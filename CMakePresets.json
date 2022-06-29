@@ -1,0 +1,161 @@
+﻿{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/Build/${presetName}",
+      "installDir": "${sourceDir}/Binary/${presetName}"
+    },
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "STRING",
+          "value": "$env{VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        },
+        "VCPKG_TARGET_TRIPLET": {
+          "type": "STRING",
+          "value": "x64-windows"
+        },
+        "QUARTZAPP_BUILD_STATIC": "OFF",
+        "QUARTZLIB_GENERATE_CONFIGS": "OFF",
+        "QUARTZMATH_GENERATE_CONFIGS": "OFF"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "quartz-x64-win-debug",
+      "displayName": "Quartz x64 - Debug (Windows)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "quartz-x64-win-release",
+      "displayName": "Quartz x64 - Release (Windows)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "quartz-x86-win-debug",
+      "displayName": "Quartz x86 - Debug (Windows)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "quartz-x86-win-release",
+      "displayName": "Quartz x86 - Release (Windows)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+
+    {
+      "name": "wsl-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "environment": {
+        "DISPLAY": "$penv{DISPLAY}",
+        "VCPKG_INSTALLATION_ROOT": "$penv{VCPKG_INSTALLATION_ROOT}"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_MAKE_PROGRAM": "ninja",
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "STRING",
+          "value": "$env{VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        },
+        "VCPKG_TARGET_TRIPLET": {
+          "type": "STRING",
+          "value": "x64-linux"
+        },
+        "QUARTZLIB_GENERATE_CONFIGS": "OFF",
+        "QUARTZMATH_GENERATE_CONFIGS": "OFF",
+        "QUARTZAPP_ENABLE_DX12": "OFF"
+      },
+      "vendor": { "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": { "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}" } }
+    },
+    {
+      "name": "quartz-x64-wsl-debug",
+      "displayName": "Quartz x64 - Debug (WSL)",
+      "inherits": "wsl-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "quartz-x64-wsl-release",
+      "displayName": "Quartz x64 - Release (WSL)",
+      "inherits": "wsl-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "quartz-x86-wsl-debug",
+      "displayName": "Quartz x86 - Debug (WSL)",
+      "inherits": "wsl-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "quartz-x86-wsl-release",
+      "displayName": "Quartz x86 - Release (WSL)",
+      "inherits": "wsl-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "quartz-win32-x64-debug",
+      "displayName": "Quartz x64 - Debug (Windows)",
+      "configurePreset": "quartz-x64-win-debug"
+    },
+    {
+      "name": "quartz-wsl-x64-debug",
+      "displayName": "Quartz x64 - Debug (WSL)",
+      "configurePreset": "quartz-x64-wsl-debug"
+    }
+  ]
+}

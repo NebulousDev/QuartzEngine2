@@ -1,0 +1,12 @@
+{
+  "name": "quartz-engine",
+  "version": "2.0.0",
+  "dependencies": [
+    "glfw3",
+    "glew",
+    {
+      "name": "directx-headers",
+      "platform": "windows"
+    }
+  ]
+}
