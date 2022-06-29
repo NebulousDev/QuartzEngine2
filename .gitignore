@@ -54,7 +54,15 @@ CTestTestfile.cmake
 _deps
 
 #########################
+#       VS Ignores      #
+#########################
+
+.vs/
+.vscode/
+
+#########################
 #     Build Ignores     #
 #########################
+
 [Bb]uild/
 [Bb]inary/
