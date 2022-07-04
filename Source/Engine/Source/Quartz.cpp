@@ -28,8 +28,9 @@
 #include "Surface.h"
 #endif
 
+#include "Types/Tuple.h"
 
-#include "GLFW/glfw3.h"
+//#include "GLFW/glfw3.h"
 
 using namespace Quartz;
 
@@ -135,18 +136,21 @@ void MouseEnteredCallback(Window* pWindow, bool entered)
 	//LogTrace("[%s] MOUSE %s", pWindow->GetTitle().Str(), entered ? "ENTERED" : "EXITED");
 }
 
-typedef bool (*QueryFunc)(void);
-
 int main()
 {
 	Log::InitLogging();
 
 	PrintBanner();
 
-	//Log::SetLogLevel(LOG_LEVEL_FATAL);
+	Log::SetLogLevel(LOG_LEVEL_INFO);
 	Log::RunLogTest();
 
+#ifdef QUARTZENGINE_WINAPI
 	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("GraphicsSystem.dll");
+#elif defined QUARTZENGINE_LINUX
+	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("libGraphicsSystem.so");
+#endif
+
 	System* pGraphicsSystem = SystemAdmin::CreateAndRegisterSystem(pGraphicsLibrary);
 
 	SystemAdmin::LoadAll();
@@ -161,7 +165,7 @@ int main()
 	
 	for (Entity& e : world.CreateView<TransformComponent>())
 	{ 
-		TransformComponent& t = world.GetComponent<TransformComponent>(e);
+		TransformComponent& t = world.GetComponent<TransformComponent>(e); 
 		int i = 5;
 	}
 
@@ -227,11 +231,12 @@ int main()
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	ApplicationInfo appInfo		    = { WINDOW_API_WINAPI, "Quartz", "2.0.0", QuartzAppLogCallback, 0};
+	ApplicationInfo appInfo		    = { WINDOW_API_GLFW, "Quartz", "2.0.0", QuartzAppLogCallback, 0};
 	Application*	pApp		    = CreateApplication(appInfo);
 
-	WindowInfo		windowInfo		= { "Quartz Sandbox - Vulkan", 1280, 720, 100, 100, WINDOW_WINDOWED };
-	SurfaceInfo		surfaceInfo		= { SURFACE_API_VULKAN, &apiInfo };
+	WindowInfo		windowInfo		= { "Quartz Sandbox", 1280, 720, 100, 100, WINDOW_WINDOWED };
+	//SurfaceInfo		surfaceInfo		= { SURFACE_API_VULKAN, &apiInfo };
+	SurfaceInfo		surfaceInfo		= { SURFACE_API_NONE, nullptr };
 	Window*			pWindow			= pApp->CreateWindow(windowInfo, surfaceInfo);
 
 	pApp->SetWindowCloseRequestedCallback(WindowCloseRequestedCallback);

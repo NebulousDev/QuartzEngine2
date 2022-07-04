@@ -4,8 +4,10 @@ project(QuartzEngine)
 
 include(GNUInstallDirs)
 
-add_executable(${PROJECT_NAME}
-    "Source/Quartz.cpp"
+set(QUARTZENGINE_COMIPLE_DEFINITIONS)
+
+set(QUARTZENGINE_SOURCE_FILES
+	"Source/Quartz.cpp"
 
     "Source/Entity/EntityGraph.cpp"
     "Source/Entity/World.cpp"
@@ -14,11 +16,32 @@ add_executable(${PROJECT_NAME}
     "Source/System/System.cpp"
     "Source/System/SystemAdmin.cpp"
     "Source/System/DynamicLibrary.cpp"
-
-    "Source/Windows/WinApiLibraryLoader.cpp"
-    "Source/Windows/WinApiDynamicLibrary.cpp"
-    "Source/Windows/WinApi.cpp"    
 )
+
+if(WIN32)
+
+	set(QUARTZENGINE_COMIPLE_DEFINITIONS ${QUARTZENGINE_COMIPLE_DEFINITIONS} QUARTZENGINE_WINAPI)
+	set(QUARTZENGINE_WINAPI PARENT_SCOPE)
+
+	set(QUARTZENGINE_SOURCE_FILES ${QUARTZENGINE_SOURCE_FILES}
+		"Source/System/Windows/WinApiLibraryLoader.cpp"
+        "Source/System/Windows/WinApiDynamicLibrary.cpp"
+        "Source/System/Windows/WinApi.cpp" 
+	)
+
+elseif(UNIX)
+
+	set(QUARTZENGINE_COMIPLE_DEFINITIONS ${QUARTZENGINE_COMIPLE_DEFINITIONS} QUARTZENGINE_LINUX)
+	set(QUARTZENGINE_LINUX PARENT_SCOPE)
+	
+	set(QUARTZENGINE_SOURCE_FILES ${QUARTZENGINE_SOURCE_FILES}
+		"Source/System/Linux/LinuxLibraryLoader.cpp"
+        "Source/System/Linux/LinuxDynamicLibrary.cpp"
+	)
+
+endif()
+
+add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC 
@@ -37,6 +60,8 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+
+target_compile_definitions(${PROJECT_NAME} PUBLIC ${QUARTZENGINE_COMIPLE_DEFINITIONS})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "Quartz")
 

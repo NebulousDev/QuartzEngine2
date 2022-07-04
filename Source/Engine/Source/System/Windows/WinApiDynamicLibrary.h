@@ -12,9 +12,6 @@ namespace Quartz
 	public:
 		WinApiDynamicLibrary(const String& name, const String& path, HMODULE module);
 
-		void Load() override;
-		void Unload() override;
-
 		void* GetFunction(const char* funcName) override;
 
 		void* GetNativeHandle() override;

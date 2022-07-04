@@ -21,24 +21,24 @@ namespace Quartz
 
 		if (!queryFunc)
 		{
-			LogError("Failed to create system from dynamic library [path='%s']: \
-				Missing 'SystemQuery' function.", pLibrary->GetPath().Str());
+			LogError("Failed to create system from dynamic library [path='%s']: "
+				"Missing 'SystemQuery' function.", pLibrary->GetPath().Str());
 
 			return nullptr;
 		}
 
 		if (!loadFunc)
 		{
-			LogError("Failed to create system from dynamic library [path='%s']: \
-				Missing 'SystemLoad' function.", pLibrary->GetPath().Str());
+			LogError("Failed to create system from dynamic library [path='%s']: "
+				"Missing 'SystemLoad' function.", pLibrary->GetPath().Str());
 
 			return nullptr;
 		}
 
 		if (!unloadFunc)
 		{
-			LogError("Failed to create system from dynamic library [path='%s']: \
-				Missing 'SystemUnload' function.", pLibrary->GetPath().Str());
+			LogError("Failed to create system from dynamic library [path='%s']: "
+				"Missing 'SystemUnload' function.", pLibrary->GetPath().Str());
 
 			return nullptr;
 		}
@@ -104,15 +104,15 @@ namespace Quartz
 
 		if (pSystem->IsLoaded())
 		{
-			LogWarning("Attempted to load an already loaded system\
-				[name=%s, version=%s]", pSystem->GetName().Str(), pSystem->GetVersion().Str());
+			LogWarning("Attempted to load an already loaded system "
+				"[name=%s, version=%s]", pSystem->GetName().Str(), pSystem->GetVersion().Str());
 			return true;
 		}
 
 		if (!pSystem->Load())
 		{
-			LogError("Failed to load system: ['%s', version='%s']: \
-				SystemLoad() returned false. Skipping...", pSystem->GetName().Str(), pSystem->GetVersion().Str());
+			LogError("Failed to load system: ['%s', version='%s']: "
+				"SystemLoad() returned false. Skipping...", pSystem->GetName().Str(), pSystem->GetVersion().Str());
 			return false;
 		}
 

@@ -21,15 +21,15 @@ namespace Quartz
 		return new WinApiDynamicLibrary(pathName, pathName, module);
 	}
 
-	bool FreeDynamicLibrary(DynamicLibrary* pDynamicLibrary)
+	bool FreeDynamicLibrary(DynamicLibrary* pLibrary)
 	{
-		WinApiDynamicLibrary* pWinApiDynamicLibrary = static_cast<WinApiDynamicLibrary*>(pDynamicLibrary);
+		WinApiDynamicLibrary* pWinApiDynamicLibrary = static_cast<WinApiDynamicLibrary*>(pLibrary);
 
-		LogInfo("Freeing dynamic library: %s", pDynamicLibrary->GetName());
+		LogInfo("Freeing dynamic library: %s", pLibrary->GetName());
 
 		if (!FreeLibrary(pWinApiDynamicLibrary->GetWinApiModuleHandle()))
 		{
-			LogError("FreeLibrary() failed to unload dynamic library: %s", pDynamicLibrary->GetPath().Str());
+			LogError("FreeLibrary() failed to unload dynamic library: %s", pLibrary->GetPath().Str());
 			WinApiPrintError();
 			return false;
 		}

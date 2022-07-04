@@ -1,9 +1,9 @@
-
 #include "System/System.h"
+#include "DLL.h"
 
 extern "C"
 {
-	bool _declspec(dllexport) SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
+	bool QUARTZENGINE_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
 	{
 		systemQuery.name = "Graphics";
 		systemQuery.version = "1.0.0";
@@ -11,12 +11,12 @@ extern "C"
 		return true;
 	}
 
-	void _declspec(dllexport) SystemLoad()
+	bool QUARTZENGINE_API SystemLoad()
 	{
-
+		return true;
 	}
 
-	void _declspec(dllexport) SystemUnload()
+	void QUARTZENGINE_API SystemUnload()
 	{
 
 	}

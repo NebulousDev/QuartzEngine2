@@ -45,7 +45,7 @@ namespace Quartz
 						++itr;
 
 						if (*this == pView->end() || 
-							(pView->mStorages.Get<ComponentStorage<Component>*>()->Contains(itr->index) && ...))
+							 (pView->mStorages. template Get<ComponentStorage<Component>*>()->Contains(itr->index) && ...))
 						{
 							return *this;
 						}
@@ -99,7 +99,7 @@ namespace Quartz
 
 			Entity* operator->()
 			{
-				return itr;
+				return (Entity*)itr;
 			}
 		};
 
@@ -119,7 +119,7 @@ namespace Quartz
 					return set1->Size() < set2->Size();
 				},
 
-				static_cast<EntitySet*>(mStorages.Get<ComponentStorage<Component>*>())...
+				static_cast<EntitySet*>(mStorages. template Get<ComponentStorage<Component>*>())...
 			);
 		}
 
