@@ -6,10 +6,18 @@ include(GNUInstallDirs)
 
 add_executable(${PROJECT_NAME}
     "Source/Quartz.cpp"
+
     "Source/Entity/EntityGraph.cpp"
     "Source/Entity/World.cpp"
     "Source/Entity/Component/Transform.cpp"
+
+    "Source/System/System.cpp"
     "Source/System/SystemAdmin.cpp"
+    "Source/System/DynamicLibrary.cpp"
+
+    "Source/Windows/WinApiLibraryLoader.cpp"
+    "Source/Windows/WinApiDynamicLibrary.cpp"
+    "Source/Windows/WinApi.cpp"    
 )
 
 target_include_directories(${PROJECT_NAME}

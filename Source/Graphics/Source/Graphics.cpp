@@ -1,15 +1,23 @@
 
-bool SystemQuery(bool isEditor)
+#include "System/System.h"
+
+extern "C"
 {
-	return true;
-}
+	bool _declspec(dllexport) SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
+	{
+		systemQuery.name = "Graphics";
+		systemQuery.version = "1.0.0";
 
-void SystemOnLoad()
-{
+		return true;
+	}
 
-}
+	void _declspec(dllexport) SystemLoad()
+	{
 
-void SystemOnUnload()
-{
+	}
 
+	void _declspec(dllexport) SystemUnload()
+	{
+
+	}
 }

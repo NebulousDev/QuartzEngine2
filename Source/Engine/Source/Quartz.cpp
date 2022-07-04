@@ -13,6 +13,8 @@
 #include "Log.h"
 
 #include "Entity/World.h"
+#include "System/SystemAdmin.h"
+#include "System/LibraryLoader.h"
 
 #include "Banner.h"
 
@@ -25,6 +27,7 @@
 #else
 #include "Surface.h"
 #endif
+
 
 #include "GLFW/glfw3.h"
 
@@ -73,7 +76,7 @@ void QuartzAppLogCallback(LogLevel level, const char* message)
 
 bool WindowCloseRequestedCallback(Window* pWindow)
 {
-	LogTrace("[%s] Requested Close\n", pWindow->GetTitle().Str());
+	LogTrace("[%s] Requested Close", pWindow->GetTitle().Str());
 	return true;
 }
 
@@ -132,14 +135,21 @@ void MouseEnteredCallback(Window* pWindow, bool entered)
 	//LogTrace("[%s] MOUSE %s", pWindow->GetTitle().Str(), entered ? "ENTERED" : "EXITED");
 }
 
+typedef bool (*QueryFunc)(void);
+
 int main()
 {
 	Log::InitLogging();
 
 	PrintBanner();
 
+	//Log::SetLogLevel(LOG_LEVEL_FATAL);
 	Log::RunLogTest();
-	//Log::SetLogLevel(LOG_LEVEL_INFO);
+
+	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("GraphicsSystem.dll");
+	System* pGraphicsSystem = SystemAdmin::CreateAndRegisterSystem(pGraphicsLibrary);
+
+	SystemAdmin::LoadAll();
 
 	/////////////////////////////////////////////////////////////////////////////////
 
@@ -241,6 +251,9 @@ int main()
 	{
 		pApp->Update();
 	}
+
+	SystemAdmin::UnloadAll();
+	SystemAdmin::DestroyAll();
 
 	pApp->DestroyWindow(pWindow);
 

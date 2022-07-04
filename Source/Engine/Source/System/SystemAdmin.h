@@ -1,25 +1,32 @@
 #pragma once
 
-#include "System.h"
+#include "System/System.h"
+#include "Types/Array.h"
+
+#include "System/DynamicLibrary.h"
 
 namespace Quartz
 {
-	struct System
-	{
-		SystemQuerryFunc	query;
-		SystemOnLoadFunc	onLoad;
-		SystemOnUnloadFunc	onUnload;
-	};
-
 	class SystemAdmin
 	{
 	private:
+		static Array<System*> smSystemRegistry;
 
 	public:
-		System* LoadSystem(const char* dllPath);
-		void UnloadSystem(System* pSystem);
+		static System* CreateSystem(DynamicLibrary* pLibrary);
+		static void DestroySystem(System* pSystem);
 
-		bool QuerySystem(const System* pSystem);
+		static System* CreateAndRegisterSystem(DynamicLibrary* pLibrary);
 
+		static void RegisterSystem(System* pSystem);
+		static void UnregisterSystem(System* pSystem);
+
+		static bool LoadSystem(System* pSystem);
+		static void UnloadSystem(System* pSystem);
+
+		static void LoadAll();
+		static void UnloadAll();
+
+		static void DestroyAll();
 	};
 }
