@@ -1,12 +1,12 @@
 [submodule "QuartzMath"]
-	path = Source/Math
+	path = Source/Core/Math
 	url = https://github.com/NebulousDev/QuartzMath.git
 [submodule "QuartzLib"]
-	path = Source/Lib
+	path = Source/Core/Lib
 	url = https://github.com/NebulousDev/QuartzLib.git
 [submodule "QuartzLog"]
-	path = Source/Log
+	path = Source/Core/Log
 	url = https://github.com/NebulousDev/QuartzLog
 [submodule "QuartzApp"]
-	path = Source/App
+	path = Source/Core/App
 	url = https://github.com/NebulousDev/QuartzApp
