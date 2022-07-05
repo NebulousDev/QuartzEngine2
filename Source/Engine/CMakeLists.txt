@@ -51,12 +51,15 @@ target_include_directories(${PROJECT_NAME}
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Source>"
         ${QUARTZLIB_INCLUDE_PATH}
         ${QUARTZMATH_INCLUDE_PATH}
+        ${QUARTZLOG_INCLUDE_PATH}
 )
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         QuartzApp
-        QuartzLog
+        QuartzCore
+        PlatformSystem
+        GraphicsSystem
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

@@ -23,7 +23,8 @@
           "type": "STRING",
           "value": "x64-windows"
         },
-        "QUARTZAPP_BUILD_STATIC": "OFF",
+        "QUARTZAPP_BUILD_STATIC": "ON",
+        "QUARTZLOG_BUILD_STATIC": "ON",
         "QUARTZLIB_GENERATE_CONFIGS": "OFF",
         "QUARTZMATH_GENERATE_CONFIGS": "OFF"
       },
@@ -99,6 +100,8 @@
           "type": "STRING",
           "value": "x64-linux"
         },
+        "QUARTZAPP_BUILD_STATIC": "ON",
+        "QUARTZLOG_BUILD_STATIC": "ON",
         "QUARTZLIB_GENERATE_CONFIGS": "OFF",
         "QUARTZMATH_GENERATE_CONFIGS": "OFF",
         "QUARTZAPP_ENABLE_DX12": "OFF"
