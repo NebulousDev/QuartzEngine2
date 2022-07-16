@@ -11,6 +11,7 @@
 #include "LogCallbacks.h"
 
 #include "Log.h"
+#include "Sinks/Windows/WinApiConsoleSink.h"
 
 #include "Entity/World.h"
 #include "System/SystemAdmin.h"
@@ -136,14 +137,26 @@ void MouseEnteredCallback(Window* pWindow, bool entered)
 	//LogTrace("[%s] MOUSE %s", pWindow->GetTitle().Str(), entered ? "ENTERED" : "EXITED");
 }
 
+#include <Windows.h>
+#include <cstdio>
+#include <fcntl.h>
+#include <time.h>
+#include <io.h>
+
+#undef CreateWindow
+
 int main()
 {
-	Log::InitLogging();
+	WinApiConsoleSink winConsoleSink;
+	winConsoleSink.SetLogLevel(LOG_LEVEL_TRACE);
+
+	Log engineLog = Log({&winConsoleSink});
+	Log::SetGlobalLog(engineLog);
 
 	PrintBanner();
 
-	//Log::SetLogLevel(LOG_LEVEL_INFO);
-	Log::RunLogTest();
+	//engineLog.SetLogLevel(LOG_LEVEL_ERROR);
+	engineLog.RunLogTest();
 
 #ifdef QUARTZENGINE_WINAPI 
 	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("Platform.dll");
@@ -157,6 +170,11 @@ int main()
 	System* pGraphicsSystem = SystemAdmin::CreateAndRegisterSystem(pGraphicsLibrary);
 
 	SystemAdmin::LoadAll();
+	//SystemAdmin::PreInitAll();
+	//SystemAdmin::InitAll();
+	//SystemAdmin::PostInitAll();
+
+ 	SystemAdmin::PreInitSystem(pPlatformSystem);
 
 	/////////////////////////////////////////////////////////////////////////////////
 

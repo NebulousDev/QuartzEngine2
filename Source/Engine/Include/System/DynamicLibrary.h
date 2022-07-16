@@ -13,7 +13,7 @@ namespace Quartz
 	public:
 		DynamicLibrary(const String& name, const String& path);
 
-		virtual void* GetFunction(const char* funcName) = 0;
+		virtual void* GetFunction(const char* funcName, bool optional) = 0;
 
 		virtual void* GetNativeHandle() = 0;
 

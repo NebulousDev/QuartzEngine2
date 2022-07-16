@@ -15,32 +15,63 @@ namespace Quartz
 			return nullptr;
 		}
 
-		SystemQueryFunc		queryFunc	= (SystemQueryFunc)pLibrary->GetFunction("SystemQuery");
-		SystemLoadFunc		loadFunc	= (SystemLoadFunc)pLibrary->GetFunction("SystemLoad");
-		SystemUnloadFunc	unloadFunc	= (SystemUnloadFunc)pLibrary->GetFunction("SystemUnload");
+		SystemQueryFunc		queryFunc		= (SystemQueryFunc)pLibrary->GetFunction("SystemQuery", false);
+		SystemLoadFunc		loadFunc		= (SystemLoadFunc)pLibrary->GetFunction("SystemLoad", true);
+		SystemUnloadFunc	unloadFunc		= (SystemUnloadFunc)pLibrary->GetFunction("SystemUnload", true);
+		SystemPreInitFunc	preInitFunc		= (SystemPreInitFunc)pLibrary->GetFunction("SystemPreInit", true);
+		SystemInitFunc		initFunc		= (SystemInitFunc)pLibrary->GetFunction("SystemInit", true);
+		SystemPostInitFunc	postInitFunc	= (SystemPostInitFunc)pLibrary->GetFunction("SystemPostInit", true);
+		SystemShutdownFunc	shutdownFunc	= (SystemShutdownFunc)pLibrary->GetFunction("SystemShutdown", true);
 
+		/* Required Query Function */
 		if (!queryFunc)
 		{
 			LogError("Failed to create system from dynamic library [path='%s']: "
-				"Missing 'SystemQuery' function.", pLibrary->GetPath().Str());
+				"Required 'SystemQuery' function was not found.", pLibrary->GetPath().Str());
 
 			return nullptr;
 		}
 
+		/* Optional Load Function */
 		if (!loadFunc)
 		{
-			LogError("Failed to create system from dynamic library [path='%s']: "
-				"Missing 'SystemLoad' function.", pLibrary->GetPath().Str());
-
-			return nullptr;
+			LogWarning("Warning while creating system from dynamic library [path='%s']: "
+				"Optional 'SystemLoad' function was not found.", pLibrary->GetPath().Str());
 		}
 
+		/* Optional Unload Function */
 		if (!unloadFunc)
 		{
-			LogError("Failed to create system from dynamic library [path='%s']: "
-				"Missing 'SystemUnload' function.", pLibrary->GetPath().Str());
+			LogWarning("Warning while creating system from dynamic library [path='%s']: "
+				"Optional 'SystemUnload' function was not found.", pLibrary->GetPath().Str());
+		}
 
-			return nullptr;
+		/* Optional PreInit Function */
+		if (!preInitFunc)
+		{
+			LogWarning("Warning while creating system from dynamic library [path='%s']: "
+				"Optional 'SystemPreInit' function was not found.", pLibrary->GetPath().Str());
+		}
+
+		/* Optional Init Function */
+		if (!initFunc)
+		{
+			LogWarning("Warning while creating system from dynamic library [path='%s']: "
+				"Optional 'SystemInit' function was not found.", pLibrary->GetPath().Str());
+		}
+
+		/* Optional PostInit Function */
+		if (!postInitFunc)
+		{
+			LogWarning("Warning while creating system from dynamic library [path='%s']: "
+				"Optional 'SystemPost' function was not found.", pLibrary->GetPath().Str());
+		}
+
+		/* Optional Shutdown Function */
+		if (!shutdownFunc)
+		{
+			LogWarning("Warning while creating system from dynamic library [path='%s']: "
+				"Optional 'SystemShutdown' function was not found.", pLibrary->GetPath().Str());
 		}
 
 		// Query system for name data etc
@@ -51,9 +82,19 @@ namespace Quartz
 
 		bool queryResult = queryFunc(false, queryInfo);
 
-		LogInfo("Querying system [path='%s']: %s", pLibrary->GetPath().Str(), queryResult ? "true" : "false");		
+		LogInfo("Querying system [path='%s']: %s", pLibrary->GetPath().Str(), queryResult ? "true" : "false");
 
-		return new System(pLibrary, queryResult, queryInfo, queryFunc, loadFunc, unloadFunc);
+		return new System(
+			pLibrary, 
+			queryResult, 
+			queryInfo, 
+			queryFunc, 
+			loadFunc, 
+			unloadFunc,
+			preInitFunc,
+			initFunc,
+			postInitFunc,
+			shutdownFunc);
 	}
 
 	void SystemAdmin::DestroySystem(System* pSystem)
@@ -109,7 +150,7 @@ namespace Quartz
 			return true;
 		}
 
-		if (!pSystem->Load())
+		if (!pSystem->Load(Log::GetGlobalLog()))
 		{
 			LogError("Failed to load system: ['%s', version='%s']: "
 				"SystemLoad() returned false. Skipping...", pSystem->GetName().Str(), pSystem->GetVersion().Str());
@@ -133,6 +174,34 @@ namespace Quartz
 		LogInfo("Unloaded system: ['%s', version='%s']", pSystem->GetName().Str(), pSystem->GetVersion().Str());
 	}
 
+	bool SystemAdmin::PreInitSystem(System* pSystem)
+	{
+		pSystem->PreInit();
+
+		return true;
+	}
+
+	bool SystemAdmin::InitSystem(System* pSystem)
+	{
+		pSystem->Init();
+
+		return true;
+	}
+
+	bool SystemAdmin::PostInitSystem(System* pSystem)
+	{
+		pSystem->PostInit();
+
+		return true;
+	}
+
+	bool SystemAdmin::ShutdownSystem(System* pSystem)
+	{
+		pSystem->Shutdown();
+
+		return true;
+	}
+
 	void SystemAdmin::LoadAll()
 	{
 		for (System* pSystem : smSystemRegistry)
@@ -146,6 +215,38 @@ namespace Quartz
 		for (System* pSystem : smSystemRegistry)
 		{
 			UnloadSystem(pSystem);
+		}
+	}
+
+	void SystemAdmin::PreInitAll()
+	{
+		for (System* pSystem : smSystemRegistry)
+		{
+			PreInitSystem(pSystem);
+		}
+	}
+
+	void SystemAdmin::InitAll()
+	{
+		for (System* pSystem : smSystemRegistry)
+		{
+			InitSystem(pSystem);
+		}
+	}
+
+	void SystemAdmin::PostInitAll()
+	{
+		for (System* pSystem : smSystemRegistry)
+		{
+			PostInitSystem(pSystem);
+		}
+	}
+
+	void SystemAdmin::ShutdownAll()
+	{
+		for (System* pSystem : smSystemRegistry)
+		{
+			ShutdownSystem(pSystem);
 		}
 	}
 

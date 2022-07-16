@@ -12,7 +12,7 @@ namespace Quartz
 	public:
 		LinuxDynamicLibrary(const String& name, const String& path, void* pLibrary);
 
-		void* GetFunction(const char* funcName) override;
+		void* GetFunction(const char* funcName, bool optional) override;
 
 		void* GetNativeHandle() override;
 	};

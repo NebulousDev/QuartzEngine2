@@ -24,8 +24,18 @@ namespace Quartz
 		static bool LoadSystem(System* pSystem);
 		static void UnloadSystem(System* pSystem);
 
+		static bool PreInitSystem(System* pSystem);
+		static bool InitSystem(System* pSystem);
+		static bool PostInitSystem(System* pSystem);
+		static bool ShutdownSystem(System* pSystem);
+
 		static void LoadAll();
 		static void UnloadAll();
+
+		static void PreInitAll();
+		static void InitAll();
+		static void PostInitAll();
+		static void ShutdownAll();
 
 		static void DestroyAll();
 	};

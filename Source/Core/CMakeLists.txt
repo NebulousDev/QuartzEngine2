@@ -7,7 +7,6 @@ include(GNUInstallDirs)
 add_library(${PROJECT_NAME} SHARED "Core.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
-#set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--export-all-symbols")
 
 target_link_libraries(${PROJECT_NAME}
 	PUBLIC

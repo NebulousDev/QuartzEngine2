@@ -13,18 +13,49 @@ namespace Quartz
 		return mQueryResult;
 	}
 
-	bool System::Load()
+	bool System::Load(Log& engineLog)
 	{
-		return mLoadFunc();
+		if(mLoadFunc) return mLoadFunc(engineLog);
+		return true;
 	}
 
 	void System::Unload()
 	{
-		mUnloadFunc();
+		if (mUnloadFunc) mUnloadFunc();
 	}
 
-	System::System(DynamicLibrary* pLibrary, bool queryResult, SystemQueryInfo& queryInfo, 
-		SystemQueryFunc queryFunc, SystemLoadFunc loadFunc, SystemUnloadFunc unloadFunc) :
+	void System::PreInit()
+	{
+		if (mPreInitFunc) mPreInitFunc();
+	}
+
+	void System::Init()
+	{
+		if (mInitFunc) mInitFunc();
+	}
+
+	void System::PostInit()
+	{
+		if (mPostInitFunc) mPostInitFunc();
+	}
+
+	void System::Shutdown()
+	{
+		if (mShutdownFunc) mShutdownFunc();
+	}
+
+	System::System(
+		DynamicLibrary*		pLibrary,
+		bool				queryResult,
+		SystemQueryInfo&	queryInfo,
+		SystemQueryFunc		queryFunc,
+		SystemLoadFunc		loadFunc,
+		SystemUnloadFunc	unloadFunc,
+		SystemPreInitFunc	preInitFunc,
+		SystemInitFunc		initFunc,
+		SystemPostInitFunc	postInitFunc,
+		SystemShutdownFunc	shutdownFunc
+	) :
 		mpLibrary(pLibrary),
 		mQueryResult(queryResult),
 		mLoaded(false),
@@ -32,7 +63,11 @@ namespace Quartz
 		mVersion(queryInfo.version),
 		mQueryFunc(queryFunc),
 		mLoadFunc(loadFunc),
-		mUnloadFunc(unloadFunc) { }
+		mUnloadFunc(unloadFunc),
+		mPreInitFunc(preInitFunc),
+		mInitFunc(initFunc),
+		mPostInitFunc(postInitFunc),
+		mShutdownFunc(shutdownFunc) { }
 
 	bool System::QuerySuccess() const
 	{
