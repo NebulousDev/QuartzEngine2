@@ -1,6 +1,6 @@
-#include "EntityGraph.h"
+#include "Entity/EntityGraph.h"
 
-#include "EntityDatabase.h"
+#include "Entity/EntityDatabase.h"
 
 namespace Quartz
 {

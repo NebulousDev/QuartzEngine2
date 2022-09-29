@@ -14,6 +14,7 @@ namespace Quartz
 	private:
 		EntityDatabase*	mpDatabase;
 		EntityGraph*	mpGraph;
+		Entity			mSingleton;
 
 	private:
 		void Initialize(EntityDatabase* pDatabase, EntityGraph* pGraph);
@@ -87,6 +88,30 @@ namespace Quartz
 		EntityView<Component...> CreateView()
 		{
 			return mpDatabase->CreateView<Component...>();
+		}
+
+		template<typename Component>
+		Component& CreateSingleton(Component&& component)
+		{
+			if (!mpDatabase->HasComponent<Component>(mSingleton))
+			{
+				mpDatabase->AddComponent(mSingleton, Forward<Component>(component));
+			}
+
+			return mpDatabase->GetComponent<Component>(mSingleton);
+		}
+
+		template<typename Component>
+		Component& CreateSingleton()
+		{
+			return CreateSingleton<Component>(Component{});
+		}
+
+		/* Assumes singleton component exists. Undefiened otherwise.*/
+		template<typename Component>
+		Component& GetSingleton()
+		{
+			return mpDatabase->GetComponent<Component>(mSingleton);
 		}
 
 		EntityDatabase& GetDatabase();

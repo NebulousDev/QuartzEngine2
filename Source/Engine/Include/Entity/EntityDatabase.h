@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Quartz.h"
+
 #include "Types/Array.h"
 #include "Types/Map.h"
 #include "Types/BlockSet.h"
@@ -14,10 +16,10 @@ namespace Quartz
 	template<>
 	inline Entity::HandleIntType SparseIndex(Entity& entity)
 	{
-		return entity.index - 1;
+		return entity.index; // - 1 ?
 	}
 
-	class EntityDatabase
+	class QUARTZ_API EntityDatabase
 	{
 	public:
 
@@ -26,21 +28,14 @@ namespace Quartz
 		using EntitySet	       = SparseSet<Entity, Entity::HandleIntType>;
 
 	private:
-		struct ComponentTypeCounter
-		{
-			static uSize Next()
-			{
-				static uSize index = 0;
-				return index++;
-			}
-		};
+		static uSize GetLinearTypeIndex(const String& componentName);
 
 		template<typename ComponentType>
 		struct ComponentTypeIndex
 		{
 			static uSize Value()
 			{
-				static uSize index = ComponentTypeCounter::Next();
+				static uSize index = GetLinearTypeIndex(TypeName<ComponentType>::Value());
 				return index;
 			}
 		};
@@ -55,8 +50,15 @@ namespace Quartz
 		{
 			using ComponentType = std::decay_t<Component>;
 			uSize typeIndex = ComponentTypeIndex<ComponentType>::Value();
+
+			if (typeIndex >= mStorageSets.Size())
+			{
+				return false;
+			}
+
 			ComponentStorage<Component>& storage = 
 				*static_cast<ComponentStorage<Component>*>(mStorageSets[typeIndex]);
+
 			return storage.Contains(entity);
 		}
 

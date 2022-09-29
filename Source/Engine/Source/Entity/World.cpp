@@ -1,4 +1,4 @@
-#include "World.h"
+#include "Entity/World.h"
 
 namespace Quartz
 {
@@ -13,6 +13,7 @@ namespace Quartz
 	{
 		mpDatabase = pDatabase;
 		mpGraph = pGraph;
+		mSingleton = CreateEntity();
 	}
 
 	EntityWorld::EntityWorld(EntityDatabase* pDatabase, EntityGraph* pGraph)
