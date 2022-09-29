@@ -2,6 +2,8 @@
 
 #include "DynamicLibrary.h"
 #include "Types/String.h"
+#include "Entity/World.h"
+#include "Runtime/Runtime.h"
 #include "Log.h"
 
 namespace Quartz
@@ -13,7 +15,7 @@ namespace Quartz
 	};
 
 	typedef bool (*SystemQueryFunc)(bool isEditor, SystemQueryInfo& systemQuery);
-	typedef bool (*SystemLoadFunc)(Log& engineLog);
+	typedef bool (*SystemLoadFunc)(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime);
 	typedef void (*SystemUnloadFunc)();
 
 	typedef bool (*SystemPreInitFunc)();
@@ -47,7 +49,7 @@ namespace Quartz
 		void SetLoaded(bool loaded);
 
 		bool Query(bool isEditor, SystemQueryInfo& queryInfo);
-		bool Load(Log& engineLog);
+		bool Load(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime);
 		void Unload();
 		void PreInit();
 		void Init();

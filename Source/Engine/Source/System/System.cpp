@@ -13,9 +13,9 @@ namespace Quartz
 		return mQueryResult;
 	}
 
-	bool System::Load(Log& engineLog)
+	bool System::Load(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
 	{
-		if(mLoadFunc) return mLoadFunc(engineLog);
+		if(mLoadFunc) return mLoadFunc(engineLog, entityWorld, runtime);
 		return true;
 	}
 

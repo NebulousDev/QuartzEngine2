@@ -1,5 +1,11 @@
 #include "System/System.h"
+
 #include "Quartz.h"
+#include "Entity/World.h"
+#include "Runtime/Runtime.h"
+#include "Log.h"
+
+using namespace Quartz;
 
 extern "C"
 {
@@ -11,8 +17,10 @@ extern "C"
 		return true;
 	}
 
-	bool QUARTZ_API SystemLoad()
+	bool QUARTZ_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
 	{
+		//entityWorld.
+
 		return true;
 	}
 

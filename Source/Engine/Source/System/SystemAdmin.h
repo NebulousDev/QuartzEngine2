@@ -3,8 +3,6 @@
 #include "System/System.h"
 #include "Types/Array.h"
 
-#include "System/DynamicLibrary.h"
-
 namespace Quartz
 {
 	class SystemAdmin
@@ -21,7 +19,7 @@ namespace Quartz
 		static void RegisterSystem(System* pSystem);
 		static void UnregisterSystem(System* pSystem);
 
-		static bool LoadSystem(System* pSystem);
+		static bool LoadSystem(System* pSystem, Log& engineLog, EntityWorld& entityWorld, Runtime& runtime);
 		static void UnloadSystem(System* pSystem);
 
 		static bool PreInitSystem(System* pSystem);
@@ -29,7 +27,7 @@ namespace Quartz
 		static bool PostInitSystem(System* pSystem);
 		static bool ShutdownSystem(System* pSystem);
 
-		static void LoadAll();
+		static void LoadAll(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime);
 		static void UnloadAll();
 
 		static void PreInitAll();

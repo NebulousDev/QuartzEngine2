@@ -9,6 +9,7 @@ set(QUARTZENGINE_COMIPLE_DEFINITIONS)
 set(QUARTZENGINE_SOURCE_FILES
 	"Source/Quartz.cpp"
 
+    "Source/Entity/EntityDatabase.cpp"
     "Source/Entity/EntityGraph.cpp"
     "Source/Entity/World.cpp"
     "Source/Entity/Component/Transform.cpp"
@@ -16,6 +17,8 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/System/System.cpp"
     "Source/System/SystemAdmin.cpp"
     "Source/System/DynamicLibrary.cpp"
+
+    "Source/Runtime/Runtime.cpp"
 )
 
 if(WIN32)
@@ -58,15 +61,13 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         QuartzApp
         QuartzCore
-        PlatformSystem
-        GraphicsSystem
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC ${QUARTZENGINE_COMIPLE_DEFINITIONS})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "Quartz")
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "Quartz" ENABLE_EXPORTS 1)
 
 install(TARGETS ${PROJECT_NAME}
     DESTINATION ${CMAKE_INSTALL_LIBDIR}

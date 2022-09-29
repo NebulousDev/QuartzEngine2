@@ -1,3 +1,5 @@
+#include "Quartz.h"
+
 #include "stdio.h"
 #include "Types/Map.h"
 #include "Types/Set.h"
@@ -10,7 +12,6 @@
 #include "Application.h"
 #include "LogCallbacks.h"
 
-#include "Log.h"
 #include "Sinks/Windows/WinApiConsoleSink.h"
 
 #include "Entity/World.h"
@@ -34,34 +35,6 @@
 //#include "GLFW/glfw3.h"
 
 using namespace Quartz;
-
-#ifdef QUARTZAPP_VULKAN
-static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
-	VkDebugUtilsMessageSeverityFlagBitsEXT		messageSeverity,
-	VkDebugUtilsMessageTypeFlagsEXT				messageType,
-	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData)
-{
-	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
-	{
-		//LogTrace("Vulkan: %s", pCallbackData->pMessage);
-	}
-	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-	{
-		//LogInfo("Vulkan: %s", pCallbackData->pMessage);
-	}
-	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-	{
-		LogWarning("Vulkan: %s", pCallbackData->pMessage);
-	}
-	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-	{
-		LogError("Vulkan: %s", pCallbackData->pMessage);
-	}
-
-	return VK_FALSE;
-}
-#endif
 
 void QuartzAppLogCallback(LogLevel level, const char* message)
 {
@@ -145,6 +118,11 @@ void MouseEnteredCallback(Window* pWindow, bool entered)
 
 #undef CreateWindow
 
+struct ControlSingleton
+{
+	bool running;
+};
+
 int main()
 {
 	WinApiConsoleSink winConsoleSink;
@@ -158,6 +136,29 @@ int main()
 	//engineLog.SetLogLevel(LOG_LEVEL_ERROR);
 	engineLog.RunLogTest();
 
+	/////////////////////////////////////////////////////////////////////////////////
+
+	EntityDatabase database;
+	EntityGraph graph(&database);
+	EntityWorld world(&database, &graph);
+
+	Entity e1 = world.CreateEntity(TransformComponent({ 5,5,5 }, Quatf(), { 1,1,1 }));
+
+	for (Entity& e : world.CreateView<TransformComponent>())
+	{
+		TransformComponent& t = world.GetComponent<TransformComponent>(e);
+		int i = 5;
+	}
+
+	ControlSingleton& control = world.CreateSingleton<ControlSingleton>();
+	control.running = true;
+
+	/////////////////////////////////////////////////////////////////////////////////
+
+	Runtime runtime;
+
+	/////////////////////////////////////////////////////////////////////////////////
+
 #ifdef QUARTZENGINE_WINAPI 
 	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("Platform.dll");
 	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("Graphics.dll");
@@ -169,121 +170,18 @@ int main()
 	System* pPlatformSystem = SystemAdmin::CreateAndRegisterSystem(pPlatformLibrary);
 	System* pGraphicsSystem = SystemAdmin::CreateAndRegisterSystem(pGraphicsLibrary);
 
-	SystemAdmin::LoadAll();
-	//SystemAdmin::PreInitAll();
-	//SystemAdmin::InitAll();
-	//SystemAdmin::PostInitAll();
+	SystemAdmin::LoadAll(engineLog, world, runtime);
+	SystemAdmin::PreInitAll();
+	SystemAdmin::InitAll();
+	SystemAdmin::PostInitAll();
 
- 	SystemAdmin::PreInitSystem(pPlatformSystem);
-
-	/////////////////////////////////////////////////////////////////////////////////
-
-	EntityDatabase database;
-	EntityGraph graph(&database);
-	EntityWorld world(&database, &graph);
-	
-	Entity e1 = world.CreateEntity(TransformComponent({ 5,5,5 }, Quatf(), { 1,1,1 }));
-	
-	for (Entity& e : world.CreateView<TransformComponent>())
-	{ 
-		TransformComponent& t = world.GetComponent<TransformComponent>(e); 
-		int i = 5;
-	}
-
-	/////////////////////////////////////////////////////////////////////////////////
-
-#ifdef QUARTZAPP_VULKAN
-
-	VkApplicationInfo vkAppInfo = {};
-	vkAppInfo.apiVersion = VK_VERSION_1_2;
-	vkAppInfo.pEngineName = "Quartz Engine 2";
-	vkAppInfo.pApplicationName = "Quartz Sandbox";
-
-	const char* extentions[] =
+	while(control.running)
 	{
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-		VK_KHR_SURFACE_EXTENSION_NAME,
-		"VK_KHR_win32_surface"
-	};
-
-	VkInstanceCreateInfo info = {};
-	info.pApplicationInfo = &vkAppInfo;
-	info.enabledExtensionCount = 3;
-	info.ppEnabledExtensionNames = extentions;
-	info.enabledLayerCount = 0;
-
-	VkDebugUtilsMessengerCreateInfoEXT debugMessengerInfo = {};
-	debugMessengerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	debugMessengerInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
-		| VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
-		| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debugMessengerInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
-		| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
-		| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	debugMessengerInfo.pfnUserCallback = DebugCallback;
-	debugMessengerInfo.pUserData = NULL;
-	debugMessengerInfo.pNext = NULL;
-
-	info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugMessengerInfo;
-
-	VkInstance vkInstance;
-
-	VkResult res = vkCreateInstance(&info, nullptr, &vkInstance);
-
-	VkSurfaceFormatKHR format = {};
-	format.format = VK_FORMAT_B8G8R8A8_SRGB;
-	format.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-
-	VkResult result = VK_ERROR_UNKNOWN;
-	uInt32 physicalDeviceCount = 0;
-	Array<VkPhysicalDevice> physicalDevices;
-
-	vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, nullptr);
-	physicalDevices.Resize(physicalDeviceCount);
-	vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, physicalDevices.Data());
-
-	VulkanSurfaceInfo apiInfo = {};
-	apiInfo.instance = vkInstance;
-	apiInfo.exclusiveFullscreen = false;
-	apiInfo.physicalDevice = physicalDevices[0];
-	apiInfo.surfaceFormat = format;
-
-#endif
-
-	/////////////////////////////////////////////////////////////////////////////////
-
-	ApplicationInfo appInfo		    = { WINDOW_API_GLFW, "Quartz", "2.0.0", QuartzAppLogCallback, 0};
-	Application*	pApp		    = CreateApplication(appInfo);
-
-	WindowInfo		windowInfo		= { "Quartz Sandbox", 1280, 720, 100, 100, WINDOW_WINDOWED };
-	//SurfaceInfo		surfaceInfo		= { SURFACE_API_VULKAN, &apiInfo };
-	SurfaceInfo		surfaceInfo		= { SURFACE_API_NONE, nullptr };
-	Window*			pWindow			= pApp->CreateWindow(windowInfo, surfaceInfo);
-
-	pApp->SetWindowCloseRequestedCallback(WindowCloseRequestedCallback);
-	pApp->SetWindowClosedCallback(WindowClosedCallback);
-	pApp->SetWindowResizedCallback(WindowResizedCallback);
-	pApp->SetWindowMovedCallback(WindowMovedCallback);
-	pApp->SetWindowMaximizedCallback(WindowMaximizedCallback);
-	pApp->SetWindowMinimizedCallback(WindowMinimizedCallback);
-	pApp->SetWindowFocusedCallback(WindowFocusedCallback);
-	pApp->SetKeyCallback(KeyCallback);
-	pApp->SetKeyTypedCallback(KeyTypedCallback);
-	pApp->SetMouseMovedCallback(MouseMovedCallback);
-	pApp->SetMouseMovedRelativeCallback(MouseMovedRelativeCallback);
-	pApp->SetMouseEnteredCallback(MouseEnteredCallback);
-
-	while(pWindow->IsOpen())
-	{
-		pApp->Update();
+		runtime.UpdateAll();
 	}
 
 	SystemAdmin::UnloadAll();
 	SystemAdmin::DestroyAll();
-
-	pApp->DestroyWindow(pWindow);
-
-	DestroyApplication(pApp);
 
 	return 0;
 }

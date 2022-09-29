@@ -139,7 +139,7 @@ namespace Quartz
 		delete pSystem;
 	}
 
-	bool SystemAdmin::LoadSystem(System* pSystem)
+	bool SystemAdmin::LoadSystem(System* pSystem, Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
 	{
 		assert(pSystem && "LoadSystem() was provided a null system.");
 
@@ -150,7 +150,7 @@ namespace Quartz
 			return true;
 		}
 
-		if (!pSystem->Load(Log::GetGlobalLog()))
+		if (!pSystem->Load(engineLog, entityWorld, runtime))
 		{
 			LogError("Failed to load system: ['%s', version='%s']: "
 				"SystemLoad() returned false. Skipping...", pSystem->GetName().Str(), pSystem->GetVersion().Str());
@@ -202,11 +202,11 @@ namespace Quartz
 		return true;
 	}
 
-	void SystemAdmin::LoadAll()
+	void SystemAdmin::LoadAll(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
 	{
 		for (System* pSystem : smSystemRegistry)
 		{
-			LoadSystem(pSystem);
+			LoadSystem(pSystem, engineLog, entityWorld, runtime);
 		}
 	}
 

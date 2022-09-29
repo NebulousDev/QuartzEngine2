@@ -26,6 +26,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
 	QuartzCore
 	QuartzApp
+	QuartzEngine
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "Platform")
