@@ -64,7 +64,7 @@ namespace Quartz
 		if (!postInitFunc)
 		{
 			LogWarning("Warning while creating system from dynamic library [path='%s']: "
-				"Optional 'SystemPost' function was not found.", pLibrary->GetPath().Str());
+				"Optional 'SystemPostInit' function was not found.", pLibrary->GetPath().Str());
 		}
 
 		/* Optional Shutdown Function */
