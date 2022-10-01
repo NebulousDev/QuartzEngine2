@@ -10,13 +10,23 @@ namespace Quartz
 	class QUARTZ_API Runtime
 	{
 	private:
-		Array<RuntimeUpdateFunc> updates;
+		Array<RuntimeUpdateFunc> mUpdates;
+
+		bool mRunning;
+		uSize mTargetUPS;
+		uSize mTargetTPS;
+
+	private:
+		void UpdateAll(double delta);
 
 	public:
+		Runtime();
+
 		void RegisterUpdate(RuntimeUpdateFunc updateFunc);
 		//void RegisterTick();
 		//void RegisterTrigger();
 
-		void UpdateAll();
+		void Start();
+		void Stop();
 	};
 }

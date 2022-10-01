@@ -17,6 +17,22 @@
 
 using namespace Quartz;
 
+struct VulkanDataSingleton
+{
+	VkInstance vkInstance = VK_NULL_HANDLE;
+	VkSurfaceKHR vkSurface = VK_NULL_HANDLE;
+};
+
+namespace Quartz
+{
+	EntityWorld* gpEntityWorld;
+	Runtime* gpRuntime;
+	Application* gpApp;
+	Window* gpWindow;
+
+	VulkanDataSingleton* gpVulkanData;
+}
+
 #ifdef QUARTZAPP_VULKAN
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT		messageSeverity,
@@ -67,6 +83,7 @@ bool WindowCloseRequestedCallback(Window* pWindow)
 void WindowClosedCallback(Window* pWindow)
 {
 	LogTrace("[%s] Closed", pWindow->GetTitle().Str());
+	gpRuntime->Stop();
 }
 
 void WindowResizedCallback(Window* pWindow, uSize width, uSize height)
@@ -119,20 +136,6 @@ void MouseEnteredCallback(Window* pWindow, bool entered)
 	//LogTrace("[%s] MOUSE %s", pWindow->GetTitle().Str(), entered ? "ENTERED" : "EXITED");
 }
 
-struct SurfaceSingleton
-{
-
-};
-
-namespace Quartz
-{
-	EntityWorld*		gpEntityWorld;
-	Runtime*			gpRuntime;
-	Application*		gpApp;
-	Window*				gpWindow;
-	SurfaceSingleton*	gpSurface;
-}
-
 extern "C"
 {
 	bool QUARTZ_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
@@ -169,7 +172,7 @@ extern "C"
 		appInfo.logCallback = QuartzAppLogCallback;
 
 		gpApp = CreateApplication(appInfo);
-		gpSurface = &gpEntityWorld->CreateSingleton<SurfaceSingleton>();
+		gpVulkanData = &gpEntityWorld->CreateSingleton<VulkanDataSingleton>();
 	}
 
 	void Update(double delta)
@@ -236,6 +239,8 @@ extern "C"
 		apiInfo.physicalDevice = physicalDevices[0];
 		apiInfo.surfaceFormat = format;
 
+		gpVulkanData->vkInstance = vkInstance;
+
 #endif
 
 		WindowInfo		windowInfo		= { "Quartz Sandbox", 1280, 720, 100, 100, WINDOW_WINDOWED };
@@ -256,6 +261,8 @@ extern "C"
 		gpApp->SetMouseEnteredCallback(MouseEnteredCallback);
 
 		gpWindow = pWindow;
+
+		gpVulkanData->vkSurface = ((VulkanSurface*)pWindow->GetSurface())->GetVkSurface();
 
 		gpRuntime->RegisterUpdate(Update);
 	}
