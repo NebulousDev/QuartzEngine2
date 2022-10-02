@@ -179,6 +179,16 @@ namespace Quartz
 				UpdateAll(deltaTime / SECOND);
 				accumulatedUpdateTime = 0;
 			}
+
+			if (mDefferedTriggers.Size() > 0)
+			{
+				for (std::function<void()>& defferedTrigger : mDefferedTriggers)
+				{
+					defferedTrigger();
+				}
+
+				mDefferedTriggers.Clear();
+			}
 		}
 	}
 

@@ -5,6 +5,8 @@
 #include "Types/Map.h"
 #include "Utility/TypeId.h"
 
+#include <functional>
+
 namespace Quartz
 {
 	template<typename TriggerPayload>
@@ -30,9 +32,10 @@ namespace Quartz
 		};
 
 	private:
-		Array<RuntimeUpdateFunc>	mUpdates;
-		Array<RuntimeTickFunc>		mTicks;
-		Array<Array<void*>>			mTriggers;
+		Array<RuntimeUpdateFunc>		mUpdates;
+		Array<RuntimeTickFunc>			mTicks;
+		Array<Array<void*>>				mTriggers;
+		Array<std::function<void()>>	mDefferedTriggers;
 
 		uSize mDirtyUpdateCount		= 0;
 		uSize mDirtyTickCount		= 0;
@@ -48,6 +51,43 @@ namespace Quartz
 
 		void UpdateAll(double delta);
 		void TickAll(uSize tick);
+
+		template<typename TriggerPayload>
+		void TriggerNow(const TriggerPayload& payload)
+		{
+			uSize triggerId = TriggerId<TriggerPayload>::Value();
+
+			if (IsValidTriggerId(triggerId))
+			{
+				for (void* pFunc : mTriggers[triggerId])
+				{
+					RuntimeTriggerFunc<TriggerPayload> triggerFunc
+						= static_cast<RuntimeTriggerFunc<TriggerPayload>>(pFunc);
+
+					if (triggerFunc)
+					{
+						triggerFunc(payload);
+					}
+				}
+
+				if (mDirtyTriggerCount > 0)
+				{
+					Array<void*> cleanTriggers(mTriggers[triggerId].Size() - mDirtyTriggerCount);
+
+					for (void* pFunc : mTriggers[triggerId])
+					{
+						if (pFunc != nullptr)
+						{
+							cleanTriggers.PushBack(pFunc);
+						}
+					}
+
+					Swap(mTriggers[triggerId], cleanTriggers);
+					mDirtyTickCount = 0;
+				}
+
+			}
+		}
 
 	public:
 		Runtime();
@@ -100,42 +140,17 @@ namespace Quartz
 		}
 
 		template<typename TriggerPayload>
-		void Trigger(const TriggerPayload& payload)
+		void Trigger(const TriggerPayload& payload, bool now = false)
 		{
-			uSize triggerId = TriggerId<TriggerPayload>::Value();
-
-			if (IsValidTriggerId(triggerId))
+			if (now)
 			{
-				for (void* pFunc : mTriggers[triggerId])
-				{
-					RuntimeTriggerFunc<TriggerPayload> triggerFunc 
-						= static_cast<RuntimeTriggerFunc<TriggerPayload>>(pFunc);
-					
-					if (triggerFunc)
-					{
-						triggerFunc(payload);
-					}
-				}
-
-				if (mDirtyTriggerCount > 0)
-				{
-					Array<void*> cleanTriggers(mTriggers[triggerId].Size() - mDirtyTriggerCount);
-
-					for (void* pFunc : mTriggers[triggerId])
-					{
-						if (pFunc != nullptr)
-						{
-							cleanTriggers.PushBack(pFunc);
-						}
-					}
-
-					Swap(mTriggers[triggerId], cleanTriggers);
-					mDirtyTickCount = 0;
-				}
-
+				TriggerNow<TriggerPayload>(payload);
 			}
-
-			
+			else
+			{
+				auto& deferedTrigger = [this,payload]() { this->TriggerNow<TriggerPayload>(payload); };
+				mDefferedTriggers.PushBack(deferedTrigger);
+			}
 		}
 
 		void Start();

@@ -10,26 +10,6 @@
 
 using namespace Quartz;
 
-struct TestTrigger
-{
-	int a = 0;
-};
-
-Runtime* gpRuntime;
-
-void OnTestTrigger(const TestTrigger& trigger)
-{
-	LogTrace(">> (CORE) TestTrigger:%d <<", trigger.a);
-	gpRuntime->UnregisterOnTrigger<TestTrigger>(OnTestTrigger);
-}
-
-
-void OnTestTick(uSize tick)
-{
-	if(tick == 0)
-		gpRuntime->Trigger<TestTrigger>(TestTrigger{ 5 });
-}
-
 int main()
 {
 	/////////////////////////////////////////////////////////////////////////////////
@@ -63,11 +43,6 @@ int main()
 	/* Create Runtime */
 
 	Runtime runtime;
-	gpRuntime = &runtime;
-
-	runtime.RegisterTriggerType<TestTrigger>();
-	runtime.RegisterOnTrigger<TestTrigger>(OnTestTrigger);
-	runtime.RegisterOnTick(OnTestTick);
 
 	/////////////////////////////////////////////////////////////////////////////////
 
