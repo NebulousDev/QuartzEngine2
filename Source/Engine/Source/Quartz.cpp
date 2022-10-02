@@ -10,6 +10,26 @@
 
 using namespace Quartz;
 
+struct TestTrigger
+{
+	int a = 0;
+};
+
+Runtime* gpRuntime;
+
+void OnTestTrigger(const TestTrigger& trigger)
+{
+	LogTrace(">> (CORE) TestTrigger:%d <<", trigger.a);
+	gpRuntime->UnregisterOnTrigger<TestTrigger>(OnTestTrigger);
+}
+
+
+void OnTestTick(uSize tick)
+{
+	if(tick == 0)
+		gpRuntime->Trigger<TestTrigger>(TestTrigger{ 5 });
+}
+
 int main()
 {
 	/////////////////////////////////////////////////////////////////////////////////
@@ -43,20 +63,25 @@ int main()
 	/* Create Runtime */
 
 	Runtime runtime;
+	gpRuntime = &runtime;
+
+	runtime.RegisterTriggerType<TestTrigger>();
+	runtime.RegisterOnTrigger<TestTrigger>(OnTestTrigger);
+	runtime.RegisterOnTick(OnTestTick);
 
 	/////////////////////////////////////////////////////////////////////////////////
 
 	/* Load Systems */
 
 #ifdef QUARTZENGINE_WINAPI 
-	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("Platform.dll");
+	//DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("Platform.dll");
 	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("Graphics.dll");
 #elif defined QUARTZENGINE_LINUX
 	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("libPlatform.so");
 	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("libGraphics.so");
 #endif
 
-	System* pPlatformSystem = SystemAdmin::CreateAndRegisterSystem(pPlatformLibrary);
+	//System* pPlatformSystem = SystemAdmin::CreateAndRegisterSystem(pPlatformLibrary);
 	System* pGraphicsSystem = SystemAdmin::CreateAndRegisterSystem(pGraphicsLibrary);
 
 	SystemAdmin::LoadAll(engineLog, world, runtime);
