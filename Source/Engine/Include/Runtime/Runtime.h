@@ -53,39 +53,51 @@ namespace Quartz
 		void TickAll(uSize tick);
 
 		template<typename TriggerPayload>
+		void RegisterTriggerType()
+		{
+			uSize triggerId = TriggerId<TriggerPayload>::Value();
+
+			if (mTriggers.Size() >= triggerId)
+			{
+				mTriggers.Resize(triggerId + 1);
+			}
+		}
+
+		template<typename TriggerPayload>
 		void TriggerNow(const TriggerPayload& payload)
 		{
 			uSize triggerId = TriggerId<TriggerPayload>::Value();
 
-			if (IsValidTriggerId(triggerId))
+			if (!IsValidTriggerId(triggerId))
 			{
+				RegisterTriggerType<TriggerPayload>();
+			}
+
+			for (void* pFunc : mTriggers[triggerId])
+			{
+				RuntimeTriggerFunc<TriggerPayload> triggerFunc
+					= static_cast<RuntimeTriggerFunc<TriggerPayload>>(pFunc);
+
+				if (triggerFunc)
+				{
+					triggerFunc(payload);
+				}
+			}
+
+			if (mDirtyTriggerCount > 0)
+			{
+				Array<void*> cleanTriggers(mTriggers[triggerId].Size() - mDirtyTriggerCount);
+
 				for (void* pFunc : mTriggers[triggerId])
 				{
-					RuntimeTriggerFunc<TriggerPayload> triggerFunc
-						= static_cast<RuntimeTriggerFunc<TriggerPayload>>(pFunc);
-
-					if (triggerFunc)
+					if (pFunc != nullptr)
 					{
-						triggerFunc(payload);
+						cleanTriggers.PushBack(pFunc);
 					}
 				}
 
-				if (mDirtyTriggerCount > 0)
-				{
-					Array<void*> cleanTriggers(mTriggers[triggerId].Size() - mDirtyTriggerCount);
-
-					for (void* pFunc : mTriggers[triggerId])
-					{
-						if (pFunc != nullptr)
-						{
-							cleanTriggers.PushBack(pFunc);
-						}
-					}
-
-					Swap(mTriggers[triggerId], cleanTriggers);
-					mDirtyTickCount = 0;
-				}
-
+				Swap(mTriggers[triggerId], cleanTriggers);
+				mDirtyTickCount = 0;
 			}
 		}
 
@@ -125,17 +137,6 @@ namespace Quartz
 					*triggerIt = nullptr;
 					mDirtyTriggerCount++;
 				}
-			}
-		}
-
-		template<typename TriggerPayload>
-		void RegisterTriggerType()
-		{
-			uSize triggerId = TriggerId<TriggerPayload>::Value();
-
-			if (mTriggers.Size() >= triggerId)
-			{
-				mTriggers.Resize(triggerId + 1);
 			}
 		}
 

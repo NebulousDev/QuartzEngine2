@@ -28,7 +28,7 @@ namespace Quartz
 
 	bool Runtime::IsValidTriggerId(uSize triggerId)
 	{
-		return mTriggers.Size() >= triggerId;
+		return mTriggers.Size() > triggerId;
 	}
 
 	void Runtime::RegisterOnUpdate(RuntimeUpdateFunc updateFunc)
@@ -160,7 +160,7 @@ namespace Quartz
 				accumulatedUpdateTime = 0;
 				accumulatedTime = 0;
 
-				LogInfo("UPS: %d, TPS: %d", accumulatedUpdates, accumulatedTicks);
+				//LogInfo("UPS: %d, TPS: %d", accumulatedUpdates, accumulatedTicks);
 
 				accumulatedUpdates = 0;
 				accumulatedTicks = 0;
