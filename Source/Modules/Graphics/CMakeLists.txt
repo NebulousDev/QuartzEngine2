@@ -6,7 +6,7 @@ include(GNUInstallDirs)
 
 add_library(${PROJECT_NAME} SHARED 
 	"Source/Graphics.cpp"
-)
+ "Include/Graphics.h")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
@@ -20,6 +20,10 @@ target_include_directories(${PROJECT_NAME}
 		${QUARTZENGINE_INCLUDE_PATH}
 )
 
-target_link_libraries(${PROJECT_NAME} QuartzCore)
+target_link_libraries(${PROJECT_NAME}
+	QuartzCore
+	QuartzApp
+	QuartzEngine
+)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "Graphics")

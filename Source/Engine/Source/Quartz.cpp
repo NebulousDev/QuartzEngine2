@@ -49,14 +49,14 @@ int main()
 	/* Load Systems */
 
 #ifdef QUARTZENGINE_WINAPI 
-	//DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("Platform.dll");
+	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("Platform.dll");
 	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("Graphics.dll");
 #elif defined QUARTZENGINE_LINUX
 	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("libPlatform.so");
 	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("libGraphics.so");
 #endif
 
-	//System* pPlatformSystem = SystemAdmin::CreateAndRegisterSystem(pPlatformLibrary);
+	System* pPlatformSystem = SystemAdmin::CreateAndRegisterSystem(pPlatformLibrary);
 	System* pGraphicsSystem = SystemAdmin::CreateAndRegisterSystem(pGraphicsLibrary);
 
 	SystemAdmin::LoadAll(engineLog, world, runtime);
