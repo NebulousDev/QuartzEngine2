@@ -84,6 +84,12 @@ namespace Quartz
 			return CreateSingleton<Component>(Component{});
 		}
 
+		template<typename Component>
+		void DestroySingleton()
+		{
+			mpDatabase->RemoveComponent<Component>(mSingleton);
+		}
+
 		/* Assumes singleton component exists. Undefiened otherwise.*/
 		template<typename Component>
 		Component& Get()
