@@ -19,6 +19,22 @@ namespace Quartz
 	private:
 		void Initialize(EntityDatabase* pDatabase, EntityGraph* pGraph);
 
+#if 0
+		/* Assumes singleton component exists. Undefiened otherwise.*/
+		template<typename Component>
+		Component& GetSingleton()
+		{
+			return mpDatabase->GetComponent<Component>(mSingleton);
+		}
+
+		/* Assumes entity has component. Undefiened otherwise.*/
+		template<typename Component>
+		Component& GetComponent(Entity entity)
+		{
+			return mpDatabase->GetComponent<Component>(entity);
+		}
+#endif
+
 	public:
 		EntityWorld();
 		EntityWorld(EntityDatabase* pDatabase, EntityGraph* pGraph);
@@ -51,6 +67,37 @@ namespace Quartz
 			return entity;
 		}
 
+		template<typename Component>
+		Component& CreateSingleton(Component&& component)
+		{
+			if (!mpDatabase->HasComponent<Component>(mSingleton))
+			{
+				mpDatabase->AddComponent(mSingleton, Forward<Component>(component));
+			}
+
+			return mpDatabase->GetComponent<Component>(mSingleton);
+		}
+
+		template<typename Component>
+		Component& CreateSingleton()
+		{
+			return CreateSingleton<Component>(Component{});
+		}
+
+		/* Assumes singleton component exists. Undefiened otherwise.*/
+		template<typename Component>
+		Component& Get()
+		{
+			return mpDatabase->GetComponent<Component>(mSingleton);
+		}
+
+		/* Assumes entity has component. Undefiened otherwise.*/
+		template<typename Component>
+		Component& Get(Entity entity)
+		{
+			return mpDatabase->GetComponent<Component>(entity);
+		}
+
 		template<typename... Component>
 		void AddComponent(Entity entity, Component&&... component)
 		{
@@ -77,41 +124,10 @@ namespace Quartz
 			return mpDatabase->HasComponent<Component...>(entity);
 		}
 
-		/* Assumes entity has component. Undefiened otherwise.*/
-		template<typename Component>
-		Component& GetComponent(Entity entity)
-		{
-			return mpDatabase->GetComponent<Component>(entity);
-		}
-
 		template<typename... Component>
 		EntityView<Component...> CreateView()
 		{
 			return mpDatabase->CreateView<Component...>();
-		}
-
-		template<typename Component>
-		Component& CreateSingleton(Component&& component)
-		{
-			if (!mpDatabase->HasComponent<Component>(mSingleton))
-			{
-				mpDatabase->AddComponent(mSingleton, Forward<Component>(component));
-			}
-
-			return mpDatabase->GetComponent<Component>(mSingleton);
-		}
-
-		template<typename Component>
-		Component& CreateSingleton()
-		{
-			return CreateSingleton<Component>(Component{});
-		}
-
-		/* Assumes singleton component exists. Undefiened otherwise.*/
-		template<typename Component>
-		Component& GetSingleton()
-		{
-			return mpDatabase->GetComponent<Component>(mSingleton);
 		}
 
 		EntityDatabase& GetDatabase();

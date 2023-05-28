@@ -28,17 +28,18 @@ namespace Quartz
 		using EntitySet	       = SparseSet<Entity, Entity::HandleIntType>;
 
 	private:
-		static uSize GetLinearTypeIndex(const String& componentName);
+
+		Map<String, uSize>	mTypeIndexMap;
+		uSize				mTypeCount = 0;
+
+		uSize GetTypeIndex(const String& componentName);
 
 		template<typename ComponentType>
-		struct ComponentTypeIndex
+		uSize GetTypeIndex()
 		{
-			static uSize Value()
-			{
-				static uSize index = GetLinearTypeIndex(TypeName<ComponentType>::Value());
-				return index;
-			}
-		};
+			static uSize index = GetTypeIndex(TypeName<ComponentType>::Value());
+			return index;
+		}
 
 	private:
 		Array<EntitySet*>	mStorageSets;
@@ -49,7 +50,7 @@ namespace Quartz
 		bool HasComponentImpl(Entity entity)
 		{
 			using ComponentType = std::decay_t<Component>;
-			uSize typeIndex = ComponentTypeIndex<ComponentType>::Value();
+			uSize typeIndex = GetTypeIndex<ComponentType>();
 
 			if (typeIndex >= mStorageSets.Size())
 			{
@@ -66,7 +67,7 @@ namespace Quartz
 		void AddComponentImpl(Entity entity, Component&& component)
 		{
 			using ComponentType = std::decay_t<Component>;
-			uSize typeIndex = ComponentTypeIndex<ComponentType>::Value();
+			uSize typeIndex = GetTypeIndex<ComponentType>();
 
 			if (typeIndex >= mStorageSets.Size())
 			{
@@ -82,7 +83,7 @@ namespace Quartz
 		void RemoveComponentImpl(Entity entity)
 		{
 			using ComponentType = std::decay_t<Component>;
-			uSize typeIndex = ComponentTypeIndex<ComponentType>::Value();
+			uSize typeIndex = GetTypeIndex<ComponentType>();
 			static_cast<ComponentStorage<ComponentType>*>(mStorageSets[typeIndex])->Remove(entity);
 		}
 
@@ -130,14 +131,14 @@ namespace Quartz
 		Component& GetComponent(Entity entity)
 		{
 			using ComponentType = std::decay_t<Component>;
-			uSize typeIndex = ComponentTypeIndex<ComponentType>::Value();
+			uSize typeIndex = GetTypeIndex<ComponentType>();
 			return static_cast<ComponentStorage<ComponentType>*>(mStorageSets[typeIndex])->Get(entity);
 		}
 
 		template<typename Component>
 		bool ComponentExists()
 		{
-			return ComponentTypeIndex<Component>::Value() < mStorageSets.Size();
+			return GetTypeIndex<ComponentType>() < mStorageSets.Size();
 		}
 
 		template<typename... Component>
@@ -150,7 +151,7 @@ namespace Quartz
 			}
 
 			return EntityView<Component...>(
-				static_cast<ComponentStorage<Component>*>(mStorageSets[ComponentTypeIndex<Component>::Value()])...);
+				static_cast<ComponentStorage<Component>*>(mStorageSets[GetTypeIndex<ComponentType>()])...);
 		}
 	};
 }

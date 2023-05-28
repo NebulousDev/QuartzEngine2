@@ -4,17 +4,14 @@
 
 namespace Quartz
 {
-	Map<String, uSize> linearIndexMap;
-	uSize currentCount = 0;
-
-	uSize EntityDatabase::GetLinearTypeIndex(const String& componentName)
+	uSize EntityDatabase::GetTypeIndex(const String& componentName)
 	{
-		auto& itr = linearIndexMap.Find(componentName);
-		if (itr != linearIndexMap.End())
+		auto& itr = mTypeIndexMap.Find(componentName);
+		if (itr != mTypeIndexMap.End())
 		{
 			return itr->value;
 		}
 
-		return linearIndexMap.Put(componentName, currentCount++);
+		return mTypeIndexMap.Put(componentName, mTypeCount++);
 	}
 }
