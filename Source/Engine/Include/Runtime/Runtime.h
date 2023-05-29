@@ -7,6 +7,9 @@
 
 #include <functional>
 
+#define RUNTIME_DEFAULT_UPS 350
+#define RUNTIME_DEFAULT_TPS 20
+
 namespace Quartz
 {
 	class Runtime;
@@ -99,8 +102,8 @@ namespace Quartz
 
 	private:
 
-		Map<String, uSize> mTriggerIdMap;
-		uSize mTriggerId = 0;
+		Map<String, uSize>	mTriggerIdMap;
+		uSize				mTriggerIdCount = 0;
 
 		uSize GetPayloadId(const String& triggerName);
 
@@ -110,6 +113,8 @@ namespace Quartz
 			static uSize sTriggerId = GetPayloadId(TypeName<Payload>::Value());
 			return sTriggerId;
 		}
+
+		bool IsValidPayloadId(uSize triggerId);
 
 	private:
 		Array<UpdateFunctor*>				mUpdates;
@@ -127,8 +132,6 @@ namespace Quartz
 		bool mRunning;
 
 	private:
-		bool IsValidTriggerId(uSize triggerId);
-
 		void UpdateAll(double delta);
 		void TickAll(uSize tick);
 
@@ -150,7 +153,7 @@ namespace Quartz
 		{
 			uSize triggerId = GetPayloadId<Payload>();
 
-			if (!IsValidTriggerId(triggerId))
+			if (!IsValidPayloadId(triggerId))
 			{
 				RegisterTriggerType<Payload>();
 			}
@@ -218,7 +221,7 @@ namespace Quartz
 		{
 			uSize payloadId = GetPayloadId<Payload>();
 
-			if (!IsValidTriggerId(payloadId))
+			if (!IsValidPayloadId(payloadId))
 			{
 				RegisterTriggerType<Payload>();
 			}
@@ -235,7 +238,7 @@ namespace Quartz
 		{
 			uSize payloadId = GetPayloadId<Payload>();
 
-			if (!IsValidTriggerId(payloadId))
+			if (!IsValidPayloadId(payloadId))
 			{
 				RegisterTriggerType<Payload>();
 			}
@@ -307,7 +310,7 @@ namespace Quartz
 		{
 			uSize payloadId = GetPayloadId<Payload>();
 
-			if (IsValidTriggerId(payloadId))
+			if (IsValidPayloadId(payloadId))
 			{
 				auto& triggers = mTriggers[payloadId];
 				for(TriggerFunctorBase * pFunctorBase : triggers)

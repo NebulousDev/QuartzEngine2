@@ -14,16 +14,16 @@ namespace Quartz
 			return idIt->value;
 		}
 
-		return mTriggerIdMap.Put(triggerName, mTriggerId++);
+		return mTriggerIdMap.Put(triggerName, mTriggerIdCount++);
 	}
 
 	Runtime::Runtime() :
 		mRunning(false),
-		mTargetTPS(20),
-		mTargetUPS(300)
+		mTargetTPS(RUNTIME_DEFAULT_TPS),
+		mTargetUPS(RUNTIME_DEFAULT_UPS)
 	{ }
 
-	bool Runtime::IsValidTriggerId(uSize triggerId)
+	bool Runtime::IsValidPayloadId(uSize triggerId)
 	{
 		return mTriggers.Size() > triggerId;
 	}
