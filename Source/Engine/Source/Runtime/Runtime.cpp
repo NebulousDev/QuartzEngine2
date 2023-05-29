@@ -6,18 +6,15 @@
 
 namespace Quartz
 {
-	uSize Runtime::GetTriggerId(const String& triggerName)
+	uSize Runtime::GetPayloadId(const String& triggerName)
 	{
-		static Map<String, uSize> sTriggerIdMap;
-		static uSize sTriggerId = 0;
-
-		auto& idIt = sTriggerIdMap.Find(triggerName);
-		if (idIt != sTriggerIdMap.End())
+		auto& idIt = mTriggerIdMap.Find(triggerName);
+		if (idIt != mTriggerIdMap.End())
 		{
 			return idIt->value;
 		}
 
-		return sTriggerIdMap.Put(triggerName, sTriggerId++);
+		return mTriggerIdMap.Put(triggerName, mTriggerId++);
 	}
 
 	Runtime::Runtime() :
@@ -33,53 +30,70 @@ namespace Quartz
 
 	void Runtime::RegisterOnUpdate(RuntimeUpdateFunc updateFunc)
 	{
-		mUpdates.PushBack(updateFunc);
+		UpdateFunctor* pFunctor = new UpdateFunctor();
+		pFunctor->pInstance = nullptr;
+		pFunctor->updateFunc = updateFunc;
+
+		mUpdates.PushBack(pFunctor);
 	}
 
 	void Runtime::RegisterOnTick(RuntimeTickFunc tickFunc)
 	{
-		mTicks.PushBack(tickFunc);
+		TickFunctor* pFunctor = new TickFunctor();
+		pFunctor->pInstance = nullptr;
+		pFunctor->tickFunc = tickFunc;
+
+		mTicks.PushBack(pFunctor);
 	}
 
 	void Runtime::UnregisterOnUpdate(RuntimeUpdateFunc updateFunc)
 	{
-		auto& updateIt = mUpdates.Find(updateFunc);
-		if (updateIt != mUpdates.End())
+		for (UpdateFunctor* pUpdateFunctor : mUpdates)
 		{
-			*updateIt = nullptr;
-			mDirtyUpdateCount++;
+			if (pUpdateFunctor->updateFunc == updateFunc)
+			{
+				pUpdateFunctor->updateFunc = nullptr;
+				mDirtyUpdateCount++;
+			}
 		}
 	}
 
 	void Runtime::UnregisterOnTick(RuntimeTickFunc tickFunc)
 	{
-		auto& tickIt = mTicks.Find(tickFunc);
-		if (tickIt != mTicks.End())
+		for (TickFunctor* pTickFunctor : mTicks)
 		{
-			*tickIt = nullptr;
-			mDirtyTickCount++;
+			if (pTickFunctor->tickFunc == tickFunc)
+			{
+				pTickFunctor->tickFunc = nullptr;
+				mDirtyTickCount++;
+			}
 		}
 	}
 
 	void Runtime::UpdateAll(double delta)
 	{
-		for (RuntimeUpdateFunc& updateFunc : mUpdates)
+		for (UpdateFunctor* pUpdateFunctor : mUpdates)
 		{
-			if (updateFunc)
+			if (pUpdateFunctor->updateFunc)
 			{
-				updateFunc(delta);
+				pUpdateFunctor->Call(this, delta);
 			}
 		}
 
 		if (mDirtyUpdateCount > 0)
 		{
-			Array<RuntimeUpdateFunc> cleanUpdates(mUpdates.Size() - mDirtyUpdateCount);
+			Array<UpdateFunctor*> cleanUpdates(mUpdates.Size() - mDirtyUpdateCount);
+			uSize index = 0;
 
-			for (RuntimeUpdateFunc pFunc : mUpdates)
+			for (UpdateFunctor* pUpdateFunctor : mUpdates)
 			{
-				if (pFunc != nullptr)
+				if (pUpdateFunctor->updateFunc)
 				{
-					cleanUpdates.PushBack(pFunc);
+					cleanUpdates[index++] = pUpdateFunctor;
+				}
+				else
+				{
+					delete pUpdateFunctor;
 				}
 			}
 
@@ -90,29 +104,68 @@ namespace Quartz
 
 	void Runtime::TickAll(uSize tick)
 	{
-		for (RuntimeTickFunc& tickFunc : mTicks)
+		for (TickFunctor* pTickFunctor : mTicks)
 		{
-			if (tickFunc)
+			if (pTickFunctor->tickFunc)
 			{
-				tickFunc(tick);
+				pTickFunctor->Call(this, tick);
 			}
 		}
 
 		if (mDirtyTickCount > 0)
 		{
-			Array<RuntimeTickFunc> cleanTicks(mTicks.Size() - mDirtyTickCount);
+			Array<TickFunctor*> cleanTicks(mTicks.Size() - mDirtyTickCount);
+			uSize index = 0;
 
-			for (RuntimeTickFunc pFunc : mTicks)
+			for (TickFunctor* pTickFunctor : mTicks)
 			{
-				if (pFunc != nullptr)
+				if (pTickFunctor->tickFunc)
 				{
-					cleanTicks.PushBack(pFunc);
+					cleanTicks[index++] = pTickFunctor;
+				}
+				else
+				{
+					delete pTickFunctor;
 				}
 			}
 
 			Swap(mTicks, cleanTicks);
 			mDirtyTickCount = 0;
 		}
+	}
+
+	// Specific type not needed to check null values
+	using TriggerType = int;
+
+	void Runtime::CleanTriggers()
+	{
+		if (mDirtyTriggerCount > 0)
+		{
+			for (Array<TriggerFunctorBase*>& triggerType : mTriggers)
+			{
+				Array<TriggerFunctorBase*> cleanTriggerType(mTriggers.Size() - mDirtyTriggerCount);
+				uSize index = 0;
+
+				for (TriggerFunctorBase* pFunctorBase : triggerType)
+				{
+					TriggerFunctor<TriggerType>* pFunctor =
+						static_cast<TriggerFunctor<TriggerType>*>(*reinterpret_cast<void**>(&pFunctorBase));
+
+					if (pFunctor->triggerFunc != nullptr)
+					{
+						cleanTriggerType[index++] = (TriggerFunctorBase*)pFunctor;
+					}
+					else
+					{
+						delete pFunctor;
+					}
+				}
+
+				Swap(triggerType, cleanTriggerType);
+			}
+		}
+
+		mDirtyTriggerCount = 0;
 	}
 
 	uInt64 GetTimeNanoseconds()
@@ -160,8 +213,6 @@ namespace Quartz
 				accumulatedUpdateTime = 0;
 				accumulatedTime = 0;
 
-				//LogInfo("UPS: %d, TPS: %d", accumulatedUpdates, accumulatedTicks);
-
 				accumulatedUpdates = 0;
 				accumulatedTicks = 0;
 			}
@@ -176,7 +227,7 @@ namespace Quartz
 			if (accumulatedUpdateTime >= targetUpdateTime)
 			{
 				accumulatedUpdates++;
-				UpdateAll(deltaTime / SECOND);
+				UpdateAll((double)(deltaTime / SECOND));
 				accumulatedUpdateTime = 0;
 			}
 
@@ -189,6 +240,8 @@ namespace Quartz
 
 				mDefferedTriggers.Clear();
 			}
+
+			CleanTriggers();
 		}
 	}
 

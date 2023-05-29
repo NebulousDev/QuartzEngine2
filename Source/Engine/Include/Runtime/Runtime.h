@@ -9,40 +9,120 @@
 
 namespace Quartz
 {
-	template<typename TriggerPayload>
-	using RuntimeTriggerFunc = void (*)(const TriggerPayload& payload);
+	class Runtime;
 
-	using RuntimeUpdateFunc = void (*)(double delta);
-	using RuntimeTickFunc	= void (*)(uSize tick);
+	template<typename Payload, typename Scope>
+	using ScopedRuntimeTriggerFunc	= void (Scope::*)(Runtime* pRuntime, const Payload& payload);
+	template<typename Payload>
+	using RuntimeTriggerFunc		= void (*)(Runtime* pRuntime, const Payload& payload);
+
+	template<typename Scope>
+	using ScopedRuntimeUpdateFunc	= void (Scope::*)(Runtime* pRuntime, double delta);
+	using RuntimeUpdateFunc			= void (*)(Runtime* pRuntime, double delta);
+
+	template<typename Scope>
+	using ScopedRuntimeTickFunc		= void (Scope::*)(Runtime* pRuntime, uSize tick);
+	using RuntimeTickFunc			= void (*)(Runtime* pRuntime, uSize tick);
+
+	using RuntimeID					= uSize;
 
 	class QUARTZ_API Runtime
 	{
-	private:
-		static uSize GetTriggerId(const String& triggerName);
+	public:
 
-		template<typename TriggerPayload>
-		class TriggerId
+		struct UpdateFunctor
 		{
-		public:
-			static uSize Value()
+			void* pInstance;
+			RuntimeUpdateFunc updateFunc;
+
+			virtual void Call(Runtime* pRuntime, double delta)
 			{
-				static uSize sTriggerId = GetTriggerId(TypeName<TriggerPayload>::Value());
-				return sTriggerId;
+				updateFunc(pRuntime, delta);
+			}
+		};
+
+		template<typename Scope>
+		struct ScopedUpdateFunctor : public UpdateFunctor
+		{
+			void Call(Runtime* pRuntime, double delta) override
+			{
+				ScopedRuntimeUpdateFunc<Scope>* pfunc = (ScopedRuntimeUpdateFunc<Scope>*)reinterpret_cast<void**>(&updateFunc);
+				(static_cast<Scope*>(pInstance)->**pfunc)(pRuntime, delta);
+			}
+		};
+
+		struct TickFunctor
+		{
+			void* pInstance;
+			RuntimeTickFunc tickFunc;
+
+			virtual void Call(Runtime* pRuntime, uSize tick)
+			{
+				tickFunc(pRuntime, tick);
+			}
+		};
+
+		template<typename Scope>
+		struct ScopedTickFunctor : public TickFunctor
+		{
+			void Call(Runtime* pRuntime, uSize tick) override
+			{
+				ScopedRuntimeTickFunc<Scope>* pfunc = (ScopedRuntimeTickFunc<Scope>*)reinterpret_cast<void**>(&tickFunc);
+				(static_cast<Scope*>(pInstance)->**pfunc)(pRuntime, tick);
+			}
+		};
+
+		struct TriggerFunctorBase { virtual void VFT_Filler() {}; };
+
+		template<typename Payload>
+		struct TriggerFunctor : public TriggerFunctorBase
+		{
+			void* pInstance;
+			RuntimeTriggerFunc<Payload> triggerFunc;
+
+			virtual void Call(Runtime* pRuntime, const Payload& payload)
+			{
+				triggerFunc(pRuntime, payload);
+			}
+		};
+
+		template<typename Payload, typename Scope>
+		struct ScopedTriggerFunctor : public TriggerFunctor<Payload>
+		{
+			void Call(Runtime* pRuntime, const Payload& payload) override
+			{
+				ScopedRuntimeTriggerFunc<Payload, Scope>* pfunc = 
+					(ScopedRuntimeTriggerFunc<Payload, Scope>*)reinterpret_cast<void**>(&triggerFunc);
+				(static_cast<Scope*>(pInstance)->**pfunc)(pRuntime, payload);
 			}
 		};
 
 	private:
-		Array<RuntimeUpdateFunc>		mUpdates;
-		Array<RuntimeTickFunc>			mTicks;
-		Array<Array<void*>>				mTriggers;
-		Array<std::function<void()>>	mDefferedTriggers;
+
+		Map<String, uSize> mTriggerIdMap;
+		uSize mTriggerId = 0;
+
+		uSize GetPayloadId(const String& triggerName);
+
+		template<typename Payload>
+		uSize GetPayloadId()
+		{
+			static uSize sTriggerId = GetPayloadId(TypeName<Payload>::Value());
+			return sTriggerId;
+		}
+
+	private:
+		Array<UpdateFunctor*>				mUpdates;
+		Array<TickFunctor*>					mTicks;
+		Array<Array<TriggerFunctorBase*>>	mTriggers;
+		Array<std::function<void()>>		mDefferedTriggers;
 
 		uSize mDirtyUpdateCount		= 0;
 		uSize mDirtyTickCount		= 0;
 		uSize mDirtyTriggerCount	= 0;
 
-		uSize mTargetUPS;
-		uSize mTargetTPS;
+		uInt64 mTargetUPS;
+		uInt64 mTargetTPS;
 
 		bool mRunning;
 
@@ -52,10 +132,12 @@ namespace Quartz
 		void UpdateAll(double delta);
 		void TickAll(uSize tick);
 
+		void CleanTriggers();
+
 		template<typename TriggerPayload>
 		void RegisterTriggerType()
 		{
-			uSize triggerId = TriggerId<TriggerPayload>::Value();
+			uSize triggerId = GetPayloadId<TriggerPayload>();
 
 			if (mTriggers.Size() >= triggerId)
 			{
@@ -63,36 +145,39 @@ namespace Quartz
 			}
 		}
 
-		template<typename TriggerPayload>
-		void TriggerNow(const TriggerPayload& payload)
+		template<typename Payload>
+		void TriggerNow(const Payload& payload)
 		{
-			uSize triggerId = TriggerId<TriggerPayload>::Value();
+			uSize triggerId = GetPayloadId<Payload>();
 
 			if (!IsValidTriggerId(triggerId))
 			{
-				RegisterTriggerType<TriggerPayload>();
+				RegisterTriggerType<Payload>();
 			}
 
-			for (void* pFunc : mTriggers[triggerId])
+			for (TriggerFunctorBase* pFunctorBase : mTriggers[triggerId])
 			{
-				RuntimeTriggerFunc<TriggerPayload> triggerFunc
-					= static_cast<RuntimeTriggerFunc<TriggerPayload>>(pFunc);
+				TriggerFunctor<Payload>* pFunctor = 
+					static_cast<TriggerFunctor<Payload>*>(*reinterpret_cast<void**>(&pFunctorBase));
 
-				if (triggerFunc)
+				if (pFunctor->triggerFunc)
 				{
-					triggerFunc(payload);
+					pFunctor->Call(this, payload);
 				}
 			}
 
 			if (mDirtyTriggerCount > 0)
 			{
-				Array<void*> cleanTriggers(mTriggers[triggerId].Size() - mDirtyTriggerCount);
+				Array<TriggerFunctorBase*> cleanTriggers(mTriggers[triggerId].Size() - mDirtyTriggerCount);
 
-				for (void* pFunc : mTriggers[triggerId])
+				for (TriggerFunctorBase* pFunctorBase : mTriggers[triggerId])
 				{
-					if (pFunc != nullptr)
+					TriggerFunctor<Payload>* pFunctor =
+						static_cast<TriggerFunctor<Payload>*>(*reinterpret_cast<void**>(&pFunctorBase));
+
+					if (pFunctor->triggerFunc)
 					{
-						cleanTriggers.PushBack(pFunc);
+						cleanTriggers.PushBack(pFunctor);
 					}
 				}
 
@@ -105,37 +190,137 @@ namespace Quartz
 		Runtime();
 
 		void RegisterOnUpdate(RuntimeUpdateFunc updateFunc);
+
+		template<typename Scope>
+		void RegisterOnUpdate(ScopedRuntimeUpdateFunc<Scope> updateFunc, Scope* pInstance)
+		{
+			ScopedUpdateFunctor<Scope>* pFunctor = new ScopedUpdateFunctor<Scope>();
+			pFunctor->pInstance = pInstance;
+			pFunctor->updateFunc = static_cast<RuntimeUpdateFunc>(*reinterpret_cast<void**>(&updateFunc));
+
+			mUpdates.PushBack(pFunctor);
+		}
+
 		void RegisterOnTick(RuntimeTickFunc tickFunc);
 
-		template<typename TriggerPayload>
-		void RegisterOnTrigger(RuntimeTriggerFunc<TriggerPayload> triggerFunc)
+		template<typename Scope>
+		void RegisterOnTick(ScopedRuntimeTickFunc<Scope> tickFunc, Scope* pInstance)
 		{
-			uSize triggerId = TriggerId<TriggerPayload>::Value();
+			ScopedTickFunctor<Scope>* pFunctor = new ScopedTickFunctor<Scope>();
+			pFunctor->pInstance = pInstance;
+			pFunctor->tickFunc = static_cast<RuntimeTickFunc>(*reinterpret_cast<void**>(&tickFunc));
 
-			if (!IsValidTriggerId(triggerId))
+			mTicks.PushBack(pFunctor);
+		}
+
+		template<typename Payload>
+		void RegisterOnTrigger(RuntimeTriggerFunc<Payload> triggerFunc)
+		{
+			uSize payloadId = GetPayloadId<Payload>();
+
+			if (!IsValidTriggerId(payloadId))
 			{
-				RegisterTriggerType<TriggerPayload>();
+				RegisterTriggerType<Payload>();
 			}
 
-			mTriggers[triggerId].PushBack(static_cast<void*>(triggerFunc));
+			TriggerFunctor<Payload> pFunctor = new TriggerFunctor<Payload>();
+			pFunctor->pInstance = pInstance;
+			pFunctor->tickFunc = triggerFunc;
+
+			mTriggers[payloadId].PushBack(pFunctor);
+		}
+
+		template<typename Payload, typename Scope>
+		void RegisterOnTrigger(ScopedRuntimeTriggerFunc<Payload, Scope> triggerFunc, Scope* pInstance)
+		{
+			uSize payloadId = GetPayloadId<Payload>();
+
+			if (!IsValidTriggerId(payloadId))
+			{
+				RegisterTriggerType<Payload>();
+			}
+
+			ScopedTriggerFunctor<Payload, Scope>* pFunctor = new ScopedTriggerFunctor<Payload, Scope>();
+			pFunctor->pInstance = pInstance;
+			pFunctor->triggerFunc = static_cast<RuntimeTriggerFunc<Payload>>(*reinterpret_cast<void**>(&triggerFunc));
+
+			mTriggers[payloadId].PushBack(pFunctor);
 		}
 
 		void UnregisterOnUpdate(RuntimeUpdateFunc updateFunc);
+
+		template<typename Scope>
+		void UnregisterOnUpdate(ScopedRuntimeUpdateFunc<Scope> updateFunc, Scope* pInstance)
+		{
+			for (UpdateFunctor* pUpdateFunctor : mUpdates)
+			{
+				if (pUpdateFunctor->updateFunc == static_cast<RuntimeUpdateFunc>(*reinterpret_cast<void**>(&updateFunc))
+					&& pUpdateFunctor->pInstance == pInstance)
+				{
+					pUpdateFunctor->updateFunc = nullptr;
+					mDirtyUpdateCount++;
+				}
+			}
+		}
+
 		void UnregisterOnTick(RuntimeTickFunc tickFunc);
 
-		template<typename TriggerPayload>
-		void UnregisterOnTrigger(RuntimeTriggerFunc<TriggerPayload> triggerFunc)
+		template<typename Scope>
+		void UnregisterOnTick(ScopedRuntimeTickFunc<Scope> tickFunc, Scope* pInstance)
 		{
-			uSize triggerId = TriggerId<TriggerPayload>::Value();
-
-			if (IsValidTriggerId(triggerId))
+			for (TickFunctor* pTickFunctor : mTicks)
 			{
-				auto& triggers = mTriggers[triggerId];
-				auto& triggerIt = triggers.Find(triggerFunc);
-				if (triggerIt != triggers.End())
+				if (pTickFunctor->tickFunc == static_cast<RuntimeTickFunc>(*reinterpret_cast<void**>(&tickFunc))
+					&& pTickFunctor->pInstance == pInstance)
 				{
-					*triggerIt = nullptr;
-					mDirtyTriggerCount++;
+					pTickFunctor->tickFunc = nullptr;
+					mDirtyTickCount++;
+				}
+			}
+		}
+
+		template<typename Payload>
+		void UnregisterOnTrigger(RuntimeTriggerFunc<Payload> triggerFunc)
+		{
+			uSize payloadId = GetPayloadId<Payload>();
+
+			if (IsValidTriggerId(payloadId))
+			{
+				auto& triggers = mTriggers[payloadId];
+				for (TriggerFunctorBase* pFunctorBase : triggers)
+				{
+					TriggerFunctor<Payload>* pFunctor =
+						static_cast<TriggerFunctor<Payload>*>(*reinterpret_cast<void**>(&pFunctorBase));
+
+					if (pFunctor->triggerFunc == static_cast<RuntimeTriggerFunc<Payload>>(*reinterpret_cast<void**>(&triggerFunc))
+						&& pFunctor->pInstance == pInstance)
+					{
+						pFunctor->triggerFunc = nullptr;
+						mDirtyTriggerCount++;
+					}
+				}
+			}
+		}
+
+		template<typename Payload, typename Scope>
+		void UnregisterOnTrigger(ScopedRuntimeTriggerFunc<Payload, Scope> triggerFunc, Scope* pInstance)
+		{
+			uSize payloadId = GetPayloadId<Payload>();
+
+			if (IsValidTriggerId(payloadId))
+			{
+				auto& triggers = mTriggers[payloadId];
+				for(TriggerFunctorBase * pFunctorBase : triggers)
+				{
+					ScopedTriggerFunctor<Payload, Scope>* pFunctor =
+						static_cast<ScopedTriggerFunctor<Payload, Scope>*>(*reinterpret_cast<void**>(&pFunctorBase));
+
+					if (pFunctor->triggerFunc == static_cast<RuntimeTriggerFunc<Payload>>(*reinterpret_cast<void**>(&triggerFunc))
+						&& pFunctor->pInstance == pInstance)
+					{
+						pFunctor->triggerFunc = nullptr;
+						mDirtyTriggerCount++;
+					}
 				}
 			}
 		}
