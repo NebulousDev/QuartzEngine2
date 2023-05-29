@@ -1,15 +1,11 @@
 cmake_minimum_required(VERSION 3.20.0)
 
-project(PlatformSystem)
+project(SandboxSystem)
 
 include(GNUInstallDirs)
 
-add_compile_definitions(QUARTZ_PLATFORM_EXPORT)
-
 add_library(${PROJECT_NAME} SHARED 
-	"Source/PlatformModule.cpp"
-	"Source/Windows/WinApi.cpp"
-	"Source/Windows/WinApiPlatform.cpp"
+	"Source/SandboxModule.cpp"
  )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
@@ -23,12 +19,16 @@ target_include_directories(${PROJECT_NAME}
 		${QUARTZAPP_INCLUDE_PATH}
 		${QUARTZLIB_INCLUDE_PATH}
 		${QUARTZENGINE_INCLUDE_PATH}
+
+		${QUARTZ_PLATFORM_INCLUDE_PATH}
+		${QUARTZ_GRAPHICS_INCLUDE_PATH}
 )
 
 target_link_libraries(${PROJECT_NAME}
 	QuartzCore
 	QuartzApp
 	QuartzEngine
+	GraphicsSystem
 )
 
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "Platform")
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "Sandbox")

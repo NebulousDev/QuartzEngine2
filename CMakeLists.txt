@@ -28,5 +28,6 @@ add_subdirectory("Source/Core")
 
 add_subdirectory("Source/Modules/Platform")
 add_subdirectory("Source/Modules/Graphics")
+add_subdirectory("Source/Modules/Sandbox")
 
 add_subdirectory("Source/Engine")
