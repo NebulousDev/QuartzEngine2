@@ -42,7 +42,7 @@ int main()
 
 	/* Create Runtime */
 
-	Runtime runtime;
+	Runtime& runtime = world.CreateSingleton<Runtime>();
 
 	/////////////////////////////////////////////////////////////////////////////////
 
@@ -51,13 +51,16 @@ int main()
 #ifdef QUARTZENGINE_WINAPI 
 	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("Platform.dll");
 	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("Graphics.dll");
+	DynamicLibrary* pSandboxLibrary  = LoadDynamicLibrary("Sandbox.dll");
 #elif defined QUARTZENGINE_LINUX
 	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("libPlatform.so");
 	DynamicLibrary* pGraphicsLibrary = LoadDynamicLibrary("libGraphics.so");
+	DynamicLibrary* pSandboxLibrary  = LoadDynamicLibrary("libSandbox.so");
 #endif
 
 	System* pPlatformSystem = SystemAdmin::CreateAndRegisterSystem(pPlatformLibrary);
 	System* pGraphicsSystem = SystemAdmin::CreateAndRegisterSystem(pGraphicsLibrary);
+	System* pSandboxSystem  = SystemAdmin::CreateAndRegisterSystem(pSandboxLibrary);
 
 	SystemAdmin::LoadAll(engineLog, world, runtime);
 	SystemAdmin::PreInitAll();

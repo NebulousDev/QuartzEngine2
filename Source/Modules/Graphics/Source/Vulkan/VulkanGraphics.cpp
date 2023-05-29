@@ -1,78 +1,10 @@
-#include "System/System.h"
+#include "Vulkan/VulkanGraphics.h"
+#include "Vulkan/VulkanState.h"
 
-#include "Quartz.h"
-#include "Entity/World.h"
-#include "Runtime/Runtime.h"
 #include "Log.h"
-
-#include <vulkan/vulkan.h>
 
 namespace Quartz
 {
-	struct VulkanPhysicalDevice
-	{
-		VkPhysicalDevice					vkPhysicalDevice;
-		VkPhysicalDeviceProperties			vkProperties;
-		VkPhysicalDeviceFeatures			vkFeatures;
-		VkPhysicalDeviceMemoryProperties	vkMemoryProperties;
-		Array<VkQueueFamilyProperties>		vkQueueFamilyProperties;
-
-		struct
-		{
-			uInt32							graphics;
-			uInt32							compute;
-			uInt32							transfer;
-			uInt32							present;
-		}
-		primaryQueueFamilyIndices;
-	};
-
-	struct VulkanDevice
-	{
-		VkDevice				vkDevice;
-		VulkanPhysicalDevice*	pPhysicalDevice;
-
-		struct
-		{
-			VkQueue				graphics;
-			VkQueue				compute;
-			VkQueue				transfer;
-			VkQueue				present;
-		}
-		queues;
-	};
-
-	struct VulkanRenderContext
-	{
-		EntityWorld* pWorld;
-		VkSurfaceKHR vkSurface;
-		VkSemaphore vkImageAvailableSemaphore;
-		VkSemaphore vkImageFinishedSemaphore;
-	};
-
-	struct VulkanData
-	{
-		VkInstance					vkInstance;
-		VkApplicationInfo			vkAppInfo;
-		Array<const char*>			enabledExtensions;
-		VulkanPhysicalDevice		primaryPhysicalDevice;
-		Array<VulkanPhysicalDevice> physicalDevices;
-		VulkanDevice				primaryDevice;
-		Array<VulkanDevice>			devices;
-		bool						ready;
-
-		VulkanRenderContext			renderContext;
-	};
-
-	struct VulkanReady
-	{
-		VulkanData* pVulkanData;
-	};
-
-	EntityWorld*	gpEntityWorld;
-	Runtime*		gpRuntime;
-	VulkanData*		gpVulkanData;
-
 	const char* VendorNameFromID(uInt32 vendorID)
 	{
 		switch (vendorID)
@@ -101,26 +33,26 @@ namespace Quartz
 		}
 	}
 
-	void PrintVulkanData(VulkanData* pData)
+	void PrintVulkanStats(VulkanGraphics* pGraphics)
 	{
 		LogRaw("Vulkan Data:\n");
 
-		LogRaw("> Instance: [%p]\n", pData->vkInstance);
+		LogRaw("> Instance: [%p]\n", pGraphics->vkInstance);
 
 		LogRaw("> Physical devices found:\n");
-		for (const VulkanPhysicalDevice& physicalDevice : pData->physicalDevices)
-		{
+		for (const VulkanPhysicalDevice& physicalDevice : pGraphics->physicalDevices)
+		{ 
 			char driverVersionString[64] = {};
 
 			// https://github.com/SaschaWillems/vulkan.gpuinfo.org/blob/1e6ca6e3c0763daabd6a101b860ab4354a07f5d3/functions.php#L294
 
 			if (physicalDevice.vkProperties.vendorID == 0x10DE) // NVIDIA
 			{
-				sprintf_s(driverVersionString, "%d.%d.%d.%d", 
+				sprintf_s(driverVersionString, "%d.%d.%d.%d",
 					(physicalDevice.vkProperties.driverVersion >> 22) & 0x3FF,
 					(physicalDevice.vkProperties.driverVersion >> 14) & 0x0FF,
-					(physicalDevice.vkProperties.driverVersion >> 6)  & 0x0FF,
-					(physicalDevice.vkProperties.driverVersion >> 0)  & 0x003);
+					(physicalDevice.vkProperties.driverVersion >> 6) & 0x0FF,
+					(physicalDevice.vkProperties.driverVersion >> 0) & 0x003);
 			}
 			else if (physicalDevice.vkProperties.vendorID == 0x1002) // AMD
 			{
@@ -143,7 +75,7 @@ namespace Quartz
 
 			LogRaw("  [%p]%s:\n   Name: %s\n   Vendor: %s (%X)\n   Type: %s\n   Driver: %s\n   VRAM: %lu MB\n",
 				physicalDevice.vkPhysicalDevice,
-				physicalDevice.vkPhysicalDevice == pData->primaryPhysicalDevice.vkPhysicalDevice ? "(Primary)" : "",
+				physicalDevice.vkPhysicalDevice == pGraphics->primaryPhysicalDevice.vkPhysicalDevice ? "(Primary)" : "",
 				physicalDevice.vkProperties.deviceName,
 				VendorNameFromID(physicalDevice.vkProperties.vendorID),
 				physicalDevice.vkProperties.vendorID,
@@ -154,7 +86,7 @@ namespace Quartz
 		}
 
 		LogRaw("> Extensions loaded:\n");
-		for (const char* ext : pData->enabledExtensions)
+		for (const char* ext : pGraphics->enabledExtensions)
 		{
 			LogRaw("  %s\n", ext);
 		}
@@ -186,7 +118,7 @@ namespace Quartz
 		return VK_FALSE;
 	}
 
-	bool CreateVulkanInstance(VulkanData* pData)
+	bool CreateVulkanInstance(VulkanGraphics* pGraphics)
 	{
 		VkInstance vkInstance;
 
@@ -203,16 +135,16 @@ namespace Quartz
 		};
 
 		VkDebugUtilsMessengerCreateInfoEXT vkDebugMessengerInfo = {};
-		vkDebugMessengerInfo.sType				= VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		vkDebugMessengerInfo.messageSeverity	= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
-												| VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
-												| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		vkDebugMessengerInfo.messageType		= VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
-												| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
-												| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-		vkDebugMessengerInfo.pfnUserCallback	= DebugCallback;
-		vkDebugMessengerInfo.pUserData			= NULL;
-		vkDebugMessengerInfo.pNext				= NULL;
+		vkDebugMessengerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		vkDebugMessengerInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
+			| VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+			| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		vkDebugMessengerInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+			| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+			| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		vkDebugMessengerInfo.pfnUserCallback = DebugCallback;
+		vkDebugMessengerInfo.pUserData	= NULL;
+		vkDebugMessengerInfo.pNext		= NULL;
 
 		VkInstanceCreateInfo vkInstanceInfo		= {};
 		vkInstanceInfo.pApplicationInfo			= &vkAppInfo;
@@ -225,9 +157,9 @@ namespace Quartz
 
 		if (result == VK_SUCCESS)
 		{
-			pData->vkInstance			= vkInstance;
-			pData->vkAppInfo			= vkAppInfo;
-			pData->enabledExtensions	= extentions;
+			pGraphics->vkInstance			= vkInstance;
+			pGraphics->vkAppInfo			= vkAppInfo;
+			pGraphics->enabledExtensions	= extentions;
 
 			return true;
 		}
@@ -238,10 +170,10 @@ namespace Quartz
 		}
 	}
 
-	bool QueryVulkanPhysicalDevices(VulkanData* pData)
+	bool QueryVulkanPhysicalDevices(VulkanGraphics* pGraphics)
 	{
 		uSize physicalDeviceCount;
-		if (vkEnumeratePhysicalDevices(pData->vkInstance, &physicalDeviceCount, VK_NULL_HANDLE) != VK_SUCCESS)
+		if (vkEnumeratePhysicalDevices(pGraphics->vkInstance, &physicalDeviceCount, VK_NULL_HANDLE) != VK_SUCCESS)
 		{
 			LogFatal("Failed to enumerate Vulkan physical devices: vkEnumeratePhysicalDevices failed. See Vulkan logs for details.");
 			return false;
@@ -250,7 +182,7 @@ namespace Quartz
 		if (physicalDeviceCount > 0)
 		{
 			Array<VkPhysicalDevice> vkPhysicalDeviceList(physicalDeviceCount);
-			vkEnumeratePhysicalDevices(pData->vkInstance, &physicalDeviceCount, vkPhysicalDeviceList.Data());
+			vkEnumeratePhysicalDevices(pGraphics->vkInstance, &physicalDeviceCount, vkPhysicalDeviceList.Data());
 
 			for (VkPhysicalDevice vkPhysicalDevice : vkPhysicalDeviceList)
 			{
@@ -280,19 +212,19 @@ namespace Quartz
 
 						if (vkProperties.queueCount > 0)
 						{
-							if ((graphicsIndex == -1) 
+							if ((graphicsIndex == -1)
 								&& (vkProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT))
 							{
 								graphicsIndex = i;
 							}
 
-							if ((computeIndex == -1 || computeIndex == graphicsIndex) 
+							if ((computeIndex == -1 || computeIndex == graphicsIndex)
 								&& (vkProperties.queueFlags & VK_QUEUE_COMPUTE_BIT))
 							{
 								computeIndex = i;
 							}
 
-							if ((transferIndex == -1 || transferIndex == graphicsIndex || transferIndex == computeIndex) 
+							if ((transferIndex == -1 || transferIndex == graphicsIndex || transferIndex == computeIndex)
 								&& (vkProperties.queueFlags & VK_QUEUE_TRANSFER_BIT))
 							{
 								transferIndex = i;
@@ -304,12 +236,12 @@ namespace Quartz
 					presentIndex = graphicsIndex;
 
 					vulkanPhysicalDevice.primaryQueueFamilyIndices.graphics = graphicsIndex;
-					vulkanPhysicalDevice.primaryQueueFamilyIndices.compute  = computeIndex;
+					vulkanPhysicalDevice.primaryQueueFamilyIndices.compute = computeIndex;
 					vulkanPhysicalDevice.primaryQueueFamilyIndices.transfer = transferIndex;
-					vulkanPhysicalDevice.primaryQueueFamilyIndices.present  = presentIndex;
+					vulkanPhysicalDevice.primaryQueueFamilyIndices.present = presentIndex;
 				}
 
-				pData->physicalDevices.PushBack(vulkanPhysicalDevice);
+				pGraphics->physicalDevices.PushBack(vulkanPhysicalDevice);
 			}
 
 			return true;
@@ -321,7 +253,7 @@ namespace Quartz
 		}
 	}
 
-	bool CreateVulkanDevices(VulkanData* pData)
+	bool CreateVulkanDevices(VulkanGraphics* pGraphics)
 	{
 		float queuePriorities[1] = { 1.0f };
 
@@ -330,7 +262,7 @@ namespace Quartz
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
 
-		for (VulkanPhysicalDevice& physicalDevice : pData->physicalDevices)
+		for (VulkanPhysicalDevice& physicalDevice : pGraphics->physicalDevices)
 		{
 			Array<VkDeviceQueueCreateInfo> queueCreateInfos;
 
@@ -345,7 +277,7 @@ namespace Quartz
 				queueCreateInfos.PushBack(queueInfo);
 			}
 
-			if (physicalDevice.primaryQueueFamilyIndices.compute != -1 
+			if (physicalDevice.primaryQueueFamilyIndices.compute != -1
 				&& physicalDevice.primaryQueueFamilyIndices.compute != physicalDevice.primaryQueueFamilyIndices.graphics)
 			{
 				VkDeviceQueueCreateInfo queueInfo = {};
@@ -362,10 +294,10 @@ namespace Quartz
 				&& physicalDevice.primaryQueueFamilyIndices.transfer != physicalDevice.primaryQueueFamilyIndices.compute)
 			{
 				VkDeviceQueueCreateInfo queueInfo = {};
-				queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueInfo.queueFamilyIndex = physicalDevice.primaryQueueFamilyIndices.transfer;
-				queueInfo.queueCount = 1;
-				queueInfo.pQueuePriorities = queuePriorities;
+				queueInfo.sType				= VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+				queueInfo.queueFamilyIndex	= physicalDevice.primaryQueueFamilyIndices.transfer;
+				queueInfo.queueCount		= 1;
+				queueInfo.pQueuePriorities	= queuePriorities;
 
 				queueCreateInfos.PushBack(queueInfo);
 			}
@@ -395,7 +327,7 @@ namespace Quartz
 			deviceInfo.pEnabledFeatures			= &physicalDevice.vkFeatures;
 
 			VulkanDevice vulkanDevice = {};
-			
+
 			if (vkCreateDevice(physicalDevice.vkPhysicalDevice, &deviceInfo, nullptr, &vulkanDevice.vkDevice) != VK_SUCCESS)
 			{
 				LogFatal("Failed to create logical vulkan device: vkCreateDevice failed. See Vulkan logs for details.");
@@ -409,20 +341,20 @@ namespace Quartz
 			vkGetDeviceQueue(vulkanDevice.vkDevice, physicalDevice.primaryQueueFamilyIndices.transfer, 0, &vulkanDevice.queues.transfer);
 			vkGetDeviceQueue(vulkanDevice.vkDevice, physicalDevice.primaryQueueFamilyIndices.present, 0, &vulkanDevice.queues.present);
 
-			gpVulkanData->devices.PushBack(vulkanDevice);
+			pGraphics->devices.PushBack(vulkanDevice);
 		}
 
 		return true;
 	}
 
-	bool ChoosePrimaryDevices(VulkanData* pData)
+	bool ChoosePrimaryDevices(VulkanGraphics* pGraphics)
 	{
 		uSize bestDeviceIndex = -1;
 		int32 bestScore = -1;
 
-		for (uSize i = 0; i < pData->physicalDevices.Size(); i++)
+		for (uSize i = 0; i < pGraphics->physicalDevices.Size(); i++)
 		{
-			const VulkanPhysicalDevice& physicalDevice = pData->physicalDevices[i];
+			const VulkanPhysicalDevice& physicalDevice = pGraphics->physicalDevices[i];
 
 			int32 score = 0;
 
@@ -450,8 +382,6 @@ namespace Quartz
 				bestScore = score;
 				bestDeviceIndex = i;
 			}
-
-			bestDeviceIndex++;
 		}
 
 		if (bestDeviceIndex == -1)
@@ -460,86 +390,82 @@ namespace Quartz
 			return false;
 		}
 
-		pData->primaryPhysicalDevice = pData->physicalDevices[bestDeviceIndex];
-		pData->primaryDevice = pData->devices[bestDeviceIndex];
+		pGraphics->primaryPhysicalDevice = pGraphics->physicalDevices[bestDeviceIndex];
+		pGraphics->primaryDevice = pGraphics->devices[bestDeviceIndex];
 
 		return true;
 	}
 
-	bool SetupVulkan()
+	bool TestVulkan(uInt32 version)
 	{
-		gpVulkanData = &gpEntityWorld->CreateSingleton<VulkanData>();
+		VkInstance vkInstance;
+
+		VkApplicationInfo vkAppInfo = {};
+		vkAppInfo.apiVersion		= version;
+		vkAppInfo.pEngineName		= "Quartz Vulkan Test";
+		vkAppInfo.pApplicationName	= "Quartz Vulkan Test";
+
+		Array<const char*> extentions =
+		{
+			VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+		};
+
+		VkDebugUtilsMessengerCreateInfoEXT vkDebugMessengerInfo = {};
+		vkDebugMessengerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		vkDebugMessengerInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+			| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		vkDebugMessengerInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT;
+		vkDebugMessengerInfo.pfnUserCallback = DebugCallback;
+		vkDebugMessengerInfo.pUserData	= NULL;
+		vkDebugMessengerInfo.pNext		= NULL;
+
+		VkInstanceCreateInfo vkInstanceInfo		= {};
+		vkInstanceInfo.pApplicationInfo			= &vkAppInfo;
+		vkInstanceInfo.enabledExtensionCount	= extentions.Size();
+		vkInstanceInfo.ppEnabledExtensionNames	= extentions.Data();
+		vkInstanceInfo.enabledLayerCount		= 0;
+		vkInstanceInfo.pNext					= (VkDebugUtilsMessengerCreateInfoEXT*)&vkDebugMessengerInfo;
+
+		VkResult result = vkCreateInstance(&vkInstanceInfo, nullptr, &vkInstance);
+
+		vkDestroyInstance(vkInstance, nullptr);
+
+		return result == VK_SUCCESS;
+	}
+
+	bool CreateVulkan(VulkanGraphics* pGraphics)
+	{
+		if (pGraphics->ready)
+			return false;
 
 		bool success =
-			CreateVulkanInstance(gpVulkanData) &&
-			QueryVulkanPhysicalDevices(gpVulkanData) &&
-			CreateVulkanDevices(gpVulkanData) &&
-			ChoosePrimaryDevices(gpVulkanData);
+			CreateVulkanInstance(pGraphics) &&
+			QueryVulkanPhysicalDevices(pGraphics) &&
+			CreateVulkanDevices(pGraphics) &&
+			ChoosePrimaryDevices(pGraphics) &&
+			CreateVulkanState(pGraphics, pGraphics->pState);
 
-		PrintVulkanData(gpVulkanData);
+		pGraphics->pResourceManager = new VulkanResourceManager();
+
+		PrintVulkanStats(pGraphics);
+
+		pGraphics->ready = true;
 
 		return success;
 	}
 
-	void Render(double delta)
+	void DestroyVulkan(VulkanGraphics* pGraphics)
 	{
+		pGraphics->ready = false;
 
-	}
+		delete pGraphics->pResourceManager;
 
-	void CleanupVulkan()
-	{
-		for (VulkanDevice& device : gpVulkanData->devices)
+		for (VulkanDevice& device : pGraphics->devices)
 		{
 			vkDeviceWaitIdle(device.vkDevice);
 			vkDestroyDevice(device.vkDevice, nullptr);
 		}
 
-		vkDestroyInstance(gpVulkanData->vkInstance, nullptr);
-	}
-}
-
-extern "C"
-{
-	using namespace Quartz;
-
-	bool QUARTZ_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
-	{
-		systemQuery.name = "GraphicsModule";
-		systemQuery.version = "1.0.0";
-
-		return true;
-	}
-
-	bool QUARTZ_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
-	{
-		Log::SetGlobalLog(engineLog);
-		gpEntityWorld = &entityWorld;
-		gpRuntime = &runtime;
-		return true;
-	}
-
-	void QUARTZ_API SystemUnload()
-	{
-		CleanupVulkan();
-	}
-
-	void QUARTZ_API SystemPreInit()
-	{
-		if (SetupVulkan())
-		{
-			VulkanReady vulkanReady = { gpVulkanData };
-			gpRuntime->Trigger<VulkanReady>(vulkanReady, true);
-		}
-	}
-
-	void QUARTZ_API SystemInit()
-	{
-		gpRuntime->RegisterOnUpdate(Render);
-		gpVulkanData->ready = true;
-	}
-
-	void QUARTZ_API SystemPostInit()
-	{
-		
+		vkDestroyInstance(pGraphics->vkInstance, nullptr);
 	}
 }

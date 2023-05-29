@@ -4,9 +4,19 @@ project(GraphicsSystem)
 
 include(GNUInstallDirs)
 
+add_compile_definitions(QUARTZ_GRAPHICS_EXPORT)
+
 add_library(${PROJECT_NAME} SHARED 
-	"Source/Graphics.cpp"
- "Include/Graphics.h")
+	"Source/GraphicsModule.cpp"
+	"Source/Vulkan/VulkanRenderScene.cpp"
+    "Source/Vulkan/VulkanGraphics.cpp"
+	"Source/Vulkan/VulkanState.cpp"
+	"Source/OpenGL/GLGraphics.cpp"
+    "Source/VulcanRenderer.cpp"
+	"Source/Vulkan/VulkanSwapchian.cpp"
+	"Source/Vulkan/VulkanImage.cpp"
+	"Source/Vulkan/VulkanResourceManager.cpp"
+ "Source/Vulkan/VulkanSurface.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
