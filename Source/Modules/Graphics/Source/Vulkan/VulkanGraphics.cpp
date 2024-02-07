@@ -123,7 +123,7 @@ namespace Quartz
 		VkInstance vkInstance;
 
 		VkApplicationInfo vkAppInfo = {};
-		vkAppInfo.apiVersion		= VK_VERSION_1_2;
+		vkAppInfo.apiVersion		= VK_API_VERSION_1_2;
 		vkAppInfo.pEngineName		= "Quartz Engine 2";
 		vkAppInfo.pApplicationName	= "Quartz Sandbox";
 
@@ -132,6 +132,17 @@ namespace Quartz
 			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 			VK_KHR_SURFACE_EXTENSION_NAME,
 			"VK_KHR_win32_surface"
+		};
+
+		uInt32 layerCount;
+		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+		Array<VkLayerProperties> availableLayers(layerCount);
+		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.Data());
+
+		Array<const char*> enabledLayers =
+		{
+			"VK_LAYER_KHRONOS_validation"
 		};
 
 		VkDebugUtilsMessengerCreateInfoEXT vkDebugMessengerInfo = {};
@@ -147,11 +158,13 @@ namespace Quartz
 		vkDebugMessengerInfo.pNext		= NULL;
 
 		VkInstanceCreateInfo vkInstanceInfo		= {};
+		vkInstanceInfo.sType					= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		vkInstanceInfo.pApplicationInfo			= &vkAppInfo;
 		vkInstanceInfo.enabledExtensionCount	= extentions.Size();
 		vkInstanceInfo.ppEnabledExtensionNames	= extentions.Data();
-		vkInstanceInfo.enabledLayerCount		= 0;
-		vkInstanceInfo.pNext					= (VkDebugUtilsMessengerCreateInfoEXT*)&vkDebugMessengerInfo;
+		vkInstanceInfo.enabledLayerCount		= enabledLayers.Size();
+		vkInstanceInfo.ppEnabledLayerNames		= enabledLayers.Data();
+		vkInstanceInfo.pNext					= &vkDebugMessengerInfo;
 
 		VkResult result = vkCreateInstance(&vkInstanceInfo, nullptr, &vkInstance);
 
@@ -259,7 +272,8 @@ namespace Quartz
 
 		Array<const char*> deviceExtensions =
 		{
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME
 		};
 
 		for (VulkanPhysicalDevice& physicalDevice : pGraphics->physicalDevices)
@@ -316,6 +330,10 @@ namespace Quartz
 				queueCreateInfos.PushBack(queueInfo);
 			}
 
+			VkPhysicalDeviceVulkan12Features vkVulkan12Features = {};
+			vkVulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+			vkVulkan12Features.timelineSemaphore = true;
+
 			VkDeviceCreateInfo deviceInfo		= {};
 			deviceInfo.sType					= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 			deviceInfo.queueCreateInfoCount		= queueCreateInfos.Size();
@@ -325,6 +343,7 @@ namespace Quartz
 			deviceInfo.enabledExtensionCount	= deviceExtensions.Size();
 			deviceInfo.ppEnabledExtensionNames	= deviceExtensions.Data();
 			deviceInfo.pEnabledFeatures			= &physicalDevice.vkFeatures;
+			deviceInfo.pNext					= &vkVulkan12Features;
 
 			VulkanDevice vulkanDevice = {};
 
@@ -358,11 +377,11 @@ namespace Quartz
 
 			int32 score = 0;
 
-			uInt32 versionMajor = VK_VERSION_MAJOR(physicalDevice.vkProperties.apiVersion);
-			uInt32 versionMinor = VK_VERSION_MINOR(physicalDevice.vkProperties.apiVersion);
+			uInt32 versionMajor = VK_API_VERSION_MAJOR(physicalDevice.vkProperties.apiVersion);
+			uInt32 versionMinor = VK_API_VERSION_MINOR(physicalDevice.vkProperties.apiVersion);
 
 			if (versionMajor < 1) continue;
-			if (versionMinor < 2) continue;
+			if (versionMinor < 3) continue;
 
 			if (physicalDevice.primaryQueueFamilyIndices.graphics == -1) continue;
 
@@ -396,7 +415,7 @@ namespace Quartz
 		return true;
 	}
 
-	bool TestVulkan(uInt32 version)
+	bool VulkanGraphics::TestVersion(uInt32 version)
 	{
 		VkInstance vkInstance;
 
@@ -428,44 +447,106 @@ namespace Quartz
 
 		VkResult result = vkCreateInstance(&vkInstanceInfo, nullptr, &vkInstance);
 
+		if (vkGetInstanceProcAddr(vkInstance, "vkEnumerateInstanceVersion") != nullptr)
+		{
+			uInt32 apiVersion;
+			if (vkEnumerateInstanceVersion(&apiVersion))
+			{
+				uInt32 major = VK_API_VERSION_MAJOR(apiVersion);
+				uInt32 minor = VK_API_VERSION_MINOR(apiVersion);
+				uInt32 patch = VK_API_VERSION_PATCH(apiVersion);
+
+				LogInfo("vkEnumerateInstanceVersion returned version: %d.%d.%d", major, minor, patch);
+
+				if (apiVersion != version)
+				{
+					uInt32 reqMajor = VK_API_VERSION_MAJOR(version);
+					uInt32 reqMinor = VK_API_VERSION_MINOR(version);
+					uInt32 reqpatch = VK_API_VERSION_PATCH(version);
+
+					LogError("VulkanTest failed. Requested version %d.%d.%d,\
+ but vkEnumerateInstanceVersion returned %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
+
+					return false;
+				}
+			}
+			else
+			{
+				LogError("VulkanTest failed. vkEnumerateInstanceVersion returned false.");
+				return false;
+			}
+		}
+		else
+		{
+			LogError("VulkanTest failed. vkGetInstanceProcAddr failed to retrieve vkEnumerateInstanceVersion. Vulkan version is too low.");
+			return false;
+		}
+
 		vkDestroyInstance(vkInstance, nullptr);
 
 		return result == VK_SUCCESS;
 	}
 
-	bool CreateVulkan(VulkanGraphics* pGraphics)
+	bool VulkanGraphics::Create()
 	{
-		if (pGraphics->ready)
+		if (ready)
 			return false;
 
 		bool success =
-			CreateVulkanInstance(pGraphics) &&
-			QueryVulkanPhysicalDevices(pGraphics) &&
-			CreateVulkanDevices(pGraphics) &&
-			ChoosePrimaryDevices(pGraphics) &&
-			CreateVulkanState(pGraphics, pGraphics->pState);
+			CreateVulkanInstance(this) &&
+			QueryVulkanPhysicalDevices(this) &&
+			CreateVulkanDevices(this) &&
+			ChoosePrimaryDevices(this) &&
+			CreateVulkanState(this, pState);
 
-		pGraphics->pResourceManager = new VulkanResourceManager();
+		pResourceManager = new VulkanResourceManager();
 
-		PrintVulkanStats(pGraphics);
+		PrintVulkanStats(this);
 
-		pGraphics->ready = true;
+		ready = true;
 
 		return success;
 	}
 
-	void DestroyVulkan(VulkanGraphics* pGraphics)
+	void VulkanGraphics::Destroy()
 	{
-		pGraphics->ready = false;
+		ready = false;
 
-		delete pGraphics->pResourceManager;
+		delete pResourceManager;
 
-		for (VulkanDevice& device : pGraphics->devices)
+		for (VulkanDevice& device : devices)
 		{
 			vkDeviceWaitIdle(device.vkDevice);
 			vkDestroyDevice(device.vkDevice, nullptr);
 		}
 
-		vkDestroyInstance(pGraphics->vkInstance, nullptr);
+		vkDestroyInstance(vkInstance, nullptr);
+	}
+
+	void VulkanGraphics::Submit(VulkanSubmission submission, VkQueue deviceQueue, VkFence signalFence)
+	{
+		constexpr const uSize commandBuffersSize = 16;
+
+		VkCommandBuffer vkCommandBuffers[commandBuffersSize] = {};
+
+		for (uSize i = 0; i < submission.commandBuffers.Size(); i++)
+		{
+			vkCommandBuffers[i] = submission.commandBuffers[i]->vkCommandBuffer;
+		}
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.waitSemaphoreCount	= submission.waitSemaphores.Size();
+		submitInfo.pWaitSemaphores		= submission.waitSemaphores.Data();
+		submitInfo.signalSemaphoreCount = submission.signalSemaphores.Size();
+		submitInfo.pSignalSemaphores	= submission.signalSemaphores.Data();
+		submitInfo.pWaitDstStageMask	= submission.waitStages.Data();
+		submitInfo.commandBufferCount	= submission.commandBuffers.Size();
+		submitInfo.pCommandBuffers		= vkCommandBuffers;
+
+		if (vkQueueSubmit(deviceQueue, 1, &submitInfo, signalFence) != VK_SUCCESS)
+		{
+			LogError("Failed to submit queue: vkQueueSubmit failed!");
+		}
 	}
 }

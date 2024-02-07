@@ -76,7 +76,7 @@ namespace Quartz
 			Window*			pWindow			= platform.pApplication->CreateWindow(windowInfo, surfaceInfo);
 
 			// TEMP
-			gfx.pSurface = gfx.pResourceManager->CreateSurface(gfx.vkInstance, &gfx.primaryDevice, (VulkanApiSurface*)pWindow->GetSurface());
+			gfx.pSurface = gfx.pResourceManager->CreateSurface(gfx.vkInstance, gfx.primaryDevice, *(VulkanApiSurface*)pWindow->GetSurface());
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
 			pRenderer->Register(gpRuntime);

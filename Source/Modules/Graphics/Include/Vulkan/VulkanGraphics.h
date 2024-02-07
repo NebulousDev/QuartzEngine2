@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GfxDLL.h"
 #include "Graphics.h"
 #include "VulkanDevice.h"
 #include "VulkanPhysicalDevice.h"
@@ -9,7 +10,15 @@
 
 namespace Quartz
 {
-	struct VulkanGraphics : public GraphicsInstance
+	struct VulkanSubmission
+	{
+		Array<VulkanCommandBuffer*> commandBuffers;
+		Array<VkSemaphore>			waitSemaphores;
+		Array<VkPipelineStageFlags>	waitStages;
+		Array<VkSemaphore>			signalSemaphores;
+	};
+
+	struct QUARTZ_GRAPHICS_API VulkanGraphics : public GraphicsInstance
 	{
 		VkInstance					vkInstance;
 		VkApplicationInfo			vkAppInfo;
@@ -23,12 +32,14 @@ namespace Quartz
 
 		//TEMP
 		VulkanSurface* pSurface;
+
+		bool TestVersion(uInt32 version);
+
+		bool Create();
+		void Destroy();
+
+		void Submit(VulkanSubmission submission, VkQueue deviceQueue, VkFence signalFence);
 	};
 
-	bool TestVulkan(uInt32 version);
-
-	bool CreateVulkan(VulkanGraphics* pGraphics);
-	void DestroyVulkan(VulkanGraphics* pGraphics);
-
-
+	
 }

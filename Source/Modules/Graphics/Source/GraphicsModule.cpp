@@ -26,7 +26,7 @@ namespace Quartz
 
 	bool CheckVulkanAvailable()
 	{
-		return TestVulkan(VK_VERSION_1_2);
+		return gpVulkanGraphics->TestVersion(VK_API_VERSION_1_2);
 	}
 
 	bool CheckD3D12Available()
@@ -43,18 +43,13 @@ namespace Quartz
 	{
 		gpVulkanGraphics = &gpEntityWorld->CreateSingleton<VulkanGraphics>();
 
-		if (CreateVulkan(gpVulkanGraphics))
+		if (gpVulkanGraphics->ready)
 		{
-			if (gpVulkanGraphics->ready)
-			{
-				return true;
-			}
+			return true;
+		}
 
-			if (!CreateVulkan(gpVulkanGraphics))
-			{
-				return false;
-			}
-
+		if (gpVulkanGraphics->Create())
+		{
 			gpGraphics->pInstance = (VulkanGraphics*)gpVulkanGraphics->vkInstance;
 			gpGraphics->activeApi = GRAPHICS_API_VULKAN;
 		}
@@ -64,7 +59,7 @@ namespace Quartz
 
 	bool StopVulkan()
 	{
-		DestroyVulkan(gpVulkanGraphics);
+		gpVulkanGraphics->Destroy();
 		gpEntityWorld->DestroySingleton<VulkanGraphics>();
 		return true;
 	}
@@ -92,7 +87,7 @@ extern "C"
 
 	void QUARTZ_API SystemUnload()
 	{
-		DestroyVulkan(gpVulkanGraphics);
+		gpVulkanGraphics->Destroy();
 	}
 
 	void QUARTZ_API SystemPreInit()

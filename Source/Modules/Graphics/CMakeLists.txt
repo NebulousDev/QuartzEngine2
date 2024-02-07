@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.25.0)
 
 project(GraphicsSystem)
 
@@ -12,11 +12,12 @@ add_library(${PROJECT_NAME} SHARED
     "Source/Vulkan/VulkanGraphics.cpp"
 	"Source/Vulkan/VulkanState.cpp"
 	"Source/OpenGL/GLGraphics.cpp"
-    "Source/VulcanRenderer.cpp"
-	"Source/Vulkan/VulkanSwapchian.cpp"
-	"Source/Vulkan/VulkanImage.cpp"
+    "Source/VulkanRenderer.cpp"
+	"Source/Vulkan/VulkanSwapchianTimer.cpp"
 	"Source/Vulkan/VulkanResourceManager.cpp"
- "Source/Vulkan/VulkanSurface.cpp")
+	"Source/Vulkan/SPIRV/SPIRV.cpp"
+	"Source/Vulkan/VulkanBuffer.cpp"
+	"Source/Vulkan/VulkanCommandRecorder.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
