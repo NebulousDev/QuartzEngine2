@@ -410,7 +410,7 @@ namespace Quartz
 		}
 
 		pGraphics->primaryPhysicalDevice = pGraphics->physicalDevices[bestDeviceIndex];
-		pGraphics->primaryDevice = pGraphics->devices[bestDeviceIndex];
+		pGraphics->pPrimaryDevice = &pGraphics->devices[bestDeviceIndex];
 
 		return true;
 	}

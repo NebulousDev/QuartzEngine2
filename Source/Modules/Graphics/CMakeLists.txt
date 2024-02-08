@@ -16,7 +16,7 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Vulkan/VulkanSwapchianTimer.cpp"
 	"Source/Vulkan/VulkanResourceManager.cpp"
 	"Source/Vulkan/SPIRV/SPIRV.cpp"
-	"Source/Vulkan/VulkanBuffer.cpp"
+	"Source/Vulkan/VulkanBufferWriter.cpp"
 	"Source/Vulkan/VulkanCommandRecorder.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

@@ -7,6 +7,8 @@
 
 namespace Quartz
 {
+	struct VulkanDevice;
+
 	enum VulkanAttachmentType
 	{
 		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,
@@ -39,8 +41,10 @@ namespace Quartz
 
 	struct VulkanRenderpass
 	{
-		String					name;
 		VkRenderPass			vkRenderpass;
-		VkRenderPassCreateInfo	vkInfo;			// @TODO rework. I dont remember why I did this
+		VulkanDevice*			pDevice;
+		Array<VulkanAttachment>	attachments;
+		Array<VulkanSubpass>	subpasses;
+		VkRenderPassCreateInfo	vkInfo;
 	};
 }

@@ -4,10 +4,13 @@
 
 namespace Quartz
 {
+	struct VulkanDevice;
+
 	struct VulkanShader
 	{
-		String					name;
 		VkShaderModule			vkShader;
+		VulkanDevice*			pDevice;
+		String					name;
 		VkShaderStageFlagBits	vkStage;
 		String					entryPoint;
 		Array<SpirvUniform>		uniforms;

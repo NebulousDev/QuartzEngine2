@@ -90,10 +90,10 @@ namespace Quartz
 		return result;
 	}
 
-	VulkanSurface* VulkanResourceManager::CreateSurface(VkInstance vkInstance, const VulkanDevice& device, const VulkanApiSurface& surface)
+	VulkanSurface* VulkanResourceManager::CreateSurface(VulkanDevice* pDevice, VkInstance vkInstance, const VulkanApiSurface& surface)
 	{
 		VkSurfaceKHR vkSurface = surface.GetVkSurface();
-		VkPhysicalDevice vkPhysicalDevice = device.pPhysicalDevice->vkPhysicalDevice;
+		VkPhysicalDevice vkPhysicalDevice = pDevice->pPhysicalDevice->vkPhysicalDevice;
 
 		Array<VkSurfaceFormatKHR>	supportedFormats;
 		VkSurfaceCapabilitiesKHR	surfaceCapibilites;
@@ -176,9 +176,9 @@ namespace Quartz
 		return true;
 	}
 
-	uInt32 FindCompatableMemoryType(VulkanDevice& device, flags32 memoryTypeBits, VkMemoryPropertyFlags memoryProperties)
+	uInt32 FindCompatableMemoryType(VulkanDevice* pDevice, flags32 memoryTypeBits, VkMemoryPropertyFlags memoryProperties)
 	{
-		VkPhysicalDeviceMemoryProperties deviceMemoryProperties = device.pPhysicalDevice->vkMemoryProperties;
+		VkPhysicalDeviceMemoryProperties deviceMemoryProperties = pDevice->pPhysicalDevice->vkMemoryProperties;
 
 		for (uInt32 i = 0; i < deviceMemoryProperties.memoryTypeCount; i++)
 		{
@@ -191,7 +191,7 @@ namespace Quartz
 		return (uInt32)-1;
 	}
 
-	VulkanImage* VulkanResourceManager::CreateImage(VulkanDevice& device, const VulkanImageInfo& info)
+	VulkanImage* VulkanResourceManager::CreateImage(VulkanDevice* pDevice, const VulkanImageInfo& info)
 	{
 		VkImage			vkImage;
 		VkDeviceMemory	vkDeviceMemory;
@@ -211,16 +211,16 @@ namespace Quartz
 		vkImageInfo.sharingMode		= VK_SHARING_MODE_EXCLUSIVE;
 		vkImageInfo.samples			= VK_SAMPLE_COUNT_1_BIT;
 
-		if (vkCreateImage(device.vkDevice, &vkImageInfo, nullptr, &vkImage) != VK_SUCCESS)
+		if (vkCreateImage(pDevice->vkDevice, &vkImageInfo, nullptr, &vkImage) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan image: vkCreateImage failed!");
 			return nullptr;
 		}
 
 		VkMemoryRequirements vkMemRequirements;
-		vkGetImageMemoryRequirements(device.vkDevice, vkImage, &vkMemRequirements);
+		vkGetImageMemoryRequirements(pDevice->vkDevice, vkImage, &vkMemRequirements);
 
-		uInt32 memoryType = FindCompatableMemoryType(device, 
+		uInt32 memoryType = FindCompatableMemoryType(pDevice,
 			vkMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);	// @TODO: maybe not always local
 
 		VkMemoryAllocateInfo allocateInfo = {};
@@ -228,18 +228,18 @@ namespace Quartz
 		allocateInfo.allocationSize		= vkMemRequirements.size;
 		allocateInfo.memoryTypeIndex	= memoryType;
 
-		if (vkAllocateMemory(device.vkDevice, &allocateInfo, nullptr, &vkDeviceMemory) != VK_SUCCESS)
+		if (vkAllocateMemory(pDevice->vkDevice, &allocateInfo, nullptr, &vkDeviceMemory) != VK_SUCCESS)
 		{
 			LogFatal("Failed to allocate device memory: vkAllocateMemory failed!");
 			return nullptr;
 		}
 
-		if (vkBindImageMemory(device.vkDevice, vkImage, vkDeviceMemory, 0) != VK_SUCCESS)
+		if (vkBindImageMemory(pDevice->vkDevice, vkImage, vkDeviceMemory, 0) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan buffer object: vkBindBufferMemory failed!");
 
-			vkDestroyImage(device.vkDevice, vkImage, nullptr);
-			vkFreeMemory(device.vkDevice, vkDeviceMemory, VK_NULL_HANDLE);
+			vkDestroyImage(pDevice->vkDevice, vkImage, nullptr);
+			vkFreeMemory(pDevice->vkDevice, vkDeviceMemory, VK_NULL_HANDLE);
 
 			return nullptr;
 		}
@@ -298,11 +298,11 @@ namespace Quartz
 		return result;
 	}
 
-	VulkanImageView* VulkanResourceManager::CreateImageView(const VulkanDevice& device, const VulkanImageViewInfo& info)
+	VulkanImageView* VulkanResourceManager::CreateImageView(VulkanDevice* pDevice, const VulkanImageViewInfo& info)
 	{
 		VkImageView vkImageView;
 
-		VkResult result = CreateVkImageView(device.vkDevice, &vkImageView, info.pImage->vkImage,
+		VkResult result = CreateVkImageView(pDevice->vkDevice, &vkImageView, info.pImage->vkImage,
 			info.vkImageViewType, info.vkAspectFlags, info.vkFormat, 
 			info.mipStart, info.mipCount, info.layerStart, info.layerCount);
 
@@ -314,6 +314,7 @@ namespace Quartz
 		LogTrace("Created VulkanImageView [ID=%06.6d].", mImageViews.Size() + 1);
 
 		VulkanImageView vulkanImageView		= {};
+		vulkanImageView.pDevice				= pDevice;
 		vulkanImageView.vkImageView			= vkImageView;
 		vulkanImageView.vkImageViewType		= info.vkImageViewType;
 		vulkanImageView.vkAspectFlags		= info.vkAspectFlags;
@@ -326,7 +327,7 @@ namespace Quartz
 		return Register(vulkanImageView);
 	}
 
-	VulkanSwapchain* VulkanResourceManager::CreateSwapchain(VulkanDevice& device, const VulkanSurface& surface, uInt32 bufferCount)
+	VulkanSwapchain* VulkanResourceManager::CreateSwapchain(VulkanDevice* pDevice, const VulkanSurface& surface, uInt32 bufferCount)
 	{
 		VkSwapchainKHR		vkSwapchain;
 		VkSurfaceFormatKHR	selectedFormat;
@@ -334,7 +335,7 @@ namespace Quartz
 
 		VkResult result;
 
-		VkPhysicalDevice physicalDevice = device.pPhysicalDevice->vkPhysicalDevice;
+		VkPhysicalDevice physicalDevice = pDevice->pPhysicalDevice->vkPhysicalDevice;
 		VkSurfaceKHR vkSurface = surface.vkSurface;
 
 		if (!PickSurfaceFormat(physicalDevice, surface, false, &selectedFormat))
@@ -365,7 +366,7 @@ namespace Quartz
 
 		VkBool32 supportsPresent = false;
 		if (vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, 
-			device.pPhysicalDevice->primaryQueueFamilyIndices.present, vkSurface, &supportsPresent) != VK_SUCCESS)
+			pDevice->pPhysicalDevice->primaryQueueFamilyIndices.present, vkSurface, &supportsPresent) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan swapchain: Specified device and queue do not support presentation!");
 			return nullptr;
@@ -396,7 +397,7 @@ namespace Quartz
 		swapChainInfo.oldSwapchain		= VK_NULL_HANDLE;
 		swapChainInfo.pNext				= nullptr;
 
-		if (vkCreateSwapchainKHR(device.vkDevice, &swapChainInfo, nullptr, &vkSwapchain) != VK_SUCCESS)
+		if (vkCreateSwapchainKHR(pDevice->vkDevice, &swapChainInfo, nullptr, &vkSwapchain) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan swapchain: vkCreateSwapchainKHR failed!");
 			return nullptr;
@@ -405,14 +406,14 @@ namespace Quartz
 		uInt32			swapChainImageCount = 0;
 		Array<VkImage>	swapchainImages;
 
-		result = vkGetSwapchainImagesKHR(device.vkDevice, vkSwapchain, &swapChainImageCount, nullptr);
+		result = vkGetSwapchainImagesKHR(pDevice->vkDevice, vkSwapchain, &swapChainImageCount, nullptr);
 		swapchainImages.Resize(swapChainImageCount);
-		result = vkGetSwapchainImagesKHR(device.vkDevice, vkSwapchain, &swapChainImageCount, swapchainImages.Data());
+		result = vkGetSwapchainImagesKHR(pDevice->vkDevice, vkSwapchain, &swapChainImageCount, swapchainImages.Data());
 
 		if (result != VK_SUCCESS)
 		{
 			LogError("Failed to retrieve images from swapchain!");
-			vkDestroySwapchainKHR(device.vkDevice, vkSwapchain, VK_NULL_HANDLE);
+			vkDestroySwapchainKHR(pDevice->vkDevice, vkSwapchain, VK_NULL_HANDLE);
 			return nullptr;
 		}
 
@@ -448,7 +449,7 @@ namespace Quartz
 
 			VkResult result = CreateVkImageView
 			(
-				device.vkDevice,
+				pDevice->vkDevice,
 				&vkImageView,
 				vulkanImage.vkImage,
 				VK_IMAGE_VIEW_TYPE_2D,
@@ -460,7 +461,7 @@ namespace Quartz
 			if (result != VK_SUCCESS)
 			{
 				LogError("Failed to create swapchain: unable to create image views.");
-				vkDestroySwapchainKHR(device.vkDevice, vkSwapchain, VK_NULL_HANDLE);
+				vkDestroySwapchainKHR(pDevice->vkDevice, vkSwapchain, VK_NULL_HANDLE);
 				return nullptr;
 			}
 
@@ -491,9 +492,9 @@ namespace Quartz
 			fenceInfo.flags					= VK_FENCE_CREATE_SIGNALED_BIT; // Start signaled
 			fenceInfo.pNext					= nullptr;
 
-			vkCreateSemaphore(device.vkDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]);
-			vkCreateSemaphore(device.vkDevice, &semaphoreInfo, nullptr, &imageCompleteSemaphores[i]);
-			vkCreateFence(device.vkDevice, &fenceInfo, nullptr, &imageFences[i]);
+			vkCreateSemaphore(pDevice->vkDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]);
+			vkCreateSemaphore(pDevice->vkDevice, &semaphoreInfo, nullptr, &imageCompleteSemaphores[i]);
+			vkCreateFence(pDevice->vkDevice, &fenceInfo, nullptr, &imageFences[i]);
 
 			//TransitionImage(pImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1);
 
@@ -506,7 +507,7 @@ namespace Quartz
 		VulkanSwapchain vulkanSwapchain = {};
 		vulkanSwapchain.vkSwapchain					= vkSwapchain;
 		vulkanSwapchain.backbufferCount				= bufferCount;
-		vulkanSwapchain.pDevice						= &device;
+		vulkanSwapchain.pDevice						= pDevice;
 		vulkanSwapchain.images						= images;
 		vulkanSwapchain.imageViews					= imageViews;
 		vulkanSwapchain.imageAvailableSemaphores	= imageAvailableSemaphores;
@@ -516,7 +517,7 @@ namespace Quartz
 		return Register(vulkanSwapchain);
 	}
 
-	VulkanShader* VulkanResourceManager::CreateShader(const VulkanDevice& device, const String& name, const Array<uInt8>& binary)
+	VulkanShader* VulkanResourceManager::CreateShader(VulkanDevice* pDevice, const String& name, const Array<uInt8>& binary)
 	{
 		VkShaderModule			vkShader;
 		SpirvReflection			reflection;
@@ -529,7 +530,7 @@ namespace Quartz
 		shaderInfo.codeSize = binary.Size();
 		shaderInfo.pCode	= reinterpret_cast<const uint32_t*>(binary.Data());
 
-		if (vkCreateShaderModule(device.vkDevice, &shaderInfo, nullptr, &vkShader) != VK_SUCCESS)
+		if (vkCreateShaderModule(pDevice->vkDevice, &shaderInfo, nullptr, &vkShader) != VK_SUCCESS)
 		{
 			LogError("Failed to create shader: vkCreateShaderModule failed!");
 			return nullptr;
@@ -538,7 +539,7 @@ namespace Quartz
 		if (!SpirvParseReflection(&reflection, binary))
 		{
 			LogError("Failed to create shader: Failed to parse SPIR-V reflection data!");
-			vkDestroyShaderModule(device.vkDevice, vkShader, VK_NULL_HANDLE);
+			vkDestroyShaderModule(pDevice->vkDevice, vkShader, VK_NULL_HANDLE);
 			return nullptr;
 		}
 
@@ -643,6 +644,7 @@ namespace Quartz
 
 		VulkanShader vulkanShader = {};
 		vulkanShader.name		= name;
+		vulkanShader.pDevice	= pDevice;
 		vulkanShader.vkShader	= vkShader;
 		vulkanShader.vkStage	= vkStageFlags;
 		vulkanShader.entryPoint	= reflection.entryName;
@@ -652,7 +654,7 @@ namespace Quartz
 		return Register(vulkanShader);
 	}
 
-	VulkanRenderpass* VulkanResourceManager::CreateRenderpass(const VulkanDevice& device, const VulkanRenderpassInfo& info)
+	VulkanRenderpass* VulkanResourceManager::CreateRenderpass(VulkanDevice* pDevice, const VulkanRenderpassInfo& info)
 	{
 		VkRenderPass vkRenderPass;
 
@@ -825,7 +827,7 @@ namespace Quartz
 		vkRenderPassCreateInfo.dependencyCount	= subpassDependancies.Size();
 		vkRenderPassCreateInfo.pDependencies	= subpassDependancies.Data();
 
-		if (vkCreateRenderPass(device.vkDevice, &vkRenderPassCreateInfo, nullptr, &vkRenderPass) != VK_SUCCESS)
+		if (vkCreateRenderPass(pDevice->vkDevice, &vkRenderPassCreateInfo, nullptr, &vkRenderPass) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan render pass: vkCreateRenderPass failed!");
 			return nullptr;
@@ -834,14 +836,16 @@ namespace Quartz
 		LogTrace("Created VulkanRenderpass [ID=%06.6d].", mRenderpasss.Size() + 1);
 
 		VulkanRenderpass vulkanRenderpass = {};
-		vulkanRenderpass.name			= info.name;
 		vulkanRenderpass.vkRenderpass	= vkRenderPass;
+		vulkanRenderpass.pDevice		= pDevice;
+		vulkanRenderpass.attachments	= info.attachments;
+		vulkanRenderpass.subpasses		= info.subpasses;
 		vulkanRenderpass.vkInfo			= vkRenderPassCreateInfo;
 
 		return Register(vulkanRenderpass);
 	}
 
-	VulkanGraphicsPipeline* VulkanResourceManager::CreateGraphicsPipeline(VulkanDevice& device, const VulkanGraphicsPipelineInfo& info, uInt32 subpass)
+	VulkanGraphicsPipeline* VulkanResourceManager::CreateGraphicsPipeline(VulkanDevice* pDevice, const VulkanGraphicsPipelineInfo& info, uInt32 subpass)
 	{
 		VkPipeline vkPipeline = VK_NULL_HANDLE;
 
@@ -929,7 +933,7 @@ namespace Quartz
 
 			VkDescriptorSetLayout vkDescriptorSetLayout;
 
-			if (vkCreateDescriptorSetLayout(device.vkDevice, &vkDescriptorSetLayoutInfo, nullptr, &vkDescriptorSetLayout) != VK_SUCCESS)
+			if (vkCreateDescriptorSetLayout(pDevice->vkDevice, &vkDescriptorSetLayoutInfo, nullptr, &vkDescriptorSetLayout) != VK_SUCCESS)
 			{
 				LogError("Failed to create vulkan descriptor set layout: vkCreateDescriptorSetLayout failed!");
 				// @TODO: Destroy other sets
@@ -988,7 +992,7 @@ namespace Quartz
 		vkRasterizationInfo.depthBiasSlopeFactor	= 0;
 		vkRasterizationInfo.lineWidth				= info.lineWidth;
 
-		uInt32 maxMultisamples = device.pPhysicalDevice->vkProperties.limits.framebufferColorSampleCounts;
+		uInt32 maxMultisamples = pDevice->pPhysicalDevice->vkProperties.limits.framebufferColorSampleCounts;
 		VkSampleCountFlagBits validMultisamples = info.multisamples;
 
 		if (validMultisamples == 0)
@@ -1062,7 +1066,7 @@ namespace Quartz
 		vkLayoutInfo.pushConstantRangeCount = 0;
 		vkLayoutInfo.pPushConstantRanges = nullptr;
 
-		if (vkCreatePipelineLayout(device.vkDevice, &vkLayoutInfo, nullptr, &vkPipelineLayout) != VK_SUCCESS)
+		if (vkCreatePipelineLayout(pDevice->vkDevice, &vkLayoutInfo, nullptr, &vkPipelineLayout) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan pipeline layout: vkCreatePipelineLayout failed!");
 			// @TODO: Destroy all descriptorSets
@@ -1097,7 +1101,7 @@ namespace Quartz
 		vkPipelineInfo.renderPass			= info.pRenderpass->vkRenderpass;
 		vkPipelineInfo.subpass				= subpass;
 
-		if (vkCreateGraphicsPipelines(device.vkDevice, VK_NULL_HANDLE, 1, &vkPipelineInfo, nullptr, &vkPipeline) != VK_SUCCESS)
+		if (vkCreateGraphicsPipelines(pDevice->vkDevice, VK_NULL_HANDLE, 1, &vkPipelineInfo, nullptr, &vkPipeline) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan graphics pipeline: vkCreateGraphicsPipelines failed!");
 			// @TODO: Destroy everything
@@ -1107,14 +1111,14 @@ namespace Quartz
 		LogTrace("Created VulkanGraphicsPipeline [ID=%06.6d].", mGraphicsPipelines.Size() + 1);
 
 		VulkanGraphicsPipeline vulkanGraphicsPipeline = {};
-		vulkanGraphicsPipeline.pDevice			= &device;
+		vulkanGraphicsPipeline.pDevice			= pDevice;
 		vulkanGraphicsPipeline.vkPipeline		= vkPipeline;
 		vulkanGraphicsPipeline.vkPipelineInfo	= vkPipelineInfo;
 
 		return Register(vulkanGraphicsPipeline);
 	}
 
-	VulkanBuffer* VulkanResourceManager::CreateBuffer(VulkanDevice& device, const VulkanBufferInfo& info)
+	VulkanBuffer* VulkanResourceManager::CreateBuffer(VulkanDevice* pDevice, const VulkanBufferInfo& info)
 	{
 		VkBuffer				vkBuffer;
 		VkDeviceMemory			vkMemory;
@@ -1126,13 +1130,13 @@ namespace Quartz
 		bufferInfo.usage		= info.vkBufferUsage;
 		bufferInfo.sharingMode	= VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(device.vkDevice, &bufferInfo, nullptr, &vkBuffer) != VK_SUCCESS)
+		if (vkCreateBuffer(pDevice->vkDevice, &bufferInfo, nullptr, &vkBuffer) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan buffer object: vkCreateBuffer failed!");
 			return nullptr;
 		}
 
-		vkGetBufferMemoryRequirements(device.vkDevice, vkBuffer, &vkMemRequirements);
+		vkGetBufferMemoryRequirements(pDevice->vkDevice, vkBuffer, &vkMemRequirements);
 
 		if (vkMemRequirements.size < info.sizeBytes)
 		{
@@ -1141,26 +1145,26 @@ namespace Quartz
 			return nullptr;
 		}
 
-		uInt32 memoryType = FindCompatableMemoryType(device, vkMemRequirements.memoryTypeBits, info.vkMemoryProperties);
+		uInt32 memoryType = FindCompatableMemoryType(pDevice, vkMemRequirements.memoryTypeBits, info.vkMemoryProperties);
 
 		VkMemoryAllocateInfo allocateInfo = {};
 		allocateInfo.sType				= VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocateInfo.allocationSize		= vkMemRequirements.size;
 		allocateInfo.memoryTypeIndex	= memoryType;
 
-		if (vkAllocateMemory(device.vkDevice, &allocateInfo, nullptr, &vkMemory) != VK_SUCCESS)
+		if (vkAllocateMemory(pDevice->vkDevice, &allocateInfo, nullptr, &vkMemory) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan buffer object: vkAllocateMemory failed!");
-			vkDestroyBuffer(device.vkDevice, vkBuffer, VK_NULL_HANDLE);
+			vkDestroyBuffer(pDevice->vkDevice, vkBuffer, VK_NULL_HANDLE);
 			return nullptr;
 		}
 
-		if (vkBindBufferMemory(device.vkDevice, vkBuffer, vkMemory, 0) != VK_SUCCESS)
+		if (vkBindBufferMemory(pDevice->vkDevice, vkBuffer, vkMemory, 0) != VK_SUCCESS)
 		{
 			LogError("Failed to create vulkan buffer object: vkBindBufferMemory failed!");
 
-			vkDestroyBuffer(device.vkDevice, vkBuffer, VK_NULL_HANDLE);
-			vkFreeMemory(device.vkDevice, vkMemory, VK_NULL_HANDLE);
+			vkDestroyBuffer(pDevice->vkDevice, vkBuffer, VK_NULL_HANDLE);
+			vkFreeMemory(pDevice->vkDevice, vkMemory, VK_NULL_HANDLE);
 
 			return nullptr;
 		}
@@ -1169,7 +1173,7 @@ namespace Quartz
 
 		VulkanBuffer vulkanBuffer = {};
 		vulkanBuffer.vkBuffer			= vkBuffer;
-		vulkanBuffer.pDevice			= &device;
+		vulkanBuffer.pDevice			= pDevice;
 		vulkanBuffer.sizeBytes			= info.sizeBytes;
 		vulkanBuffer.vkMemory			= vkMemory;
 		vulkanBuffer.vkMemoryProperties	= info.vkMemoryProperties;
@@ -1178,7 +1182,7 @@ namespace Quartz
 		return Register(vulkanBuffer);
 	}
 
-	VulkanCommandPool* VulkanResourceManager::CreateCommandPool(VulkanDevice& device, const VulkanCommandPoolInfo& info)
+	VulkanCommandPool* VulkanResourceManager::CreateCommandPool(VulkanDevice* pDevice, const VulkanCommandPoolInfo& info)
 	{
 		VkCommandPool vkCommandPool;
 
@@ -1187,7 +1191,7 @@ namespace Quartz
 		commandPoolInfo.queueFamilyIndex	= info.queueFamilyIndex;
 		commandPoolInfo.flags				= info.vkCommandPoolCreateFlags;
 
-		if (vkCreateCommandPool(device.vkDevice, &commandPoolInfo, nullptr, &vkCommandPool) != VK_SUCCESS)
+		if (vkCreateCommandPool(pDevice->vkDevice, &commandPoolInfo, nullptr, &vkCommandPool) != VK_SUCCESS)
 		{
 			LogError("Failed to create VulkanCommandPool: vkCreateCommandPool failed!");
 			return nullptr;
@@ -1197,7 +1201,7 @@ namespace Quartz
 
 		VulkanCommandPool vulkanCommandPool = {};
 		vulkanCommandPool.vkCommandPool				= vkCommandPool;
-		vulkanCommandPool.pDevice					= &device;
+		vulkanCommandPool.pDevice					= pDevice;
 		vulkanCommandPool.queueFamilyIndex			= info.queueFamilyIndex;
 		vulkanCommandPool.vkCommandPoolCreateFlags	= info.vkCommandPoolCreateFlags;
 
@@ -1225,8 +1229,8 @@ namespace Quartz
 		{
 			VulkanCommandBuffer vulkanCommandBuffer = {};
 			vulkanCommandBuffer.vkCommandBuffer = vkCommandBuffersList[i];
-			vulkanCommandBuffer.pCommandPool	= pCommandPool;
 			vulkanCommandBuffer.pDevice			= pCommandPool->pDevice;
+			vulkanCommandBuffer.pCommandPool	= pCommandPool;
 
 			LogTrace("Created VulkanCommandBuffer [ID=%06.6d].", mCommandBuffers.Size() + 1);
 
@@ -1234,7 +1238,7 @@ namespace Quartz
 		}
 	}
 
-	VulkanFramebuffer* VulkanResourceManager::CreateFramebuffer(VulkanDevice& device, const VulkanFramebufferInfo& info)
+	VulkanFramebuffer* VulkanResourceManager::CreateFramebuffer(VulkanDevice* pDevice, const VulkanFramebufferInfo& info)
 	{
 		VkFramebuffer vkFramebuffer;
 
@@ -1256,7 +1260,7 @@ namespace Quartz
 		framebufferInfo.height			= info.height;
 		framebufferInfo.layers			= info.layers;
 
-		if (vkCreateFramebuffer(device.vkDevice, &framebufferInfo, VK_NULL_HANDLE, &vkFramebuffer) != VK_SUCCESS)
+		if (vkCreateFramebuffer(pDevice->vkDevice, &framebufferInfo, VK_NULL_HANDLE, &vkFramebuffer) != VK_SUCCESS)
 		{
 			LogError("Failed to create VulkanFramebuffer: vkCreateFramebuffer failed!");
 		}

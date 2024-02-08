@@ -48,17 +48,16 @@ namespace Quartz
 		VulkanFramebuffer*		Register(const VulkanFramebuffer& framebuffer);
 
 	public:
-		VulkanSurface*			CreateSurface(VkInstance vkInstance, const VulkanDevice& device, const VulkanApiSurface& surface);
-		VulkanSwapchain*		CreateSwapchain(VulkanDevice& device, const VulkanSurface& surface, uInt32 bufferCount);
-		VulkanImage*			CreateImage(VulkanDevice& device, const VulkanImageInfo& info);
-		VulkanImageView*		CreateImageView(const VulkanDevice& device, const VulkanImageViewInfo& info);
-		VulkanShader*			CreateShader(const VulkanDevice& device, const String& name, const Array<uInt8>& binary);
-		VulkanRenderpass*		CreateRenderpass(const VulkanDevice& device, const VulkanRenderpassInfo& info);
-		VulkanGraphicsPipeline* CreateGraphicsPipeline(VulkanDevice& device, const VulkanGraphicsPipelineInfo& info, uInt32 subpass);
-		VulkanBuffer*			CreateBuffer(VulkanDevice& device, const VulkanBufferInfo& info);
-		VulkanCommandPool*		CreateCommandPool(VulkanDevice& device, const VulkanCommandPoolInfo& info);
-		bool					CreateCommandBuffers(VulkanCommandPool* pCommandPool, uInt32 count,
-									VulkanCommandBuffer** ppCommandBuffers);
-		VulkanFramebuffer*		CreateFramebuffer(VulkanDevice& device, const VulkanFramebufferInfo& info);
+		VulkanSurface*			CreateSurface(VulkanDevice* pDevice, VkInstance vkInstance, const VulkanApiSurface& surface);
+		VulkanSwapchain*		CreateSwapchain(VulkanDevice* pDevice, const VulkanSurface& surface, uInt32 bufferCount);
+		VulkanImage*			CreateImage(VulkanDevice* pDevice, const VulkanImageInfo& info);
+		VulkanImageView*		CreateImageView(VulkanDevice* pDevice, const VulkanImageViewInfo& info);
+		VulkanShader*			CreateShader(VulkanDevice* pDevice, const String& name, const Array<uInt8>& binary);
+		VulkanRenderpass*		CreateRenderpass(VulkanDevice* pDevice, const VulkanRenderpassInfo& info);
+		VulkanGraphicsPipeline* CreateGraphicsPipeline(VulkanDevice* pDevice, const VulkanGraphicsPipelineInfo& info, uInt32 subpass);
+		VulkanBuffer*			CreateBuffer(VulkanDevice* pDevice, const VulkanBufferInfo& info);
+		VulkanCommandPool*		CreateCommandPool(VulkanDevice* pDevice, const VulkanCommandPoolInfo& info);
+		bool					CreateCommandBuffers(VulkanCommandPool* pCommandPool, uInt32 count, VulkanCommandBuffer** ppCommandBuffers);
+		VulkanFramebuffer*		CreateFramebuffer(VulkanDevice* pDevice, const VulkanFramebufferInfo& info);
 	};
 }

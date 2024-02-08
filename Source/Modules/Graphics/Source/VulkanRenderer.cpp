@@ -5,6 +5,7 @@
 #include "Vulkan/VulkanPipeline.h"
 #include "Vulkan/VulkanCommandRecorder.h"
 #include "Vulkan/VulkanSwapchainTimer.h"
+#include "Vulkan/VulkanBufferWriter.h"
 
 #include "shaderc/shaderc.hpp"
 
@@ -34,14 +35,12 @@ namespace Quartz
 
 	void VulkanRenderer::Initialize(VulkanGraphics* pGraphics)
 	{
-		VulkanGraphicsPipeline* pLine = new VulkanGraphicsPipeline[3000];
-
-		VulkanResourceManager* pResources = pGraphics->pResourceManager;
+		VulkanResourceManager*	pResources	= pGraphics->pResourceManager;
+		VulkanDevice*			pDevice		= pGraphics->pPrimaryDevice;
 
 		mpGraphics = pGraphics;
 
-		mpSwapchain = pResources->CreateSwapchain(pGraphics->primaryDevice, *pGraphics->pSurface, 3);
-		
+		mpSwapchain = pResources->CreateSwapchain(pGraphics->pPrimaryDevice, *pGraphics->pSurface, 3);		
 		mpSwapTimer = new VulkanSwapchainTimer(mpSwapchain);
 
 		char* vertexShader = 
@@ -85,11 +84,10 @@ namespace Quartz
 		CompileShader("Vertex", vertexShader, vertexShaderSPIRV, shaderc_shader_kind::shaderc_glsl_vertex_shader);
 		CompileShader("Fragment", fragmentShader, fragmentShaderSPIRV, shaderc_shader_kind::shaderc_glsl_fragment_shader);
 
-		VulkanShader* pVertexShader = pResources->CreateShader(pGraphics->primaryDevice, "Vertex", vertexShaderSPIRV);
-		VulkanShader* pFragmentShader = pResources->CreateShader(pGraphics->primaryDevice, "Fragment", fragmentShaderSPIRV);
+		VulkanShader* pVertexShader = pResources->CreateShader(pGraphics->pPrimaryDevice, "Vertex", vertexShaderSPIRV);
+		VulkanShader* pFragmentShader = pResources->CreateShader(pGraphics->pPrimaryDevice, "Fragment", fragmentShaderSPIRV);
 
 		VulkanRenderpassInfo renderpassInfo = {};
-		renderpassInfo.name = "TestPass";
 		renderpassInfo.attachments =
 		{
 			{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
@@ -100,7 +98,7 @@ namespace Quartz
 			{ "Color-Subpass", { 0, 1 } }
 		};
 
-		VulkanRenderpass* pRenderPass = pResources->CreateRenderpass(pGraphics->primaryDevice, renderpassInfo);
+		VulkanRenderpass* pRenderPass = pResources->CreateRenderpass(pGraphics->pPrimaryDevice, renderpassInfo);
 
 		VulkanGraphicsPipelineInfo pipelineInfo = {};
 		pipelineInfo.shaders				= { pVertexShader, pFragmentShader };
@@ -179,7 +177,7 @@ namespace Quartz
 
 		pipelineInfo.blendAttachments.PushBack(blendAttachment);
 
-		mpPipeline = pResources->CreateGraphicsPipeline(pGraphics->primaryDevice, pipelineInfo, 0);
+		mpPipeline = pResources->CreateGraphicsPipeline(pGraphics->pPrimaryDevice, pipelineInfo, 0);
 
 
 		// Framebuffers
@@ -196,7 +194,7 @@ namespace Quartz
 			depthImageInfo.layers			= 1;
 			depthImageInfo.mips				= 1;
 
-			VulkanImage* pDepthStencilImage = pResources->CreateImage(pGraphics->primaryDevice, depthImageInfo);
+			VulkanImage* pDepthStencilImage = pResources->CreateImage(pGraphics->pPrimaryDevice, depthImageInfo);
 
 			VulkanImageViewInfo depthImageViewInfo = {};
 			depthImageViewInfo.pImage			= pDepthStencilImage;
@@ -208,7 +206,7 @@ namespace Quartz
 			depthImageViewInfo.mipStart			= 0;
 			depthImageViewInfo.mipCount			= 1;
 
-			VulkanImageView* pDepthStencilImageView = pResources->CreateImageView(pGraphics->primaryDevice, depthImageViewInfo);
+			VulkanImageView* pDepthStencilImageView = pResources->CreateImageView(pGraphics->pPrimaryDevice, depthImageViewInfo);
 
 			VulkanFramebufferInfo framebufferInfo = {};
 			framebufferInfo.renderpass	= pRenderPass;
@@ -217,7 +215,7 @@ namespace Quartz
 			framebufferInfo.height		= pGraphics->pSurface->height;
 			framebufferInfo.layers		= 1;
 
-			mFramebuffers[i] = pResources->CreateFramebuffer(pGraphics->primaryDevice, framebufferInfo);
+			mFramebuffers[i] = pResources->CreateFramebuffer(pGraphics->pPrimaryDevice, framebufferInfo);
 		}
 
 
@@ -235,14 +233,14 @@ namespace Quartz
 		stagingVertexBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		stagingVertexBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-		VulkanBuffer* pStagingVertexBuffer = pResources->CreateBuffer(pGraphics->primaryDevice, stagingVertexBufferInfo);
+		VulkanBuffer* pStagingVertexBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, stagingVertexBufferInfo);
 
 		VulkanBufferInfo vertexBufferInfo	= {};
 		vertexBufferInfo.sizeBytes			= sizeof(vertexData);
 		vertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		vertexBufferInfo.vkMemoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-		VulkanBuffer* pVertexBuffer = pResources->CreateBuffer(pGraphics->primaryDevice, vertexBufferInfo);
+		VulkanBuffer* pVertexBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, vertexBufferInfo);
 
 		VulkanBufferWriter vertexWriter(pStagingVertexBuffer);
 		float* pVertexData = vertexWriter.Map<float>();
@@ -264,14 +262,14 @@ namespace Quartz
 		stagingIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		stagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-		VulkanBuffer* pStagingIndexBuffer = pResources->CreateBuffer(pGraphics->primaryDevice, stagingIndexBufferInfo);
+		VulkanBuffer* pStagingIndexBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, stagingIndexBufferInfo);
 
 		VulkanBufferInfo indexBufferInfo	= {};
 		indexBufferInfo.sizeBytes			= sizeof(indexData);
 		indexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		indexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-		VulkanBuffer* pIndexBuffer = pResources->CreateBuffer(pGraphics->primaryDevice, indexBufferInfo);
+		VulkanBuffer* pIndexBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, indexBufferInfo);
 
 		VulkanBufferWriter indexWriter(pStagingIndexBuffer);
 		uInt16* pIndexData = indexWriter.Map<uInt16>();
@@ -282,10 +280,10 @@ namespace Quartz
 
 
 		VulkanCommandPoolInfo immediateTransferPoolInfo = {};
-		immediateTransferPoolInfo.queueFamilyIndex			= pGraphics->primaryDevice.pPhysicalDevice->primaryQueueFamilyIndices.transfer;
+		immediateTransferPoolInfo.queueFamilyIndex			= pGraphics->pPrimaryDevice->pPhysicalDevice->primaryQueueFamilyIndices.transfer;
 		immediateTransferPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		VulkanCommandPool* pImmedateTransferPool = pResources->CreateCommandPool(pGraphics->primaryDevice, immediateTransferPoolInfo);
+		VulkanCommandPool* pImmedateTransferPool = pResources->CreateCommandPool(pGraphics->pPrimaryDevice, immediateTransferPoolInfo);
 
 		VulkanCommandBuffer* pImmediateCommandBuffer;
 		pResources->CreateCommandBuffers(pImmedateTransferPool, 1, &pImmediateCommandBuffer);
@@ -303,15 +301,15 @@ namespace Quartz
 		immediateSubmition.waitStages		= {};
 		immediateSubmition.signalSemaphores	= {};
 
-		pGraphics->Submit(immediateSubmition, pGraphics->primaryDevice.queues.transfer, VK_NULL_HANDLE);
+		pGraphics->Submit(immediateSubmition, pGraphics->pPrimaryDevice->queues.transfer, VK_NULL_HANDLE);
 
 
 
 		VulkanCommandPoolInfo renderPoolInfo = {};
-		renderPoolInfo.queueFamilyIndex			= pGraphics->primaryDevice.pPhysicalDevice->primaryQueueFamilyIndices.graphics;
+		renderPoolInfo.queueFamilyIndex			= pGraphics->pPrimaryDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
 		renderPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		VulkanCommandPool* pRenderPool = pResources->CreateCommandPool(pGraphics->primaryDevice, renderPoolInfo);
+		VulkanCommandPool* pRenderPool = pResources->CreateCommandPool(pGraphics->pPrimaryDevice, renderPoolInfo);
 
 		pResources->CreateCommandBuffers(pRenderPool, 3, mCommandBuffers);
 
@@ -353,7 +351,7 @@ namespace Quartz
 		renderSubmition.waitStages			= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		renderSubmition.signalSemaphores	= { mpSwapTimer->GetCurrentCompleteSemaphore() };
 
-		mpGraphics->Submit(renderSubmition, mpGraphics->primaryDevice.queues.graphics, mpSwapTimer->GetCurrentFence());
+		mpGraphics->Submit(renderSubmition, mpGraphics->pPrimaryDevice->queues.graphics, mpSwapTimer->GetCurrentFence());
 
 		mpSwapTimer->Present();
 	}

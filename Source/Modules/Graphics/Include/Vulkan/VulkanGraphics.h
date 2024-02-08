@@ -25,7 +25,7 @@ namespace Quartz
 		Array<const char*>			enabledExtensions;
 		VulkanPhysicalDevice		primaryPhysicalDevice;
 		Array<VulkanPhysicalDevice> physicalDevices;
-		VulkanDevice				primaryDevice;
+		VulkanDevice*				pPrimaryDevice;
 		Array<VulkanDevice>			devices;
 		VulkanState*				pState;
 		VulkanResourceManager*		pResourceManager;

@@ -6,6 +6,8 @@
 
 namespace Quartz
 {
+	struct VulkanDevice;
+
 	struct VulkanImageInfo
 	{
 		VkImageType			vkImageType;
@@ -21,6 +23,7 @@ namespace Quartz
 	struct VulkanImage
 	{
 		VkImage				vkImage;
+		VulkanDevice*		pDevice;
 		VkDeviceMemory		vkMemory;
 		VkImageType			vkImageType;
 		VkFormat			vkFormat;
@@ -47,6 +50,7 @@ namespace Quartz
 	struct VulkanImageView
 	{
 		VkImageView			vkImageView;
+		VulkanDevice*		pDevice;
 		VulkanImage*		pImage;
 		VkImageViewType		vkImageViewType;
 		VkImageAspectFlags	vkAspectFlags;
