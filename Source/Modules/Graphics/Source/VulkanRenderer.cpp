@@ -50,12 +50,15 @@ namespace Quartz
 			#extension GL_ARB_separate_shader_objects : enable
 			
 			layout(location = 0) in vec3 inPosition;
-			//layout(location = 1) in vec3 inNormal;
+			layout(location = 1) in vec3 inNormal;
 			//layout(location = 2) in vec3 inTangent;
 			//layout(location = 3) in vec2 inTexCoord;
 			
+			layout(location = 0) out vec3 outNormal;
+
 			void main()
 			{
+				outNormal = inNormal;
 				gl_Position = vec4(inPosition, 1.0);
 			}
 		)";
@@ -66,11 +69,13 @@ namespace Quartz
 			#extension GL_ARB_separate_shader_objects : enable
 			#extension GL_KHR_vulkan_glsl : enable
 			
+			layout(location = 0) in vec3 inNormal;
+
 			layout(location = 0) out vec4 fragOut;
 			
 			void main()
 			{
-				fragOut = vec4(1.0, 1.0, 1.0, 1.0);
+				fragOut = vec4(inNormal, 1.0);
 			}
 		)";
 
@@ -88,11 +93,11 @@ namespace Quartz
 		renderpassInfo.attachments =
 		{
 			{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
-			//{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
+			{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
 		};
 		renderpassInfo.subpasses =
 		{
-			{ "Color-Subpass", { 0, }}//1 } }
+			{ "Color-Subpass", { 0, 1 } }
 		};
 
 		VulkanRenderpass* pRenderPass = pResources->CreateRenderpass(pGraphics->primaryDevice, renderpassInfo);
@@ -112,22 +117,21 @@ namespace Quartz
 		pipelineInfo.scissor.extent.height	= pGraphics->pSurface->height;
 		pipelineInfo.vkTopology				= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		pipelineInfo.vkPolygonMode			= VK_POLYGON_MODE_FILL;
-		pipelineInfo.vkCullMode				= VK_CULL_MODE_NONE;
+		pipelineInfo.vkCullMode				= VK_CULL_MODE_BACK_BIT;
 		pipelineInfo.vkFrontFace			= VK_FRONT_FACE_CLOCKWISE;
 		pipelineInfo.lineWidth				= 1.0f;
 		pipelineInfo.multisamples			= VK_SAMPLE_COUNT_1_BIT;
-		pipelineInfo.depth.enableTesting	= false;//true;
-		pipelineInfo.depth.enableWrite		= false;//true;
+		pipelineInfo.depth.enableTesting	= true;
+		pipelineInfo.depth.enableWrite		= true;
 		pipelineInfo.depth.compareOp		= VK_COMPARE_OP_LESS_OR_EQUAL;
 		pipelineInfo.depth.depthMin			= 0.0f;
-		pipelineInfo.depth.depthMax			= 0.0f;//1.0f
+		pipelineInfo.depth.depthMax			= 1.0f;
 		pipelineInfo.stencil.enableTesting	= false;
 		pipelineInfo.stencil.compareOp		= VK_COMPARE_OP_LESS_OR_EQUAL;
 
 		VkVertexInputBindingDescription vertexBufferAttachment = {};
 		vertexBufferAttachment.binding		= 0;
-		//vertexBufferAttachment.stride		= 11 * sizeof(float);
-		vertexBufferAttachment.stride		= 3 * sizeof(float);
+		vertexBufferAttachment.stride		= 6 * sizeof(float);
 		vertexBufferAttachment.inputRate	= VK_VERTEX_INPUT_RATE_VERTEX;
 
 		pipelineInfo.bufferAttachments.PushBack(vertexBufferAttachment);
@@ -157,7 +161,7 @@ namespace Quartz
 		texCoordAttrib.offset				= 9 * sizeof(float);
 
 		pipelineInfo.vertexAttributes.PushBack(positionAttrib);
-		//pipelineInfo.vertexAttributes.PushBack(normalAttrib);
+		pipelineInfo.vertexAttributes.PushBack(normalAttrib);
 		//pipelineInfo.vertexAttributes.PushBack(tangentAttrib);
 		//pipelineInfo.vertexAttributes.PushBack(texCoordAttrib);
 
@@ -182,9 +186,33 @@ namespace Quartz
 
 		for (uSize i = 0; i < 3; i++)
 		{
+			VulkanImageInfo depthImageInfo = {};
+			depthImageInfo.vkFormat			= VK_FORMAT_D24_UNORM_S8_UINT;
+			depthImageInfo.vkImageType		= VK_IMAGE_TYPE_2D;
+			depthImageInfo.vkUsageFlags		= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			depthImageInfo.width			= pGraphics->pSurface->width;
+			depthImageInfo.height			= pGraphics->pSurface->height;
+			depthImageInfo.depth			= 1;
+			depthImageInfo.layers			= 1;
+			depthImageInfo.mips				= 1;
+
+			VulkanImage* pDepthStencilImage = pResources->CreateImage(pGraphics->primaryDevice, depthImageInfo);
+
+			VulkanImageViewInfo depthImageViewInfo = {};
+			depthImageViewInfo.pImage			= pDepthStencilImage;
+			depthImageViewInfo.vkImageViewType	= VK_IMAGE_VIEW_TYPE_2D;
+			depthImageViewInfo.vkFormat			= VK_FORMAT_D24_UNORM_S8_UINT;
+			depthImageViewInfo.vkAspectFlags	= VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			depthImageViewInfo.layerStart		= 0;
+			depthImageViewInfo.layerCount		= 1;
+			depthImageViewInfo.mipStart			= 0;
+			depthImageViewInfo.mipCount			= 1;
+
+			VulkanImageView* pDepthStencilImageView = pResources->CreateImageView(pGraphics->primaryDevice, depthImageViewInfo);
+
 			VulkanFramebufferInfo framebufferInfo = {};
 			framebufferInfo.renderpass	= pRenderPass;
-			framebufferInfo.attachments = { mpSwapTimer->GetSwapchain()->imageViews[i] };
+			framebufferInfo.attachments = { mpSwapTimer->GetSwapchain()->imageViews[i], pDepthStencilImageView };
 			framebufferInfo.width		= pGraphics->pSurface->width;
 			framebufferInfo.height		= pGraphics->pSurface->height;
 			framebufferInfo.layers		= 1;
@@ -197,9 +225,9 @@ namespace Quartz
 
 		float vertexData[] =
 		{
-			-0.5f, -0.5f, 0.0f,
-			 0.0f,  0.5f, 0.0f,
-			 0.5f, -0.5f, 0.0f
+			-0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
+			 0.0f,  0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
+			 0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f
 		};
 
 		VulkanBufferInfo stagingVertexBufferInfo		= {};
@@ -296,7 +324,7 @@ namespace Quartz
 			VulkanRenderpassBeginInfo renderpassBeginInfo = {};
 			renderpassBeginInfo.pFramebuffer	= mFramebuffers[i];
 			renderpassBeginInfo.renderArea		= { { 0, 0 }, {mFramebuffers[i]->width, mFramebuffers[i]->height}};
-			renderpassBeginInfo.clearValues		= { { 0.02f, 0.05f, 0.05f, 1.0f } };//, { 1.0f, 0 } };
+			renderpassBeginInfo.clearValues		= { { 0.02f, 0.05f, 0.05f, 1.0f }, { 1.0f, 0 } };
 
 			renderRecorder.BeginRenderpass(pRenderPass, renderpassBeginInfo);
 

@@ -50,9 +50,8 @@ namespace Quartz
 	public:
 		VulkanSurface*			CreateSurface(VkInstance vkInstance, const VulkanDevice& device, const VulkanApiSurface& surface);
 		VulkanSwapchain*		CreateSwapchain(VulkanDevice& device, const VulkanSurface& surface, uInt32 bufferCount);
-		VulkanImageView*		CreateImageView(const VulkanDevice& device, VulkanImage& image,
-									VkImageViewType vkImageViewType, VkImageAspectFlags vkAspectFlags, VkFormat vkFormat,
-									uInt32 mipStart, uInt32 mipCount, uInt32 layerStart, uInt32 layerCount);
+		VulkanImage*			CreateImage(VulkanDevice& device, const VulkanImageInfo& info);
+		VulkanImageView*		CreateImageView(const VulkanDevice& device, const VulkanImageViewInfo& info);
 		VulkanShader*			CreateShader(const VulkanDevice& device, const String& name, const Array<uInt8>& binary);
 		VulkanRenderpass*		CreateRenderpass(const VulkanDevice& device, const VulkanRenderpassInfo& info);
 		VulkanGraphicsPipeline* CreateGraphicsPipeline(VulkanDevice& device, const VulkanGraphicsPipelineInfo& info, uInt32 subpass);

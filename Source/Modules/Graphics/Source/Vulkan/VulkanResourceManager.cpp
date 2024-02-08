@@ -176,6 +176,91 @@ namespace Quartz
 		return true;
 	}
 
+	uInt32 FindCompatableMemoryType(VulkanDevice& device, flags32 memoryTypeBits, VkMemoryPropertyFlags memoryProperties)
+	{
+		VkPhysicalDeviceMemoryProperties deviceMemoryProperties = device.pPhysicalDevice->vkMemoryProperties;
+
+		for (uInt32 i = 0; i < deviceMemoryProperties.memoryTypeCount; i++)
+		{
+			if ((memoryTypeBits & (1 << i)) && (deviceMemoryProperties.memoryTypes[i].propertyFlags & memoryProperties) == memoryProperties)
+			{
+				return i;
+			}
+		}
+
+		return (uInt32)-1;
+	}
+
+	VulkanImage* VulkanResourceManager::CreateImage(VulkanDevice& device, const VulkanImageInfo& info)
+	{
+		VkImage			vkImage;
+		VkDeviceMemory	vkDeviceMemory;
+
+		VkImageCreateInfo vkImageInfo = {};
+		vkImageInfo.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		vkImageInfo.imageType		= info.vkImageType;
+		vkImageInfo.format			= info.vkFormat;
+		vkImageInfo.extent.width	= info.width;
+		vkImageInfo.extent.height	= info.height;
+		vkImageInfo.extent.depth	= info.depth;
+		vkImageInfo.mipLevels		= info.mips;
+		vkImageInfo.arrayLayers		= info.layers;
+		vkImageInfo.tiling			= VK_IMAGE_TILING_OPTIMAL;
+		vkImageInfo.initialLayout	= VK_IMAGE_LAYOUT_UNDEFINED;
+		vkImageInfo.usage			= info.vkUsageFlags;
+		vkImageInfo.sharingMode		= VK_SHARING_MODE_EXCLUSIVE;
+		vkImageInfo.samples			= VK_SAMPLE_COUNT_1_BIT;
+
+		if (vkCreateImage(device.vkDevice, &vkImageInfo, nullptr, &vkImage) != VK_SUCCESS)
+		{
+			LogError("Failed to create vulkan image: vkCreateImage failed!");
+			return nullptr;
+		}
+
+		VkMemoryRequirements vkMemRequirements;
+		vkGetImageMemoryRequirements(device.vkDevice, vkImage, &vkMemRequirements);
+
+		uInt32 memoryType = FindCompatableMemoryType(device, 
+			vkMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);	// @TODO: maybe not always local
+
+		VkMemoryAllocateInfo allocateInfo = {};
+		allocateInfo.sType				= VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocateInfo.allocationSize		= vkMemRequirements.size;
+		allocateInfo.memoryTypeIndex	= memoryType;
+
+		if (vkAllocateMemory(device.vkDevice, &allocateInfo, nullptr, &vkDeviceMemory) != VK_SUCCESS)
+		{
+			LogFatal("Failed to allocate device memory: vkAllocateMemory failed!");
+			return nullptr;
+		}
+
+		if (vkBindImageMemory(device.vkDevice, vkImage, vkDeviceMemory, 0) != VK_SUCCESS)
+		{
+			LogError("Failed to create vulkan buffer object: vkBindBufferMemory failed!");
+
+			vkDestroyImage(device.vkDevice, vkImage, nullptr);
+			vkFreeMemory(device.vkDevice, vkDeviceMemory, VK_NULL_HANDLE);
+
+			return nullptr;
+		}
+
+		LogTrace("Created VulkanImage [ID=%06.6d].", mImages.Size() + 1);
+
+		VulkanImage vulkanImage		= {};
+		vulkanImage.vkImage			= vkImage;
+		vulkanImage.vkMemory		= vkDeviceMemory;
+		vulkanImage.vkImageType		= info.vkImageType;
+		vulkanImage.vkFormat		= info.vkFormat;
+		vulkanImage.vkUsageFlags	= info.vkUsageFlags;	
+		vulkanImage.width			= info.width;
+		vulkanImage.height			= info.height;
+		vulkanImage.depth			= info.depth;
+		vulkanImage.layers			= info.layers;
+		vulkanImage.mips			= info.mips;
+
+		Register(vulkanImage);
+	}
+
 	VkResult CreateVkImageView(VkDevice vkDevice, VkImageView* pVkImageView, VkImage vkImage,
 		VkImageViewType vkImageViewType, VkImageAspectFlags vkAspectFlags, VkFormat vkFormat,
 		uInt32 layerStart, uInt32 layerCount, uInt32 mipStart, uInt32 mipCount)
@@ -213,30 +298,30 @@ namespace Quartz
 		return result;
 	}
 
-	VulkanImageView* VulkanResourceManager::CreateImageView(const VulkanDevice& device, VulkanImage& image,
-		VkImageViewType vkImageViewType, VkImageAspectFlags vkAspectFlags, VkFormat vkFormat,
-		uInt32 mipStart, uInt32 mipCount, uInt32 layerStart, uInt32 layerCount)
+	VulkanImageView* VulkanResourceManager::CreateImageView(const VulkanDevice& device, const VulkanImageViewInfo& info)
 	{
 		VkImageView vkImageView;
 
-		VkResult result = CreateVkImageView(device.vkDevice, &vkImageView, image.vkImage,
-			vkImageViewType, vkAspectFlags, vkFormat, mipStart, mipCount, layerStart, layerCount);
+		VkResult result = CreateVkImageView(device.vkDevice, &vkImageView, info.pImage->vkImage,
+			info.vkImageViewType, info.vkAspectFlags, info.vkFormat, 
+			info.mipStart, info.mipCount, info.layerStart, info.layerCount);
 
 		if (result != VK_SUCCESS)
 		{
 			return nullptr;
 		}
 
-		LogTrace("Created VulkanImageView [ID=%06.6d].", mSwapchains.Size() + 1);
+		LogTrace("Created VulkanImageView [ID=%06.6d].", mImageViews.Size() + 1);
 
 		VulkanImageView vulkanImageView		= {};
-		vulkanImageView.vkImageViewType		= vkImageViewType;
-		vulkanImageView.vkAspectFlags		= vkAspectFlags;
-		vulkanImageView.pImage				= &image;
-		vulkanImageView.layerStart			= layerStart;
-		vulkanImageView.layerCount			= layerCount;
-		vulkanImageView.mipStart			= mipStart;
-		vulkanImageView.mipCount			= mipCount;
+		vulkanImageView.vkImageView			= vkImageView;
+		vulkanImageView.vkImageViewType		= info.vkImageViewType;
+		vulkanImageView.vkAspectFlags		= info.vkAspectFlags;
+		vulkanImageView.pImage				= info.pImage;
+		vulkanImageView.layerStart			= info.layerStart;
+		vulkanImageView.layerCount			= info.layerCount;
+		vulkanImageView.mipStart			= info.mipStart;
+		vulkanImageView.mipCount			= info.mipCount;
 
 		return Register(vulkanImageView);
 	}
@@ -1005,7 +1090,7 @@ namespace Quartz
 		vkPipelineInfo.pViewportState		= &vkViewportInfo;
 		vkPipelineInfo.pRasterizationState	= &vkRasterizationInfo;
 		vkPipelineInfo.pMultisampleState	= &vkMultisampleInfo;
-		vkPipelineInfo.pDepthStencilState = nullptr;//&vkDepthStencilInfo;
+		vkPipelineInfo.pDepthStencilState	= &vkDepthStencilInfo;
 		vkPipelineInfo.pColorBlendState		= &vkColorBlendInfo;
 		vkPipelineInfo.pDynamicState		= nullptr; //TODO
 		vkPipelineInfo.layout				= vkPipelineLayout;
@@ -1027,21 +1112,6 @@ namespace Quartz
 		vulkanGraphicsPipeline.vkPipelineInfo	= vkPipelineInfo;
 
 		return Register(vulkanGraphicsPipeline);
-	}
-
-	uInt32 FindCompatableMemoryType(VulkanDevice& device, flags32 memoryTypeBits, VkMemoryPropertyFlags memoryProperties)
-	{
-		VkPhysicalDeviceMemoryProperties deviceMemoryProperties = device.pPhysicalDevice->vkMemoryProperties;
-
-		for (uInt32 i = 0; i < deviceMemoryProperties.memoryTypeCount; i++)
-		{
-			if ((memoryTypeBits & (1 << i)) && (deviceMemoryProperties.memoryTypes[i].propertyFlags & memoryProperties) == memoryProperties)
-			{
-				return i;
-			}
-		}
-
-		return (uInt32)-1;
 	}
 
 	VulkanBuffer* VulkanResourceManager::CreateBuffer(VulkanDevice& device, const VulkanBufferInfo& info)
