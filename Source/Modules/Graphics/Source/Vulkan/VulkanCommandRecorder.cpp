@@ -62,8 +62,8 @@ namespace Quartz
 	{
 		constexpr const uSize bufferCacheSize = 16;
 
-		VkBuffer		vkBuffers[bufferCacheSize];
-		VkDeviceSize	vkOffsetSizes[bufferCacheSize];
+		VkBuffer		vkBuffers[bufferCacheSize] = {};
+		VkDeviceSize	vkOffsetSizes[bufferCacheSize] = {};
 
 		if (buffers.Size() > bufferCacheSize) // @TODO: should be debug_assert
 		{
@@ -82,6 +82,34 @@ namespace Quartz
 	void VulkanCommandRecorder::SetIndexBuffer(VulkanBuffer* pIndexBuffer, uSize offset, VkIndexType indexType)
 	{
 		vkCmdBindIndexBuffer(mpCommandBuffer->vkCommandBuffer, pIndexBuffer->vkBuffer, offset, indexType);
+	}
+
+	void VulkanCommandRecorder::BindUniforms(VulkanGraphicsPipeline* pPipeline, uInt32 set, const Array<VulkanUniformBinding>& bindings)
+	{
+		constexpr const uSize maxWriteDescriptorSets = 16;
+
+		VkWriteDescriptorSet writeDescriptorSets[maxWriteDescriptorSets] = {};
+
+		for (uSize i = 0; i < bindings.Size(); i++)
+		{
+			VkDescriptorBufferInfo bufferInfo = {};
+			bufferInfo.buffer	= bindings[i].pBuffer->vkBuffer;
+			bufferInfo.offset	= bindings[i].offset;
+			bufferInfo.range	= bindings[i].range;
+
+			writeDescriptorSets[i].sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeDescriptorSets[i].dstSet			= 0; // Ignored
+			writeDescriptorSets[i].dstBinding		= bindings[i].binding;
+			writeDescriptorSets[i].descriptorCount	= 1;
+			writeDescriptorSets[i].descriptorType	= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			writeDescriptorSets[i].pBufferInfo		= &bufferInfo;
+		}
+
+		PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR2 = 
+			(PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(pPipeline->pDevice->vkDevice, "vkCmdPushDescriptorSetKHR");
+
+		vkCmdPushDescriptorSetKHR2(mpCommandBuffer->vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			pPipeline->vkPipelineInfo.layout, set, bindings.Size(), writeDescriptorSets);
 	}
 
 	void VulkanCommandRecorder::DrawIndexed(uInt32 instanceCount, uInt32 indexCount, uInt32 indexStart)

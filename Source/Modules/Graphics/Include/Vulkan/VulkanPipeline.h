@@ -3,6 +3,7 @@
 #include "VulkanDevice.h"
 #include "VulkanImage.h"
 #include "VulkanRenderpass.h"
+#include "VulkanDescriptorSetLayout.h"
 #include "Types/Map.h"
 
 #include <vulkan/vulkan.h>
@@ -10,30 +11,6 @@
 namespace Quartz
 {
 	struct VulkanShader;
-
-	struct VulkanDescriptorSetInfo
-	{
-		uInt32								set;
-		VkDescriptorSetLayout				vkDescriptorSetLayout;
-		Array<VkDescriptorSetLayoutBinding> bindings;
-		uInt32								sizeBytes;
-	};
-
-	struct VulkanDescriptorWriter
-	{
-		Array<VkWriteDescriptorSet>		descWrites;
-		Array<VkDescriptorBufferInfo>	bufferInfos;
-		Array<VkDescriptorImageInfo>	imageInfos;
-		Map<uInt32, uInt32>				bindingTable;
-
-		bool operator==(const VulkanDescriptorWriter& writer);
-
-		void SetupWriter(const VulkanDescriptorSetInfo& info);
-		void SetDynamicBuffer(uInt32 binding, VkBuffer vkBuffer, uInt32 offset, uInt32 range);
-		void SetImageSampler(uInt32 binding, VkImageView vkImageView, VkSampler vkSampler);
-
-		void UpdateDescriptorSet(VulkanDevice* pDevice, VkDescriptorSet vkDescriptorSet);
-	};
 
 	struct VulkanGraphicsPipelineInfo
 	{
@@ -69,24 +46,17 @@ namespace Quartz
 		stencil;
 
 		VulkanRenderpass*							pRenderpass;
+		bool										usePushDescriptors;
 	};
 
 	struct VulkanGraphicsPipeline
 	{
-		typedef uInt32 SetID;
-
 		VkPipeline							vkPipeline;
 		VulkanDevice*						pDevice;
 		VkGraphicsPipelineCreateInfo		vkPipelineInfo;
-		Array<VulkanDescriptorSetInfo>		descriptorSetInfos;
-		//Array<VulkanDescriptorCache>		descriptorCaches;
-		//Map<SetID, VulkanDescriptorWriter>	descriptorWriters;
+		VulkanGraphicsPipelineInfo			pipelineInfo;
+		Array<VulkanDescriptorSetLayout*>	descriptorSetLayouts;
 		VkSampler							defaultVkSampler;
-
-		//void SetupUniformStates(uInt32 count);
-
-		//VulkanDescriptorWriter* GetDescriptorWriter(uInt32 set);
-		//VkDescriptorSet GetCashedDescriptorSet(uInt32 set, VulkanDescriptorWriter& writer, uInt32 frameIndex);
 	};
 
 	struct VulkanComputePipeline

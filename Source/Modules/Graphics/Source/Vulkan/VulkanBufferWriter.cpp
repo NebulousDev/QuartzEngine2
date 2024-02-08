@@ -41,6 +41,12 @@ namespace Quartz
 		return mpMappedData;
 	}
 
+	VulkanBufferWriter::VulkanBufferWriter() :
+		mpBuffer(nullptr), mMapped(false), mpMappedData(nullptr), mMappedSize(0), mMappedOffset(0)
+	{
+		// Invalid state, use only for construction
+	}
+
 	VulkanBufferWriter::VulkanBufferWriter(VulkanBuffer* pBuffer) :
 		mpBuffer (pBuffer), mMapped(false), mpMappedData(nullptr), mMappedSize(0), mMappedOffset(0)
 	{

@@ -55,10 +55,16 @@ namespace Quartz
 			
 			layout(location = 0) out vec3 outNormal;
 
+			layout(set = 0, binding = 0) uniform TransformUBO
+			{
+				mat4 model;
+				mat4 view;
+			} ubo;
+
 			void main()
 			{
 				outNormal = inNormal;
-				gl_Position = vec4(inPosition, 1.0);
+				gl_Position = (ubo.view * ubo.model) * vec4(inPosition, 1.0);
 			}
 		)";
 
@@ -126,6 +132,7 @@ namespace Quartz
 		pipelineInfo.depth.depthMax			= 1.0f;
 		pipelineInfo.stencil.enableTesting	= false;
 		pipelineInfo.stencil.compareOp		= VK_COMPARE_OP_LESS_OR_EQUAL;
+		pipelineInfo.usePushDescriptors		= true;
 
 		VkVertexInputBindingDescription vertexBufferAttachment = {};
 		vertexBufferAttachment.binding		= 0;
@@ -259,8 +266,8 @@ namespace Quartz
 
 		VulkanBufferInfo stagingIndexBufferInfo		= {};
 		stagingIndexBufferInfo.sizeBytes			= sizeof(indexData);
-		stagingIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		stagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		stagingIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		stagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 		VulkanBuffer* pStagingIndexBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, stagingIndexBufferInfo);
 
@@ -278,6 +285,67 @@ namespace Quartz
 
 		indexWriter.Unmap();
 
+
+		// Uniform Buffers
+
+		uSize transformUniformBufferSize = pVertexShader->uniforms[0].sizeBytes;
+
+		for (uSize i = 0; i < 3; i++)
+		{
+			VulkanBufferInfo stagingUniformBufferInfo	= {};
+			stagingUniformBufferInfo.sizeBytes			= transformUniformBufferSize;
+			stagingUniformBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+			stagingUniformBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+			VulkanBuffer* pStagingUniformBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, stagingUniformBufferInfo);
+
+			VulkanBufferInfo uniformBufferInfo		= {};
+			uniformBufferInfo.sizeBytes				= transformUniformBufferSize;
+			uniformBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			uniformBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+			VulkanBuffer* pUniformBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, uniformBufferInfo);
+
+			VulkanBufferWriter uniformWriter(pStagingUniformBuffer);
+			TransformUniformData* pTransformData = uniformWriter.Map<TransformUniformData>();
+
+			pTransformData->transform = Mat4f().SetRotation({0.0f, 1.0f, 0.0f}, 0.5f);
+			pTransformData->view = Mat4f().SetTranslation({ 0.0f, 0.0f, -1.0f }) * Mat4f().SetPerspective(ToRadians(90.0f),
+				(float)pGraphics->pSurface->width / (float)pGraphics->pSurface->height, 0.001f, 1000.0f);
+
+			mUniformTransformStagingBuffers[i] = pStagingUniformBuffer;
+			mUniformTransformBuffers[i] = pUniformBuffer;
+			mUniformTransformWriters[i] = uniformWriter;
+			mTransformData[i] = pTransformData;
+
+			//uniformWriter.Unmap();
+		}
+
+
+		// Descriptor Sets
+
+		/*
+		VulkanDescriptorPoolInfo descriptorPoolInfo = {};
+		descriptorPoolInfo.maxSets = 4 * 3;
+		descriptorPoolInfo.sizes =
+		{
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			256 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	256 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			256 },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,				256 }
+		};
+
+		mGlobalDescriptorPool = pResources->CreateDescriptorPool(mpGraphics->pPrimaryDevice, descriptorPoolInfo);
+		
+		VulkanDescriptorSetAllocationInfo transformUniformAllocationInfo = {};
+		transformUniformAllocationInfo.pDescriptorPool	= mGlobalDescriptorPool;
+		transformUniformAllocationInfo.setLayouts		= mpPipeline->descriptorSetLayouts;
+
+		pResources->CreateDescriptorSets(mpGraphics->pPrimaryDevice, transformUniformAllocationInfo, mTransformDescriptorSets);
+		*/
+
+
+		// Command Buffers
 
 		VulkanCommandPoolInfo immediateTransferPoolInfo = {};
 		immediateTransferPoolInfo.queueFamilyIndex			= pGraphics->pPrimaryDevice->pPhysicalDevice->primaryQueueFamilyIndices.transfer;
@@ -324,11 +392,21 @@ namespace Quartz
 			renderpassBeginInfo.renderArea		= { { 0, 0 }, {mFramebuffers[i]->width, mFramebuffers[i]->height}};
 			renderpassBeginInfo.clearValues		= { { 0.02f, 0.05f, 0.05f, 1.0f }, { 1.0f, 0 } };
 
+			renderRecorder.CopyBuffer(mUniformTransformStagingBuffers[i], mUniformTransformBuffers[i], transformUniformBufferSize, 0, 0);
+
 			renderRecorder.BeginRenderpass(pRenderPass, renderpassBeginInfo);
 
 			renderRecorder.SetVertexBuffers({{pVertexBuffer, 0}});
 			renderRecorder.SetIndexBuffer(pIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
 			renderRecorder.SetGraphicsPipeline(mpPipeline);
+
+			VulkanUniformBinding binding = {};
+			binding.binding = 0;
+			binding.pBuffer = mUniformTransformBuffers[i];
+			binding.offset	= 0;
+			binding.range	= mUniformTransformBuffers[i]->sizeBytes;
+
+			renderRecorder.BindUniforms(mpPipeline, 0, { binding });
 
 			renderRecorder.DrawIndexed(1, pIndexBuffer->sizeBytes / sizeof(uInt16), 0);
 
@@ -336,7 +414,6 @@ namespace Quartz
 
 			renderRecorder.EndRecording();
 		}
-		
 	}
 
 	void VulkanRenderer::RenderScene(VulkanRenderScene* pRenderScene)

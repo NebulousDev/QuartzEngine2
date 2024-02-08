@@ -131,7 +131,8 @@ namespace Quartz
 		{
 			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 			VK_KHR_SURFACE_EXTENSION_NAME,
-			"VK_KHR_win32_surface"
+			"VK_KHR_win32_surface",
+			VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
 		};
 
 		uInt32 layerCount;
@@ -273,7 +274,8 @@ namespace Quartz
 		Array<const char*> deviceExtensions =
 		{
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME
+			VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
+			VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 		};
 
 		for (VulkanPhysicalDevice& physicalDevice : pGraphics->physicalDevices)
@@ -464,7 +466,7 @@ namespace Quartz
 					uInt32 reqMinor = VK_API_VERSION_MINOR(version);
 					uInt32 reqpatch = VK_API_VERSION_PATCH(version);
 
-					LogError("VulkanTest failed. Requested version %d.%d.%d,\
+					LogError("Vulkan VersionTest failed. Requested version %d.%d.%d,\
  but vkEnumerateInstanceVersion returned %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
 
 					return false;
@@ -472,13 +474,13 @@ namespace Quartz
 			}
 			else
 			{
-				LogError("VulkanTest failed. vkEnumerateInstanceVersion returned false.");
+				LogError("Vulkan VersionTest failed failed. vkEnumerateInstanceVersion returned false.");
 				return false;
 			}
 		}
 		else
 		{
-			LogError("VulkanTest failed. vkGetInstanceProcAddr failed to retrieve vkEnumerateInstanceVersion. Vulkan version is too low.");
+			LogError("Vulkan VersionTest failed failed. vkGetInstanceProcAddr failed to retrieve vkEnumerateInstanceVersion. Vulkan version is too low.");
 			return false;
 		}
 

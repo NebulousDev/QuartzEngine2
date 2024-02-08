@@ -66,6 +66,21 @@ namespace Quartz
 		return &mFramebuffers.PushBack(framebuffer);
 	}
 
+	VulkanDescriptorPool* VulkanResourceManager::Register(const VulkanDescriptorPool& pool)
+	{
+		return &mDescriptorPools.PushBack(pool);
+	}
+
+	VulkanDescriptorSet* VulkanResourceManager::Register(const VulkanDescriptorSet& set)
+	{
+		return &mDescriptorSets.PushBack(set);
+	}
+
+	VulkanDescriptorSetLayout* VulkanResourceManager::Register(const VulkanDescriptorSetLayout& layout)
+	{
+		return &mDescriptorSetLayouts.PushBack(layout);
+	}
+
 	bool EnumeratePresentModes(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, Array<VkPresentModeKHR>& presentModes)
 	{
 		VkResult result;
@@ -850,10 +865,10 @@ namespace Quartz
 		VkPipeline vkPipeline = VK_NULL_HANDLE;
 
 		Array<VkPipelineShaderStageCreateInfo>				shaderStageInfos;
-		Array<VulkanDescriptorSetInfo>						descriptorSetInfos;
 		Array<Map<String, VkDescriptorSetLayoutBinding>>	descriptorSetBindings(16); // @Todo: querry max supported sets
 		Array<uInt32>										descriptorSetSizes(16);
-		Array<VkDescriptorSetLayout>						descriptorSetLayouts;
+		Array<VulkanDescriptorSetLayout*>					descriptorSetLayouts;
+		Array<VkDescriptorSetLayout>						vkDescriptorSetLayouts;
 		
 		uSize maxSetIndex = 0;
 
@@ -861,20 +876,18 @@ namespace Quartz
 		{
 			if (!pShader) continue;
 
-			VulkanShader* pVulkanShader = static_cast<VulkanShader*>(pShader);
-
 			VkPipelineShaderStageCreateInfo vkShaderStageInfo = {};
 			vkShaderStageInfo.sType					= VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			vkShaderStageInfo.flags					= 0;
 			vkShaderStageInfo.pSpecializationInfo	= nullptr;
-			vkShaderStageInfo.stage					= pVulkanShader->vkStage;
-			vkShaderStageInfo.module				= pVulkanShader->vkShader;
-			vkShaderStageInfo.pName					= pVulkanShader->entryPoint.Str();
+			vkShaderStageInfo.stage					= pShader->vkStage;
+			vkShaderStageInfo.module				= pShader->vkShader;
+			vkShaderStageInfo.pName					= pShader->entryPoint.Str();
 			vkShaderStageInfo.pNext					= nullptr;
 
 			shaderStageInfos.PushBack(vkShaderStageInfo);
 
-			const Array<SpirvUniform>& uniforms = pVulkanShader->uniforms;
+			const Array<SpirvUniform>& uniforms = pShader->uniforms;
 
 			for (uInt32 i = 0; i < uniforms.Size(); i++)
 			{
@@ -882,15 +895,15 @@ namespace Quartz
 
 				if (descriptorSetBindings[uniform.set].Contains(uniform.name))
 				{
-					descriptorSetBindings[uniform.set][uniform.name].stageFlags |= pVulkanShader->vkStage;
+					descriptorSetBindings[uniform.set][uniform.name].stageFlags |= pShader->vkStage;
 				}
 				else
 				{
-					VkDescriptorSetLayoutBinding vkBinding;
+					VkDescriptorSetLayoutBinding vkBinding = {};
 					vkBinding.binding				= uniform.binding;
-					vkBinding.descriptorCount		= 1;
+					vkBinding.descriptorCount		= 1; // @TODO allow uniform arrays
 					vkBinding.descriptorType		= uniform.descriptorType;
-					vkBinding.stageFlags			= pVulkanShader->vkStage;
+					vkBinding.stageFlags			= pShader->vkStage;
 					vkBinding.pImmutableSamplers	= nullptr;
 
 					// @TODO: check set bounds < 16
@@ -907,7 +920,7 @@ namespace Quartz
 			// @Todo: samplers, etc.
 		}
 
-		descriptorSetLayouts.Resize(maxSetIndex + 1);
+		vkDescriptorSetLayouts.Resize(maxSetIndex + 1);
 
 		uInt32 setIndex = 0;
 		for (Map<String, VkDescriptorSetLayoutBinding>& set : descriptorSetBindings)
@@ -926,7 +939,7 @@ namespace Quartz
 
 			VkDescriptorSetLayoutCreateInfo vkDescriptorSetLayoutInfo = {};
 			vkDescriptorSetLayoutInfo.sType			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			vkDescriptorSetLayoutInfo.flags			= 0;
+			vkDescriptorSetLayoutInfo.flags			= info.usePushDescriptors ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR : 0;
 			vkDescriptorSetLayoutInfo.bindingCount	= setBindings.Size();
 			vkDescriptorSetLayoutInfo.pBindings		= setBindings.Data();
 			vkDescriptorSetLayoutInfo.pNext			= nullptr; //&bindingFlags;
@@ -940,19 +953,26 @@ namespace Quartz
 				return nullptr;
 			}
 
-			descriptorSetLayouts[setIndex] = vkDescriptorSetLayout;
+			vkDescriptorSetLayouts[setIndex] = vkDescriptorSetLayout;
 
-			VulkanDescriptorSetInfo descriptorSetInfo;
-			descriptorSetInfo.set					= setIndex;
-			descriptorSetInfo.vkDescriptorSetLayout = vkDescriptorSetLayout;
-			descriptorSetInfo.sizeBytes				= descriptorSetSizes[setIndex];
+			VulkanDescriptorSetLayout descriptorSetLayout;
+			descriptorSetLayout.set						= setIndex;
+			descriptorSetLayout.vkDescriptorSetLayout	= vkDescriptorSetLayout;
+			descriptorSetLayout.sizeBytes				= descriptorSetSizes[setIndex];
 
 			for (const MapPair<String, VkDescriptorSetLayoutBinding>& binding : set)
 			{
-				descriptorSetInfo.bindings.PushBack(binding.value);
+				VulkanDesctiptorSetLayoutBinding vulkanBinding = {};
+				vulkanBinding.vkBinding = binding.value;
+				vulkanBinding.sizeBytes = 0; // @TODO: Fix zero bytes
+
+				descriptorSetLayout.setBindings.PushBack(vulkanBinding);
 			}
 
-			descriptorSetInfos.PushBack(descriptorSetInfo);
+			LogTrace("Created VulkanDescriptorSetLayout [ID=%06.6d].", mDescriptorSetLayouts.Size() + 1);
+
+			VulkanDescriptorSetLayout* pSetLayout = Register(descriptorSetLayout);
+			descriptorSetLayouts.PushBack(pSetLayout);
 
 			setIndex++;
 		}
@@ -963,7 +983,7 @@ namespace Quartz
 		vkVertexInputStateInfo.pVertexBindingDescriptions		= info.bufferAttachments.Data();
 		vkVertexInputStateInfo.vertexAttributeDescriptionCount	= info.vertexAttributes.Size();
 		vkVertexInputStateInfo.pVertexAttributeDescriptions		= info.vertexAttributes.Data();
-		vkVertexInputStateInfo.flags = 0;
+		vkVertexInputStateInfo.flags							= 0;
 
 		VkPipelineInputAssemblyStateCreateInfo vkInputAssemblyInfo = {};
 		vkInputAssemblyInfo.sType		= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -1059,8 +1079,8 @@ namespace Quartz
 		VkPipelineLayoutCreateInfo vkLayoutInfo = {};
 		vkLayoutInfo.sType			= VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		vkLayoutInfo.flags			= 0;
-		vkLayoutInfo.setLayoutCount = descriptorSetLayouts.Size();
-		vkLayoutInfo.pSetLayouts	= descriptorSetLayouts.Data();
+		vkLayoutInfo.setLayoutCount = vkDescriptorSetLayouts.Size();
+		vkLayoutInfo.pSetLayouts	= vkDescriptorSetLayouts.Data();
 
 		// TODO: Support push constants?
 		vkLayoutInfo.pushConstantRangeCount = 0;
@@ -1111,9 +1131,12 @@ namespace Quartz
 		LogTrace("Created VulkanGraphicsPipeline [ID=%06.6d].", mGraphicsPipelines.Size() + 1);
 
 		VulkanGraphicsPipeline vulkanGraphicsPipeline = {};
-		vulkanGraphicsPipeline.pDevice			= pDevice;
-		vulkanGraphicsPipeline.vkPipeline		= vkPipeline;
-		vulkanGraphicsPipeline.vkPipelineInfo	= vkPipelineInfo;
+		vulkanGraphicsPipeline.pDevice				= pDevice;
+		vulkanGraphicsPipeline.vkPipeline			= vkPipeline;
+		vulkanGraphicsPipeline.vkPipelineInfo		= vkPipelineInfo;
+		vulkanGraphicsPipeline.pipelineInfo			= info;
+		vulkanGraphicsPipeline.descriptorSetLayouts = descriptorSetLayouts;
+		vulkanGraphicsPipeline.defaultVkSampler		= 0; // @TODO default sampler
 
 		return Register(vulkanGraphicsPipeline);
 	}
@@ -1208,16 +1231,16 @@ namespace Quartz
 		return Register(vulkanCommandPool);
 	}
 
-	bool VulkanResourceManager::CreateCommandBuffers(VulkanCommandPool* pCommandPool, uInt32 count, VulkanCommandBuffer** ppCommandBuffers)
+	bool VulkanResourceManager::CreateCommandBuffers(VulkanCommandPool* pCommandPool, uInt32 count, VulkanCommandBuffer** ppOutCommandBuffers)
 	{
 		Array<VkCommandBuffer> vkCommandBuffersList;
 		vkCommandBuffersList.Resize(count);
 
 		VkCommandBufferAllocateInfo allocInfo = {};
-		allocInfo.sType					= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool			= pCommandPool->vkCommandPool;
-		allocInfo.level					= VK_COMMAND_BUFFER_LEVEL_PRIMARY; // Secondary buffers not worth it
-		allocInfo.commandBufferCount	= count;
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = pCommandPool->vkCommandPool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; // Secondary buffers not worth it
+		allocInfo.commandBufferCount = count;
 
 		if (vkAllocateCommandBuffers(pCommandPool->pDevice->vkDevice, &allocInfo, vkCommandBuffersList.Data()) != VK_SUCCESS)
 		{
@@ -1229,12 +1252,12 @@ namespace Quartz
 		{
 			VulkanCommandBuffer vulkanCommandBuffer = {};
 			vulkanCommandBuffer.vkCommandBuffer = vkCommandBuffersList[i];
-			vulkanCommandBuffer.pDevice			= pCommandPool->pDevice;
-			vulkanCommandBuffer.pCommandPool	= pCommandPool;
+			vulkanCommandBuffer.pDevice = pCommandPool->pDevice;
+			vulkanCommandBuffer.pCommandPool = pCommandPool;
 
 			LogTrace("Created VulkanCommandBuffer [ID=%06.6d].", mCommandBuffers.Size() + 1);
 
-			ppCommandBuffers[i] = Register(vulkanCommandBuffer);
+			ppOutCommandBuffers[i] = Register(vulkanCommandBuffer);
 		}
 	}
 
@@ -1244,7 +1267,7 @@ namespace Quartz
 
 		constexpr const uSize attachmentImageViewsSize = 16;
 
-		VkImageView vkAttachmentImageViews[attachmentImageViewsSize];
+		VkImageView vkAttachmentImageViews[attachmentImageViewsSize] = {};
 
 		for (uSize i = 0; i < info.attachments.Size(); i++)
 		{
@@ -1252,29 +1275,140 @@ namespace Quartz
 		}
 
 		VkFramebufferCreateInfo framebufferInfo = {};
-		framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass		= info.renderpass->vkRenderpass;
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = info.renderpass->vkRenderpass;
 		framebufferInfo.attachmentCount = info.attachments.Size();
-		framebufferInfo.pAttachments	= vkAttachmentImageViews;
-		framebufferInfo.width			= info.width;
-		framebufferInfo.height			= info.height;
-		framebufferInfo.layers			= info.layers;
+		framebufferInfo.pAttachments = vkAttachmentImageViews;
+		framebufferInfo.width = info.width;
+		framebufferInfo.height = info.height;
+		framebufferInfo.layers = info.layers;
 
 		if (vkCreateFramebuffer(pDevice->vkDevice, &framebufferInfo, VK_NULL_HANDLE, &vkFramebuffer) != VK_SUCCESS)
 		{
 			LogError("Failed to create VulkanFramebuffer: vkCreateFramebuffer failed!");
+			return nullptr;
 		}
 
 		VulkanFramebuffer vulkanFramebuffer = {};
-		vulkanFramebuffer.vkFramebuffer		= vkFramebuffer;
-		vulkanFramebuffer.renderpass		= info.renderpass;
-		vulkanFramebuffer.attachments		= info.attachments;
-		vulkanFramebuffer.width				= info.width;
-		vulkanFramebuffer.height			= info.height;
-		vulkanFramebuffer.layers			= info.layers;
+		vulkanFramebuffer.vkFramebuffer = vkFramebuffer;
+		vulkanFramebuffer.renderpass = info.renderpass;
+		vulkanFramebuffer.attachments = info.attachments;
+		vulkanFramebuffer.width = info.width;
+		vulkanFramebuffer.height = info.height;
+		vulkanFramebuffer.layers = info.layers;
 
 		LogTrace("Created VulkanFramebuffer [ID=%06.6d].", mFramebuffers.Size() + 1);
 
 		return Register(vulkanFramebuffer);
+	}
+
+	VulkanDescriptorPool* VulkanResourceManager::CreateDescriptorPool(VulkanDevice* pDevice, const VulkanDescriptorPoolInfo& info)
+	{
+		VkDescriptorPool vkDescriptorPool;
+
+		VkDescriptorPoolCreateInfo descriptorPoolInfo = {};
+		descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolInfo.maxSets = info.maxSets;
+		descriptorPoolInfo.poolSizeCount = info.sizes.Size();
+		descriptorPoolInfo.pPoolSizes = info.sizes.Data();
+		descriptorPoolInfo.flags = 0;
+		descriptorPoolInfo.pNext = nullptr;
+
+		if (vkCreateDescriptorPool(pDevice->vkDevice, &descriptorPoolInfo, VK_NULL_HANDLE, &vkDescriptorPool) != VK_SUCCESS)
+		{
+			LogError("Failed to create VulkanDescriptorPool: vkCreateDescriptorPool failed!");
+			return nullptr;
+		}
+
+		LogTrace("Created VulkanDescriptorPool [ID=%06.6d].", mDescriptorPools.Size() + 1);
+
+		VulkanDescriptorPool descriptorPool = {};
+		descriptorPool.vkDescriptorPool = vkDescriptorPool;
+		descriptorPool.sizes = info.sizes;
+		descriptorPool.maxSets = info.maxSets;
+
+		return Register(descriptorPool);
+	}
+
+	bool VulkanResourceManager::CreateDescriptorSets(VulkanDevice* pDevice,	const VulkanDescriptorSetAllocationInfo& info, VulkanDescriptorSet** ppOutDescriptorSets)
+	{
+		constexpr const uSize maxDescriptorSetAllocations = 16;
+
+		VkDescriptorSetLayout vkDescriptorSetLayouts[maxDescriptorSetAllocations] = {};
+
+		for(uSize i = 0; i < info.setLayouts.Size(); i++)
+		{
+			vkDescriptorSetLayouts[i] = info.setLayouts[i]->vkDescriptorSetLayout;
+		}
+
+		VkDescriptorSetAllocateInfo setAllocateInfo = {};
+		setAllocateInfo.sType				= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		setAllocateInfo.descriptorPool		= info.pDescriptorPool->vkDescriptorPool;
+		setAllocateInfo.descriptorSetCount	= info.setLayouts.Size();
+		setAllocateInfo.pSetLayouts			= vkDescriptorSetLayouts;
+		setAllocateInfo.pNext				= nullptr;
+
+		VkDescriptorSet vkDescriptorSets[maxDescriptorSetAllocations];
+
+		if (vkAllocateDescriptorSets(pDevice->vkDevice, &setAllocateInfo, vkDescriptorSets) != VK_SUCCESS)
+		{
+			LogError("Failed to create VulkanDescriptorSet: vkAllocateDescriptorSets failed!");
+			return false;
+		}
+
+		for (uSize i = 0; i < info.setLayouts.Size(); i++)
+		{
+			LogTrace("Created VulkanDescriptorSet [ID=%06.6d].", mDescriptorSets.Size() + 1);
+
+			VulkanDescriptorSet descriptorSet = {};
+			descriptorSet.pDescriptorPool	= info.pDescriptorPool;
+			descriptorSet.vkDescriptorSet	= vkDescriptorSets[i];
+
+			VulkanDescriptorSet* pDescriptorSet = Register(descriptorSet);
+
+			ppOutDescriptorSets[i] = pDescriptorSet;
+		}
+
+		return true;
+	}
+
+	VulkanDescriptorSetLayout* VulkanResourceManager::CreateDescriptorSetLayout(VulkanDevice* pDevice, const VulkanDesctiptorSetLayoutInfo& info)
+	{
+		constexpr const uSize maxDescriptorSetLayoutBindings = 16;
+
+		VkDescriptorSetLayoutBinding vkBindings[maxDescriptorSetLayoutBindings] = {};
+		
+		uSize sizeBytes = 0;
+
+		for (uSize i = 0; i < info.setBindings.Size(); i++)
+		{
+			vkBindings[i] = info.setBindings[i].vkBinding;
+			sizeBytes += info.setBindings.Size();
+		}
+
+		VkDescriptorSetLayoutCreateInfo vkDescriptorSetLayoutInfo = {};
+		vkDescriptorSetLayoutInfo.sType			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		vkDescriptorSetLayoutInfo.flags			= 0;
+		vkDescriptorSetLayoutInfo.bindingCount	= info.setBindings.Size();
+		vkDescriptorSetLayoutInfo.pBindings		= vkBindings;
+		vkDescriptorSetLayoutInfo.pNext			= nullptr;
+
+		VkDescriptorSetLayout vkDescriptorSetLayout;
+
+		if (vkCreateDescriptorSetLayout(pDevice->vkDevice, &vkDescriptorSetLayoutInfo, nullptr, &vkDescriptorSetLayout) != VK_SUCCESS)
+		{
+			LogError("Failed to create vulkan descriptor set layout: vkCreateDescriptorSetLayout failed!");
+			return nullptr;
+		}
+
+		LogTrace("Created VulkanDescriptorSetLayout [ID=%06.6d].", mDescriptorSetLayouts.Size() + 1);
+
+		VulkanDescriptorSetLayout descriptorSetLayout = {};
+		descriptorSetLayout.vkDescriptorSetLayout	= vkDescriptorSetLayout;
+		descriptorSetLayout.setBindings				= info.setBindings;
+		descriptorSetLayout.set						= info.set;
+		descriptorSetLayout.sizeBytes				= sizeBytes;
+
+		return Register(descriptorSetLayout);
 	}
 }

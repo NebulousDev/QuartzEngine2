@@ -18,6 +18,7 @@ namespace Quartz
 			void* MapBytes(uSize size, uSize offset);
 
 		public:
+			VulkanBufferWriter();
 			VulkanBufferWriter(VulkanBuffer* pBuffer);
 
 			template<typename Data>

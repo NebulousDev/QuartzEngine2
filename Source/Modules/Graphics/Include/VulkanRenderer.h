@@ -7,9 +7,18 @@
 #include "Vulkan/VulkanRenderScene.h"
 #include "Vulkan/VulkanSwapchainTimer.h"
 #include "Vulkan/VulkanPipeline.h"
+#include "Vulkan/VulkanBufferWriter.h"
+
+#include "Math/Math.h"
 
 namespace Quartz
 {
+	struct TransformUniformData
+	{
+		Mat4f transform;
+		Mat4f view;
+	};
+
 	class QUARTZ_GRAPHICS_API VulkanRenderer
 	{
 	private:
@@ -20,6 +29,12 @@ namespace Quartz
 
 		VulkanCommandBuffer*	mCommandBuffers[3];
 		VulkanFramebuffer*		mFramebuffers[3];
+		VulkanBuffer*			mUniformTransformStagingBuffers[3];
+		VulkanBuffer*			mUniformTransformBuffers[3];
+		VulkanBufferWriter		mUniformTransformWriters[3];
+		TransformUniformData*	mTransformData[3];
+		VulkanDescriptorPool*	mGlobalDescriptorPool;
+		VulkanDescriptorSet*	mTransformDescriptorSets[3];
 
 	public:
 		void Initialize(VulkanGraphics* pGraphics);
