@@ -1,13 +1,13 @@
 #pragma once
 
-#include "GfxDLL.h"
+#include "../GfxDLL.h"
 #include "Runtime/Runtime.h"
 
-#include "Vulkan/VulkanGraphics.h"
-#include "Vulkan/VulkanRenderScene.h"
-#include "Vulkan/VulkanSwapchainTimer.h"
-#include "Vulkan/VulkanPipeline.h"
-#include "Vulkan/VulkanBufferWriter.h"
+#include "VulkanGraphics.h"
+#include "VulkanRenderScene.h"
+#include "VulkanSwapchainTimer.h"
+#include "Primatives/VulkanPipeline.h"
+#include "VulkanBufferWriter.h"
 
 #include "Math/Math.h"
 

@@ -3,17 +3,17 @@
 #include "../GfxDLL.h"
 #include "Types/Array.h"
 
-#include "VulkanSurface.h"
-#include "VulkanSwapchain.h"
-#include "VulkanImage.h"
-#include "VulkanShader.h"
-#include "VulkanRenderpass.h"
-#include "VulkanPipeline.h"
-#include "VulkanBuffer.h"
-#include "VulkanCommandBuffer.h"
-#include "VulkanFramebuffer.h"
-#include "VulkanDescriptorSet.h"
-#include "VulkanDescriptorSetLayout.h"
+#include "Primatives/VulkanSurface.h"
+#include "Primatives/VulkanSwapchain.h"
+#include "Primatives/VulkanImage.h"
+#include "Primatives/VulkanShader.h"
+#include "Primatives/VulkanRenderpass.h"
+#include "Primatives/VulkanPipeline.h"
+#include "Primatives/VulkanBuffer.h"
+#include "Primatives/VulkanCommandBuffer.h"
+#include "Primatives/VulkanFramebuffer.h"
+#include "Primatives/VulkanDescriptorSet.h"
+#include "Primatives/VulkanDescriptorSetLayout.h"
 
 #include <vulkan/vulkan.h>
 

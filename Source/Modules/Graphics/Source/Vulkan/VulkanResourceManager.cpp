@@ -2,8 +2,8 @@
 
 #include "Log.h"
 
-#include "Vulkan/VulkanDevice.h"
-#include "Vulkan/VulkanPhysicalDevice.h"
+#include "Vulkan/Primatives/VulkanDevice.h"
+#include "Vulkan/Primatives/VulkanPhysicalDevice.h"
 
 #include "Vulkan/VulkanApiSurface.h"
 

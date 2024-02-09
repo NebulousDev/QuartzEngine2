@@ -1,8 +1,8 @@
-#include "VulkanRenderer.h"
+#include "Vulkan/VulkanRenderer.h"
 
 #include "Log.h"
 #include "Vulkan/VulkanGraphics.h"
-#include "Vulkan/VulkanPipeline.h"
+#include "Vulkan/Primatives/VulkanPipeline.h"
 #include "Vulkan/VulkanCommandRecorder.h"
 #include "Vulkan/VulkanSwapchainTimer.h"
 #include "Vulkan/VulkanBufferWriter.h"
@@ -321,30 +321,6 @@ namespace Quartz
 			//uniformWriter.Unmap();
 		}
 
-
-		// Descriptor Sets
-
-		/*
-		VulkanDescriptorPoolInfo descriptorPoolInfo = {};
-		descriptorPoolInfo.maxSets = 4 * 3;
-		descriptorPoolInfo.sizes =
-		{
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			256 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	256 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			256 },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,				256 }
-		};
-
-		mGlobalDescriptorPool = pResources->CreateDescriptorPool(mpGraphics->pPrimaryDevice, descriptorPoolInfo);
-		
-		VulkanDescriptorSetAllocationInfo transformUniformAllocationInfo = {};
-		transformUniformAllocationInfo.pDescriptorPool	= mGlobalDescriptorPool;
-		transformUniformAllocationInfo.setLayouts		= mpPipeline->descriptorSetLayouts;
-
-		pResources->CreateDescriptorSets(mpGraphics->pPrimaryDevice, transformUniformAllocationInfo, mTransformDescriptorSets);
-		*/
-
-
 		// Command Buffers
 
 		VulkanCommandPoolInfo immediateTransferPoolInfo = {};
@@ -374,7 +350,7 @@ namespace Quartz
 
 
 		VulkanCommandPoolInfo renderPoolInfo = {};
-		renderPoolInfo.queueFamilyIndex			= pGraphics->pPrimaryDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
+		renderPoolInfo.queueFamilyIndex			= pGraphics->pPrimaryDevice->pPhysicalDevice-> primaryQueueFamilyIndices.graphics;
 		renderPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 		VulkanCommandPool* pRenderPool = pResources->CreateCommandPool(pGraphics->pPrimaryDevice, renderPoolInfo);

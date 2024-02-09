@@ -8,9 +8,9 @@
 #include "Graphics.h"
 
 #include "Vulkan/VulkanGraphics.h"
-#include "Vulkan/VulkanSurface.h"
+#include "Vulkan/Primatives/VulkanSurface.h"
 #include "Vulkan/VulkanApiSurface.h"
-#include "VulkanRenderer.h"
+#include "Vulkan/VulkanRenderer.h"
 
 #include <vulkan/vulkan.h>
 

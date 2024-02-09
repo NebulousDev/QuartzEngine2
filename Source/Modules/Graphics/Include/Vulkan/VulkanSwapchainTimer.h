@@ -1,7 +1,7 @@
 #pragma once
 
 #include "GfxDLL.h"
-#include "VulkanSwapchain.h"
+#include "Primatives/VulkanSwapchain.h"
 
 namespace Quartz
 {

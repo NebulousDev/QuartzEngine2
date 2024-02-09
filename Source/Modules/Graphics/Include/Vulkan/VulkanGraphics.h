@@ -2,10 +2,10 @@
 
 #include "GfxDLL.h"
 #include "Graphics.h"
-#include "VulkanDevice.h"
-#include "VulkanPhysicalDevice.h"
+#include "Primatives/VulkanDevice.h"
+#include "Primatives/VulkanPhysicalDevice.h"
+#include "Primatives/VulkanSwapchain.h"
 #include "VulkanState.h"
-#include "VulkanSwapchain.h"
 #include "VulkanResourceManager.h"
 
 namespace Quartz

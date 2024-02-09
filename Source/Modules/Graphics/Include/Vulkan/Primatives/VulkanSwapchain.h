@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Vulkan/VulkanImage.h"
-#include "Vulkan/VulkanDevice.h"
+#include "VulkanImage.h"
+#include "VulkanDevice.h"
 
 #include "Types/Array.h"
 
