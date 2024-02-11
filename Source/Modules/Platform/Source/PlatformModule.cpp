@@ -1,6 +1,5 @@
 #include "System/System.h"
 
-#include "Quartz.h"
 #include "Entity/World.h"
 #include "Runtime/Runtime.h"
 #include "Types/Array.h"
@@ -122,7 +121,7 @@ extern "C"
 {
 	using namespace Quartz;
 
-	bool QUARTZ_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
+	bool QUARTZ_ENGINE_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
 	{
 		systemQuery.name = "PlatformModule";
 		systemQuery.version = "1.0.0";
@@ -130,7 +129,7 @@ extern "C"
 		return true;
 	}
 
-	bool QUARTZ_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
+	bool QUARTZ_ENGINE_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
 	{
 		Log::SetGlobalLog(engineLog);
 		gpEntityWorld = &entityWorld;
@@ -138,13 +137,13 @@ extern "C"
 		return true;
 	}
 
-	void QUARTZ_API SystemUnload()
+	void QUARTZ_ENGINE_API SystemUnload()
 	{
 		DestroyApplication(gpApp);
 		DestroyPlatform(gpPlatform);
 	}
 
-	void QUARTZ_API SystemPreInit()
+	void QUARTZ_ENGINE_API SystemPreInit()
 	{
 		ApplicationInfo appInfo = {};
 
@@ -161,7 +160,7 @@ extern "C"
 		gpPlatform->pApplication = gpApp;
 	}
 
-	void QUARTZ_API SystemInit()
+	void QUARTZ_ENGINE_API SystemInit()
 	{
 		/*
 #ifdef QUARTZAPP_VULKAN

@@ -1,4 +1,4 @@
-#include "Quartz.h"
+#include "EngineAPI.h"
 
 #include "Sinks/Windows/WinApiConsoleSink.h"
 

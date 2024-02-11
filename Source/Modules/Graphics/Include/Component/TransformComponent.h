@@ -1,11 +1,12 @@
 #pragma once
 
+#include "GfxAPI.h"
 #include "Entity/Component.h"
 #include "Math/Math.h"
 
 namespace Quartz
 {
-	struct TransformComponent : public Component<TransformComponent>
+	struct QUARTZ_GRAPHICS_API TransformComponent : public Component<TransformComponent>
 	{
 		Vec3f position;
 		Quatf rotation;

@@ -1,6 +1,6 @@
 #include "System/System.h"
 
-#include "Quartz.h"
+#include "EngineAPI.h"
 #include "Entity/World.h"
 #include "Log.h"
 
@@ -11,6 +11,9 @@
 #include "Vulkan/Primatives/VulkanSurface.h"
 #include "Vulkan/VulkanApiSurface.h"
 #include "Vulkan/VulkanRenderer.h"
+
+#include "Component/TransformComponent.h"
+#include "Component/MeshComponent.h"
 
 #include <vulkan/vulkan.h>
 
@@ -23,7 +26,7 @@ namespace Quartz
 		EntityWorld*	gpWorld;
 		Runtime*		gpRuntime;
 
-		bool QUARTZ_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
+		bool QUARTZ_ENGINE_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
 		{
 			systemQuery.name = "SandboxModule";
 			systemQuery.version = "1.0.0";
@@ -31,7 +34,7 @@ namespace Quartz
 			return true;
 		}
 
-		bool QUARTZ_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
+		bool QUARTZ_ENGINE_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
 		{
 			Log::SetGlobalLog(engineLog);
 
@@ -41,17 +44,17 @@ namespace Quartz
 			return true;
 		}
 
-		void QUARTZ_API SystemUnload()
+		void QUARTZ_ENGINE_API SystemUnload()
 		{
 
 		}
 
-		void QUARTZ_API SystemPreInit()
+		void QUARTZ_ENGINE_API SystemPreInit()
 		{
 
 		}
 
-		void QUARTZ_API SystemInit()
+		void QUARTZ_ENGINE_API SystemInit()
 		{
 			LogInfo("Starting Sandbox");
 
@@ -77,6 +80,47 @@ namespace Quartz
 
 			// TEMP
 			gfx.pSurface = gfx.pResourceManager->CreateSurface(gfx.pPrimaryDevice, gfx.vkInstance, *(VulkanApiSurface*)pWindow->GetSurface());
+
+			TransformComponent transform1
+			( 
+				{ 0.0f, 0.0f, 1.0f }, 
+				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f), 
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			TransformComponent transform2
+			(
+				{ -0.6f, -0.4f, -2.0f },
+				Quatf({ 0.0f, 0.0f, 0.0f }, 0.2f),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			TransformComponent transform3
+			(
+				{ 0.6f, 0.4f, -3.0f },
+				Quatf({ 0.0f, 0.0f, 0.0f }, -0.2f),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			ModelData triData =
+			{
+				{
+					-0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
+					 0.0f,  0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
+					 0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f
+				},
+				{
+					0, 1, 2
+				}
+			};
+
+			MeshComponent renderable1("simpletri0", triData);
+			MeshComponent renderable2("simpletri1", triData);
+
+			Entity eTri1 = gpWorld->CreateEntity(transform1, renderable1);
+			Entity eTri2 = gpWorld->CreateEntity(transform2, renderable2);
+			Entity eTri3 = gpWorld->CreateEntity(transform3, renderable2);
+
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
 			pRenderer->Register(gpRuntime);

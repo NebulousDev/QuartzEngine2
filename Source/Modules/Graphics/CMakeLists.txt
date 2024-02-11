@@ -17,7 +17,10 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Vulkan/VulkanResourceManager.cpp"
 	"Source/Vulkan/SPIRV/SPIRV.cpp"
 	"Source/Vulkan/VulkanBufferWriter.cpp"
-	"Source/Vulkan/VulkanCommandRecorder.cpp")
+	"Source/Vulkan/VulkanCommandRecorder.cpp"
+	"Source/Component/TransformComponent.cpp"
+	"Source/Component/RenderableComponent.cpp"
+	"Source/Vulkan/VulkanMultiBuffer.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

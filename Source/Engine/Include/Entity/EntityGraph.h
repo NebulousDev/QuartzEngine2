@@ -1,25 +1,49 @@
 #pragma once
 
+#include "EngineAPI.h"
+
 #include "Entity.h"
-#include "Component/Transform.h"
 #include "Types/BlockSet.h"
 #include "Types/Array.h"
+
+#include "Math/Math.h"
+#include "Component.h"
 
 namespace Quartz
 {
 	class EntityGraph;
 	class EntityDatabase;
 
+	// TEMP
+	struct QUARTZ_ENGINE_API TransformComponentOld : public Component<TransformComponentOld>
+	{
+		Vec3f position;
+		Quatf rotation;
+		Vec3f scale;
+
+		TransformComponentOld();
+		TransformComponentOld(const Vec3f& position, const Quatf& rotation, const Vec3f& scale);
+
+		Vec3f GetForward();
+		Vec3f GetBackward();
+		Vec3f GetLeft();
+		Vec3f GetRight();
+		Vec3f GetUp();
+		Vec3f GetDown();
+
+		Mat4f GetMatrix();
+	};
+
 	struct SceneNode
 	{
 		SceneNode*			pParent;
 		Entity				entity;
-		TransformComponent* pLocalTransform;
+		TransformComponentOld* pLocalTransform;
 		Mat4f				globalTransform;
 		Array<SceneNode*>	children;
 	};
 
-	class EntityGraphView
+	class QUARTZ_ENGINE_API EntityGraphView
 	{
 	private:
 		EntityGraph* mpParentGraph;
@@ -36,7 +60,7 @@ namespace Quartz
 	// TODO: transition away from linked lists to a more compact
 	//		 data structure (indexed array?)
 
-	class EntityGraph
+	class QUARTZ_ENGINE_API EntityGraph
 	{
 	private:
 		friend class EntityWorld;
@@ -47,7 +71,7 @@ namespace Quartz
 		EntityDatabase*		mpDatabase;
 		NodeStorage			mNodes;
 		SceneNode*			mpRoot;
-		TransformComponent	mZeroTransform;
+		TransformComponentOld 	mZeroTransform;
 
 	private:
 		EntityGraph();

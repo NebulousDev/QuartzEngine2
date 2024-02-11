@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GfxDLL.h"
+#include "GfxAPI.h"
 #include "Primatives/VulkanSwapchain.h"
 
 namespace Quartz

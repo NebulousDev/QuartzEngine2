@@ -4,6 +4,15 @@
 
 namespace Quartz
 {
+	VulkanMultiBuffer::VulkanMultiBuffer() :
+		mpBuffer(nullptr),
+		mBufferWriter(),
+		mpHead(nullptr),
+		mpTail(nullptr),
+		mpFirstEmpty(nullptr),
+		mpMappedData(nullptr),
+		mUsedBytes(0) { }
+
 	VulkanMultiBuffer::VulkanMultiBuffer(VulkanBuffer* pBuffer) :
 		mpBuffer(pBuffer), mpMappedData(nullptr), mUsedBytes(0)
 	{
@@ -21,17 +30,34 @@ namespace Quartz
 		mpFirstEmpty = pInitialEntry;
 	}
 
-	void* VulkanMultiBuffer::AllocateBytes(uSize sizeBytes, VulkanMultiBufferEntry& outEntry)
+	VulkanMultiBuffer::~VulkanMultiBuffer()
 	{
-		if (!mpMappedData)
+		/*
+		VulkanMultiBufferEntry* pEntry = mpHead;
+
+		while (pEntry != nullptr)
 		{
-			return nullptr;
+			VulkanMultiBufferEntry* pEntryOld = pEntry;
+			pEntry = pEntry->pNext;
+			delete pEntryOld;
+		}
+		*/
+
+		// @TODO: MEMORY LEAK! problems with copying multibuffers
+	}
+
+	bool VulkanMultiBuffer::AllocateBytes(uSize sizeBytes, VulkanMultiBufferEntry& outEntry, void** ppOutData)
+	{
+		if (mpBuffer == nullptr)
+		{
+			LogError("Error allocating VulkanMultiBuffer entry: VulkanBuffer is null or invalid.");
+			return false;
 		}
 
 		if (mUsedBytes + sizeBytes > mpBuffer->sizeBytes)
 		{
-			LogError("Error writing to MultiBuffer: Out of buffer memory.");
-			return nullptr;
+			LogError("Error allocating VulkanMultiBuffer entry: Out of buffer memory.");
+			return false;
 		}
 
 		uSize emptySize = mpFirstEmpty->sizeBytes - sizeBytes;
@@ -46,8 +72,8 @@ namespace Quartz
 
 			if (pNextEmpty == nullptr)
 			{
-				LogError("Error writing to MultiBuffer: Out of buffer memory.");
-				return nullptr;
+				LogError("Error allocating VulkanMultiBuffer entry: Out of buffer memory.");
+				return false;
 			}
 		}
 
@@ -114,13 +140,24 @@ namespace Quartz
 
 		outEntry = *pEntry;
 
-		return mpMappedData + pEntry->offset;
+		if (mpMappedData && ppOutData != nullptr)
+		{
+			*ppOutData = mpMappedData + pEntry->offset;
+		}
+
+		return true;
 	}
 
 	void VulkanMultiBuffer::Free(const VulkanMultiBufferEntry& entry)
 	{
 		VulkanMultiBufferEntry* pEntry = mpHead;
 		VulkanMultiBufferEntry* pFirstFree = nullptr;
+
+		if (mpBuffer == nullptr)
+		{
+			LogError("Error freeing VulkanMultiBuffer entry: VulkanBuffer is null or invalid.");
+			return;
+		}
 
 		while (pEntry->pNext != nullptr)
 		{

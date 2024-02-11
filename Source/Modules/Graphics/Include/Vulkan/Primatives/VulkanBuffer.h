@@ -20,5 +20,7 @@ namespace Quartz
 		VkDeviceMemory			vkMemory;
 		VkBufferUsageFlags		vkUsage;
 		VkMemoryPropertyFlags	vkMemoryProperties;
+
+		inline bool operator==(const VulkanBuffer& value) { return vkBuffer == value.vkBuffer; }
 	};
 }

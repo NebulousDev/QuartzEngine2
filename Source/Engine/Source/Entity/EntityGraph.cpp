@@ -46,7 +46,7 @@ namespace Quartz
         rootNode.pParent = nullptr;
         rootNode.entity = NullEntity;
 
-        mZeroTransform = TransformComponent(
+        mZeroTransform = TransformComponentOld(
             { 0.0f, 0.0f, 0.0f },
             { 0.0f, 0.0f, 0.0f, 0.0f },
             { 1.0f, 1.0f, 1.0f });
@@ -92,9 +92,9 @@ namespace Quartz
             entityNode.pParent = &parentNode;
             entityNode.entity = entity;
 
-            if (mpDatabase->HasComponent<TransformComponent>(entity))
+            if (mpDatabase->HasComponent<TransformComponentOld>(entity))
             {
-                TransformComponent& transform = mpDatabase->GetComponent<TransformComponent>(entity);
+                TransformComponentOld& transform = mpDatabase->GetComponent<TransformComponentOld>(entity);
                 entityNode.pLocalTransform = &transform;
                 entityNode.globalTransform = parentNode.globalTransform * transform.GetMatrix();
             }
@@ -153,6 +153,72 @@ namespace Quartz
     EntityGraphView EntityGraph::CreateRootView()
     {
         return EntityGraphView(this, mpRoot);
+    }
+
+
+
+
+    //// TEMP
+
+    TransformComponentOld::TransformComponentOld() :
+        position({ 0.0f, 0.0f, 0.0f }),
+        rotation(Quatf().SetEuler({ 0.0f, 0.0f, 0.0f })),
+        scale({ 1.0f, 1.0f, 1.0f })
+    {
+        // Nothing
+    }
+
+    TransformComponentOld::TransformComponentOld(const Vec3f& position, const Quatf& rotation, const Vec3f& scale) :
+        position(position),
+        rotation(rotation),
+        scale(scale)
+    {
+        // Nothing
+    }
+
+    Vec3f TransformComponentOld::GetForward()
+    {
+        return rotation * Vec3f(0.0f, 0.0f, 1.0f);
+    }
+
+    Vec3f TransformComponentOld::GetBackward()
+    {
+        return rotation * Vec3f(0.0f, 0.0f, -1.0f);
+    }
+
+    Vec3f TransformComponentOld::GetLeft()
+    {
+        return rotation * Vec3f(1.0f, 0.0f, 0.0f);
+    }
+
+    Vec3f TransformComponentOld::GetRight()
+    {
+        return rotation * Vec3f(-1.0f, 0.0f, 1.0f);
+    }
+
+    Vec3f TransformComponentOld::GetUp()
+    {
+        return rotation * Vec3f(0.0f, 1.0f, 1.0f);
+    }
+
+    Vec3f TransformComponentOld::GetDown()
+    {
+        return rotation * Vec3f(0.0f, -1.0f, 1.0f);
+    }
+
+    Mat4f TransformComponentOld::GetMatrix()
+    {
+#if 0
+        return
+            Mat4f().SetTranslation(position) *
+            Mat4f().SetRotation(rotation) *
+            Mat4f().SetScale(scale);
+#else
+        return
+            (Mat4f().SetScale(scale) *
+                Mat4f().SetRotation(rotation)) *
+            Mat4f().SetTranslation(position);
+#endif
     }
 }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GfxDLL.h"
+#include "GfxAPI.h"
 #include "Primatives/VulkanBuffer.h"
 
 namespace Quartz
@@ -21,6 +21,8 @@ namespace Quartz
 			VulkanBufferWriter();
 			VulkanBufferWriter(VulkanBuffer* pBuffer);
 
+			void* Map();
+
 			template<typename Data>
 			Data* Map()
 			{
@@ -34,5 +36,8 @@ namespace Quartz
 			}
 
 			void Unmap();
+
+			inline uSize GetMappedSize() { return mMappedSize; }
+			inline void* GetMappedData() { return mpMappedData; }
 	};
 }

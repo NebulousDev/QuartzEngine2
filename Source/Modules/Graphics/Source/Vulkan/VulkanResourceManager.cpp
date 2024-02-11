@@ -81,6 +81,26 @@ namespace Quartz
 		return &mDescriptorSetLayouts.PushBack(layout);
 	}
 
+	VulkanResourceManager::VulkanResourceManager()
+	{
+		// @TODO: This would be better with a different structure
+
+		mSurfaces.Reserve(8);
+		mSwapchains.Reserve(128);
+		mImages.Reserve(1024);
+		mImageViews.Reserve(1024);
+		mShaders.Reserve(1024);
+		mRenderpasss.Reserve(1024);
+		mGraphicsPipelines.Reserve(1024);
+		mBuffers.Reserve(2048);
+		mCommandPools.Reserve(1024);
+		mCommandBuffers.Reserve(1024);
+		mFramebuffers.Reserve(1024);
+		mDescriptorPools.Reserve(1024);
+		mDescriptorSets.Reserve(1024);
+		mDescriptorSetLayouts.Reserve(1024);
+	}
+
 	bool EnumeratePresentModes(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, Array<VkPresentModeKHR>& presentModes)
 	{
 		VkResult result;
@@ -122,7 +142,7 @@ namespace Quartz
 
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkPhysicalDevice, vkSurface, &surfaceCapibilites);
 
-		LogTrace("Created VulkanSerface [ID=%06.6d].", mSurfaces.Size() + 1);
+		LogTrace("Created VulkanSurface [ID=%06.6d].", mSurfaces.Size() + 1);
 
 		VulkanSurface vulkanSurface		= {};
 		vulkanSurface.vkSurface			= vkSurface;
@@ -1410,5 +1430,25 @@ namespace Quartz
 		descriptorSetLayout.sizeBytes				= sizeBytes;
 
 		return Register(descriptorSetLayout);
+	}
+
+	void VulkanResourceManager::DestroyBuffer(VulkanBuffer* pBuffer)
+	{
+		auto& it = mBuffers.Find(*pBuffer);
+
+		if (it != mBuffers.End())
+		{
+			vkDestroyBuffer(pBuffer->pDevice->vkDevice, pBuffer->vkBuffer, VK_NULL_HANDLE);
+			
+			uSize index = mBuffers.IndexOf(it);
+
+			// @TODO: properly remove, requires better storage
+
+			LogTrace("Destroyed VulkanBuffer [ID=%06.6d].", index);
+		}
+		else
+		{
+			LogTrace("Failed to destroy VulkanBuffer [ID=???]: Buffer not found.");
+		}
 	}
 }

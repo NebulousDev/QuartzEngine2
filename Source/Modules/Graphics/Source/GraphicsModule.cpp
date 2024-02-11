@@ -1,6 +1,6 @@
 #include "System/System.h"
 
-#include "Quartz.h"
+#include "EngineAPI.h"
 #include "Entity/World.h"
 #include "Log.h"
 
@@ -54,6 +54,8 @@ namespace Quartz
 			gpGraphics->activeApi = GRAPHICS_API_VULKAN;
 		}
 
+		gpVulkanGraphics->pEntityWorld = gpEntityWorld; // @TODO: find a better solution
+
 		return false;
 	}
 
@@ -69,7 +71,7 @@ extern "C"
 {
 	using namespace Quartz;
 
-	bool QUARTZ_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
+	bool QUARTZ_ENGINE_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
 	{
 		systemQuery.name = "GraphicsModule";
 		systemQuery.version = "1.0.0";
@@ -77,7 +79,7 @@ extern "C"
 		return true;
 	}
 
-	bool QUARTZ_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
+	bool QUARTZ_ENGINE_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
 	{
 		Log::SetGlobalLog(engineLog);
 		gpEntityWorld = &entityWorld;
@@ -85,12 +87,12 @@ extern "C"
 		return true;
 	}
 
-	void QUARTZ_API SystemUnload()
+	void QUARTZ_ENGINE_API SystemUnload()
 	{
 		gpVulkanGraphics->Destroy();
 	}
 
-	void QUARTZ_API SystemPreInit()
+	void QUARTZ_ENGINE_API SystemPreInit()
 	{
 		gpGraphics = &gpEntityWorld->CreateSingleton<Graphics>();
 
@@ -112,7 +114,7 @@ extern "C"
 		}
 	}
 
-	void QUARTZ_API SystemInit()
+	void QUARTZ_ENGINE_API SystemInit()
 	{
 		
 	}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../GfxDLL.h"
+#include "../GfxAPI.h"
 #include "Types/Array.h"
 
 #include "Primatives/VulkanSurface.h"
@@ -56,6 +56,8 @@ namespace Quartz
 		VulkanDescriptorSetLayout*	Register(const VulkanDescriptorSetLayout& layout);
 
 	public:
+		VulkanResourceManager();
+
 		VulkanSurface*				CreateSurface(VulkanDevice* pDevice, VkInstance vkInstance, const VulkanApiSurface& surface);
 		VulkanSwapchain*			CreateSwapchain(VulkanDevice* pDevice, const VulkanSurface& surface, uInt32 bufferCount);
 		VulkanImage*				CreateImage(VulkanDevice* pDevice, const VulkanImageInfo& info);
@@ -71,5 +73,7 @@ namespace Quartz
 		bool						CreateDescriptorSets(VulkanDevice* pDevice, const VulkanDescriptorSetAllocationInfo& info, 
 										VulkanDescriptorSet** ppOutDescriptorSets);
 		VulkanDescriptorSetLayout*	CreateDescriptorSetLayout(VulkanDevice* pDevice, const VulkanDesctiptorSetLayoutInfo& info);
+
+		void DestroyBuffer(VulkanBuffer* pBuffer);
 	};
 }

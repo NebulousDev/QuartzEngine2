@@ -12,7 +12,6 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Entity/EntityDatabase.cpp"
     "Source/Entity/EntityGraph.cpp"
     "Source/Entity/World.cpp"
-    "Source/Entity/Component/Transform.cpp"
 
     "Source/System/System.cpp"
     "Source/System/SystemAdmin.cpp"

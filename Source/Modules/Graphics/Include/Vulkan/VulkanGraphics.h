@@ -1,12 +1,14 @@
 #pragma once
 
-#include "GfxDLL.h"
+#include "GfxAPI.h"
 #include "Graphics.h"
 #include "Primatives/VulkanDevice.h"
 #include "Primatives/VulkanPhysicalDevice.h"
 #include "Primatives/VulkanSwapchain.h"
 #include "VulkanState.h"
 #include "VulkanResourceManager.h"
+
+#include "Entity/World.h"
 
 namespace Quartz
 {
@@ -29,6 +31,7 @@ namespace Quartz
 		Array<VulkanDevice>			devices;
 		VulkanState*				pState;
 		VulkanResourceManager*		pResourceManager;
+		EntityWorld*				pEntityWorld;
 
 		//TEMP
 		VulkanSurface* pSurface;

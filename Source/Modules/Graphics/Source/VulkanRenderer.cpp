@@ -6,8 +6,14 @@
 #include "Vulkan/VulkanCommandRecorder.h"
 #include "Vulkan/VulkanSwapchainTimer.h"
 #include "Vulkan/VulkanBufferWriter.h"
+#include "Vulkan/VulkanRenderScene.h"
+
+#include "Vulkan/VulkanMultiBuffer.h"
 
 #include "shaderc/shaderc.hpp"
+
+#include "Component/MeshComponent.h"
+#include "Component/TransformComponent.h"
 
 namespace Quartz
 {
@@ -39,6 +45,67 @@ namespace Quartz
 		VulkanDevice*			pDevice		= pGraphics->pPrimaryDevice;
 
 		mpGraphics = pGraphics;
+
+
+		{
+			VulkanBufferInfo testBufferInfo	= {};
+			testBufferInfo.sizeBytes				= 256;
+			testBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			testBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+			VulkanBuffer* pTestBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, testBufferInfo);
+
+			VulkanMultiBuffer muliBuffer(pTestBuffer);
+			muliBuffer.Map();
+
+			VulkanMultiBufferEntry entry1;
+			VulkanMultiBufferEntry entry2;
+			VulkanMultiBufferEntry entry3;
+			VulkanMultiBufferEntry entry4;
+			VulkanMultiBufferEntry entry5;
+
+			muliBuffer.Allocate<float>(120 / 4, entry1, nullptr);
+			muliBuffer.Allocate<float>(120 / 4, entry2, nullptr);
+			muliBuffer.Allocate<float>(16 / 4,  entry3, nullptr);
+
+			muliBuffer.Free(entry2);
+
+			muliBuffer.Allocate<float>(64 / 4, entry4, nullptr);
+			muliBuffer.Allocate<float>(16 / 4, entry5, nullptr);
+
+			muliBuffer.Free(entry4);
+			muliBuffer.Free(entry5);
+
+			muliBuffer.Unmap();
+		}
+
+
+
+
+		VulkanRenderSettings renderSettings = {};
+		renderSettings.useUniqueMeshBuffers				= false;
+		renderSettings.useUniqueMeshStagingBuffers		= false;
+		renderSettings.useUniqueUniformBuffers			= false;
+		renderSettings.useUniqueUniformStagingBuffers	= false;
+		renderSettings.vertexBufferSizeMb				= 32;
+		renderSettings.indexBufferSizeMb				= 16;
+		renderSettings.perInstanceBufferSizeMb			= 16;
+		renderSettings.perModelBufferSizeMb				= 32;
+		renderSettings.globalBufferSizeBytes			= 128;
+		renderSettings.uniquePerInstanceBufferSizeBytes	= 128; //
+		renderSettings.uniquePerModelBufferSizeBytes	= 128; //
+		renderSettings.useInstancing					= true;
+		renderSettings.useMeshStaging					= true;
+		renderSettings.useUniformStaging				= true;
+		renderSettings.useDrawIndirect					= false;
+
+		VulkanRenderScene renderScene;
+		renderScene.Initialize(pDevice, pResources, renderSettings);
+
+		renderScene.BuildScene(mpGraphics->pEntityWorld);
+
+
+
 
 		mpSwapchain = pResources->CreateSwapchain(pGraphics->pPrimaryDevice, *pGraphics->pSurface, 3);		
 		mpSwapTimer = new VulkanSwapchainTimer(mpSwapchain);
@@ -337,6 +404,11 @@ namespace Quartz
 		immediateRecorder.BeginRecording();
 		immediateRecorder.CopyBuffer(pStagingVertexBuffer, pVertexBuffer, pVertexBuffer->sizeBytes, 0, 0);
 		immediateRecorder.CopyBuffer(pStagingIndexBuffer, pIndexBuffer, pIndexBuffer->sizeBytes, 0, 0);
+
+		////
+		renderScene.RecordTransfers(&immediateRecorder);
+		////
+
 		immediateRecorder.EndRecording();
 
 		VulkanSubmission immediateSubmition	= {};
@@ -347,7 +419,8 @@ namespace Quartz
 
 		pGraphics->Submit(immediateSubmition, pGraphics->pPrimaryDevice->queues.transfer, VK_NULL_HANDLE);
 
-
+		pResources->DestroyBuffer(pStagingVertexBuffer);
+		pResources->DestroyBuffer(pStagingIndexBuffer);
 
 		VulkanCommandPoolInfo renderPoolInfo = {};
 		renderPoolInfo.queueFamilyIndex			= pGraphics->pPrimaryDevice->pPhysicalDevice-> primaryQueueFamilyIndices.graphics;
@@ -385,6 +458,8 @@ namespace Quartz
 			renderRecorder.BindUniforms(mpPipeline, 0, { binding });
 
 			renderRecorder.DrawIndexed(1, pIndexBuffer->sizeBytes / sizeof(uInt16), 0);
+
+			renderScene.RecordRender(&renderRecorder, mpPipeline);
 
 			renderRecorder.EndRenderpass();
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../GfxDLL.h"
+#include "../GfxAPI.h"
 #include "Runtime/Runtime.h"
 
 #include "VulkanGraphics.h"
@@ -33,8 +33,6 @@ namespace Quartz
 		VulkanBuffer*			mUniformTransformBuffers[3];
 		VulkanBufferWriter		mUniformTransformWriters[3];
 		TransformUniformData*	mTransformData[3];
-		VulkanDescriptorPool*	mGlobalDescriptorPool;
-		VulkanDescriptorSet*	mTransformDescriptorSets[3];
 
 	public:
 		void Initialize(VulkanGraphics* pGraphics);

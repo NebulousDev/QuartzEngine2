@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Quartz.h"
+#include "EngineAPI.h"
 
 #include "Types/Array.h"
 #include "Types/Map.h"
@@ -19,7 +19,7 @@ namespace Quartz
 		return entity.index; // - 1 ?
 	}
 
-	class QUARTZ_API EntityDatabase
+	class QUARTZ_ENGINE_API EntityDatabase
 	{
 	public:
 
@@ -34,9 +34,10 @@ namespace Quartz
 
 		uSize GetTypeIndex(const String& componentName);
 
-		template<typename ComponentType>
+		template<typename Component>
 		uSize GetTypeIndex()
 		{
+			using ComponentType = std::decay_t<Component>;
 			static uSize index = GetTypeIndex(TypeName<ComponentType>::Value());
 			return index;
 		}
@@ -138,6 +139,7 @@ namespace Quartz
 		template<typename Component>
 		bool ComponentExists()
 		{
+			using ComponentType = std::decay_t<Component>;
 			return GetTypeIndex<ComponentType>() < mStorageSets.Size();
 		}
 
@@ -151,7 +153,7 @@ namespace Quartz
 			}
 
 			return EntityView<Component...>(
-				static_cast<ComponentStorage<Component>*>(mStorageSets[GetTypeIndex<ComponentType>()])...);
+				static_cast<ComponentStorage<Component>*>(mStorageSets[GetTypeIndex<Component>()])...);
 		}
 	};
 }

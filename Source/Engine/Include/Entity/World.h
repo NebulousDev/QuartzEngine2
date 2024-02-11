@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EngineAPI.h"
+
 #include "EntityDatabase.h"
 #include "EntityGraph.h"
 
@@ -7,7 +9,7 @@
 
 namespace Quartz
 {
-	class EntityWorld
+	class QUARTZ_ENGINE_API EntityWorld
 	{
 		friend class Engine;
 

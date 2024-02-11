@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Quartz.h"
+#include "EngineAPI.h"
 #include "Types/Array.h"
 #include "Types/Map.h"
 #include "Utility/TypeId.h"
@@ -29,7 +29,7 @@ namespace Quartz
 
 	using RuntimeID					= uSize;
 
-	class QUARTZ_API Runtime
+	class QUARTZ_ENGINE_API Runtime
 	{
 	public:
 

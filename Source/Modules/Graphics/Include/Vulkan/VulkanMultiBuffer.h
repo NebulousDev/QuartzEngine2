@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../GfxAPI.h"
 #include "VulkanBufferWriter.h"
-#include "Types/List.h"
 
 namespace Quartz
 {
@@ -15,7 +15,7 @@ namespace Quartz
 		VulkanMultiBufferEntry* pLast;
 	};
 
-	class VulkanMultiBuffer
+	class QUARTZ_GRAPHICS_API VulkanMultiBuffer
 	{
 	private:
 		VulkanBuffer*					mpBuffer;
@@ -26,20 +26,28 @@ namespace Quartz
 		uInt8*							mpMappedData;
 		uSize							mUsedBytes;
 
-		void* AllocateBytes(uSize sizeBytes, VulkanMultiBufferEntry& outEntry);
+		bool AllocateBytes(uSize sizeBytes, VulkanMultiBufferEntry& outEntry, void** ppOutData);
 
 	public:
+		VulkanMultiBuffer();
 		VulkanMultiBuffer(VulkanBuffer* pBuffer);
+		~VulkanMultiBuffer();
 		
+		// ppOutData will only return a value if the buffer is mapped. Pass nullptr to ignore.
 		template<typename Type>
-		Type* Allocate(uSize count, VulkanMultiBufferEntry& outEntry)
+		bool Allocate(uSize count, VulkanMultiBufferEntry& outEntry, Type** ppOutData)
 		{
-			return static_cast<Type*>(AllocateBytes(count * sizeof(Type), outEntry));
+			return AllocateBytes(count * sizeof(Type), outEntry, (void**)ppOutData);
 		}
 
 		void Free(const VulkanMultiBufferEntry& entry);
 
 		bool Map();
 		bool Unmap();
+
+		inline VulkanBuffer* GetVulkanBuffer() { return mpBuffer; }
+		inline void* GetMappedData() { return mpMappedData; }
+		inline uSize UsedBytes() { return mUsedBytes; }
+		inline bool IsMapped() { return mpMappedData != nullptr; }
 	};
 }

@@ -48,12 +48,17 @@ namespace Quartz
 	}
 
 	VulkanBufferWriter::VulkanBufferWriter(VulkanBuffer* pBuffer) :
-		mpBuffer (pBuffer), mMapped(false), mpMappedData(nullptr), mMappedSize(0), mMappedOffset(0)
+		mpBuffer(pBuffer), mMapped(false), mpMappedData(nullptr), mMappedSize(0), mMappedOffset(0)
 	{
 		if (!mpBuffer)
 		{
 			LogError("Error creating VulkanBufferWriter: pBuffer is null!");
 		}
+	}
+
+	void* VulkanBufferWriter::Map()
+	{
+		return MapBytes(mpBuffer->sizeBytes, 0);
 	}
 
 	void VulkanBufferWriter::Unmap()
