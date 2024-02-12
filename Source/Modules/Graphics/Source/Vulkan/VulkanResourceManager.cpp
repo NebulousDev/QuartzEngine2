@@ -1131,15 +1131,71 @@ namespace Quartz
 		vkPipelineInfo.pVertexInputState	= &vkVertexInputStateInfo;
 		vkPipelineInfo.pInputAssemblyState	= &vkInputAssemblyInfo;
 		vkPipelineInfo.pTessellationState	= nullptr;
-		vkPipelineInfo.pViewportState		= &vkViewportInfo;
 		vkPipelineInfo.pRasterizationState	= &vkRasterizationInfo;
 		vkPipelineInfo.pMultisampleState	= &vkMultisampleInfo;
 		vkPipelineInfo.pDepthStencilState	= &vkDepthStencilInfo;
 		vkPipelineInfo.pColorBlendState		= &vkColorBlendInfo;
-		vkPipelineInfo.pDynamicState		= nullptr; //TODO
 		vkPipelineInfo.layout				= vkPipelineLayout;
-		vkPipelineInfo.renderPass			= info.pRenderpass->vkRenderpass;
-		vkPipelineInfo.subpass				= subpass;
+
+		Array<VkFormat> colorAttachmentFormats = {};
+		VkFormat depthAttachmentFormat		= VK_FORMAT_UNDEFINED;
+		VkFormat stencilAttachmentFormat	= VK_FORMAT_UNDEFINED;
+
+		if (info.useDynamicRendering)
+		{
+			for (const VulkanAttachment& attachment : info.attachments)
+			{
+				if (attachment.type == VULKAN_ATTACHMENT_TYPE_SWAPCHAIN || 
+					attachment.type == VULKAN_ATTACHMENT_TYPE_COLOR)
+				{
+					colorAttachmentFormats.PushBack(attachment.vkFormat);
+				}
+				else if (attachment.type == VULKAN_ATTACHMENT_TYPE_DEPTH ||
+					attachment.type == VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL)
+				{
+					depthAttachmentFormat = attachment.vkFormat;
+					// @TODO assert only one depth format?
+				}
+				else if (attachment.type == VULKAN_ATTACHMENT_TYPE_STENCIL)
+				{
+					stencilAttachmentFormat = attachment.vkFormat;
+					// @TODO assert only one stencil format?
+				}
+			}
+
+			VkPipelineRenderingCreateInfoKHR vkPipelineRenderingInfo = {};
+			vkPipelineRenderingInfo.sType					= VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+			vkPipelineRenderingInfo.colorAttachmentCount	= colorAttachmentFormats.Size();
+			vkPipelineRenderingInfo.pColorAttachmentFormats = colorAttachmentFormats.Data();
+			vkPipelineRenderingInfo.depthAttachmentFormat	= depthAttachmentFormat;
+			vkPipelineRenderingInfo.stencilAttachmentFormat = stencilAttachmentFormat;
+
+			vkPipelineInfo.renderPass			= VK_NULL_HANDLE;
+			vkPipelineInfo.subpass				= 0;
+			vkPipelineInfo.pNext				= &vkPipelineRenderingInfo;
+		}
+		else
+		{
+			vkPipelineInfo.renderPass			= info.pRenderpass->vkRenderpass;
+			vkPipelineInfo.subpass				= subpass;
+			vkPipelineInfo.pNext				= nullptr;
+		}
+
+		if (info.useDynamicViewport)
+		{
+			VkDynamicState dynamicState		= VK_DYNAMIC_STATE_VIEWPORT;
+
+			VkPipelineDynamicStateCreateInfo vkDynamicStateCreateInfo;
+			vkDynamicStateCreateInfo.dynamicStateCount	= 1;
+			vkDynamicStateCreateInfo.pDynamicStates		= &dynamicState;
+
+			vkPipelineInfo.pViewportState	= nullptr;
+		}
+		else
+		{
+			vkPipelineInfo.pViewportState	= &vkViewportInfo;
+			vkPipelineInfo.pDynamicState	= nullptr;
+		}
 
 		if (vkCreateGraphicsPipelines(pDevice->vkDevice, VK_NULL_HANDLE, 1, &vkPipelineInfo, nullptr, &vkPipeline) != VK_SUCCESS)
 		{

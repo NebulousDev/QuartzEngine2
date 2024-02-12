@@ -12,7 +12,7 @@ namespace Quartz
 		uInt64		modelURIHash;
 		ModelData	modelData;
 
-		MeshComponent() = default;
+		MeshComponent();
 		MeshComponent(const String& uri, const ModelData& modelData);
 	};
 }

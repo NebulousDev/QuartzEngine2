@@ -15,10 +15,10 @@ namespace Quartz
 	struct VulkanGraphicsPipelineInfo
 	{
 		Array<VulkanShader*>						shaders;
+		Array<VulkanAttachment>						attachments;
 		Array<VkVertexInputBindingDescription>		bufferAttachments;
 		Array<VkVertexInputAttributeDescription>	vertexAttributes;
 		Array<VkPipelineColorBlendAttachmentState>	blendAttachments;
-		bool										dynamicViewport;
 		VkViewport									viewport;
 		VkRect2D									scissor;
 		VkPrimitiveTopology							vkTopology;
@@ -47,6 +47,8 @@ namespace Quartz
 
 		VulkanRenderpass*							pRenderpass;
 		bool										usePushDescriptors;
+		bool										useDynamicViewport;
+		bool										useDynamicRendering;
 	};
 
 	struct VulkanGraphicsPipeline

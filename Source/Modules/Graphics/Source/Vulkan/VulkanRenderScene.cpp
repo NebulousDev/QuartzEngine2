@@ -517,17 +517,23 @@ namespace Quartz
 					pRecorder->SetIndexBuffer(mIndexBuffers[renderable.meshLocation.indexBufferIndex].GetVulkanBuffer(), 
 						renderable.meshLocation.indexEntry.offset, VK_INDEX_TYPE_UINT16);
 
-					pRecorder->SetVertexBuffers({ { mVertexBuffers[renderable.meshLocation.vertexBufferIndex].GetVulkanBuffer() , 
-						renderable.meshLocation.vertexEntry.offset } });
+					VulkanBufferBind pVertexBufferBinds[] = 
+					{ 
+						{mVertexBuffers[renderable.meshLocation.vertexBufferIndex].GetVulkanBuffer(), renderable.meshLocation.vertexEntry.offset} 
+					};
 
-					VulkanUniformBinding binding = {};
+					pRecorder->SetVertexBuffers(pVertexBufferBinds, 1);
+
+					VulkanUniformBind binding = {};
 					binding.binding = 0;
 					binding.pBuffer = mPerModelBuffers[renderable.perModelLocation.perModelBufferIndex].GetVulkanBuffer();
 					binding.offset	= renderable.perModelLocation.perModelEntry.offset;
 					binding.range	= renderable.perModelLocation.perModelEntry.sizeBytes;
 
-					pRecorder->BindUniforms(pPipeline, 0, { binding });
-					pRecorder->DrawIndexed(1, renderable.indexCount, 0/*renderable.meshLocation.indexEntry.offset / sizeof(uInt16)*/);
+					VulkanUniformBind pUniformBinds[] = { binding };
+
+					pRecorder->BindUniforms(pPipeline, 0, pUniformBinds, 1);
+					pRecorder->DrawIndexed(1, renderable.indexCount, 0); //renderable.meshLocation.indexEntry.offset / sizeof(uInt16)
 				}
 			}
 		}

@@ -47,41 +47,6 @@ namespace Quartz
 		mpGraphics = pGraphics;
 
 
-		{
-			VulkanBufferInfo testBufferInfo	= {};
-			testBufferInfo.sizeBytes				= 256;
-			testBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-			testBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-			VulkanBuffer* pTestBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, testBufferInfo);
-
-			VulkanMultiBuffer muliBuffer(pTestBuffer);
-			muliBuffer.Map();
-
-			VulkanMultiBufferEntry entry1;
-			VulkanMultiBufferEntry entry2;
-			VulkanMultiBufferEntry entry3;
-			VulkanMultiBufferEntry entry4;
-			VulkanMultiBufferEntry entry5;
-
-			muliBuffer.Allocate<float>(120 / 4, entry1, nullptr);
-			muliBuffer.Allocate<float>(120 / 4, entry2, nullptr);
-			muliBuffer.Allocate<float>(16 / 4,  entry3, nullptr);
-
-			muliBuffer.Free(entry2);
-
-			muliBuffer.Allocate<float>(64 / 4, entry4, nullptr);
-			muliBuffer.Allocate<float>(16 / 4, entry5, nullptr);
-
-			muliBuffer.Free(entry4);
-			muliBuffer.Free(entry5);
-
-			muliBuffer.Unmap();
-		}
-
-
-
-
 		VulkanRenderSettings renderSettings = {};
 		renderSettings.useUniqueMeshBuffers				= false;
 		renderSettings.useUniqueMeshStagingBuffers		= false;
@@ -94,7 +59,7 @@ namespace Quartz
 		renderSettings.globalBufferSizeBytes			= 128;
 		renderSettings.uniquePerInstanceBufferSizeBytes	= 128; //
 		renderSettings.uniquePerModelBufferSizeBytes	= 128; //
-		renderSettings.useInstancing					= true;
+		renderSettings.useInstancing					= false;
 		renderSettings.useMeshStaging					= true;
 		renderSettings.useUniformStaging				= true;
 		renderSettings.useDrawIndirect					= false;
@@ -105,10 +70,13 @@ namespace Quartz
 		renderScene.BuildScene(mpGraphics->pEntityWorld);
 
 
-
+		// PIPELINE
 
 		mpSwapchain = pResources->CreateSwapchain(pGraphics->pPrimaryDevice, *pGraphics->pSurface, 3);		
 		mpSwapTimer = new VulkanSwapchainTimer(mpSwapchain);
+
+
+		// SHADERS
 
 		char* vertexShader = 
 		R"(
@@ -160,22 +128,48 @@ namespace Quartz
 		VulkanShader* pVertexShader = pResources->CreateShader(pGraphics->pPrimaryDevice, "Vertex", vertexShaderSPIRV);
 		VulkanShader* pFragmentShader = pResources->CreateShader(pGraphics->pPrimaryDevice, "Fragment", fragmentShaderSPIRV);
 
-		VulkanRenderpassInfo renderpassInfo = {};
-		renderpassInfo.attachments =
+
+		// DEPTH IMAGES
+
+		for (uSize i = 0; i < 3; i++)
+		{
+			VulkanImageInfo depthImageInfo = {};
+			depthImageInfo.vkFormat		= VK_FORMAT_D24_UNORM_S8_UINT;
+			depthImageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
+			depthImageInfo.vkUsageFlags	= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			depthImageInfo.width		= pGraphics->pSurface->width;
+			depthImageInfo.height		= pGraphics->pSurface->height;
+			depthImageInfo.depth		= 1;
+			depthImageInfo.layers		= 1;
+			depthImageInfo.mips			= 1;
+
+			mDepthImages[i] = pResources->CreateImage(pDevice, depthImageInfo);
+
+			VulkanImageViewInfo depthImageViewInfo = {};
+			depthImageViewInfo.pImage			= mDepthImages[i];
+			depthImageViewInfo.vkFormat			= VK_FORMAT_D24_UNORM_S8_UINT;
+			depthImageViewInfo.vkImageViewType	= VK_IMAGE_VIEW_TYPE_2D;
+			depthImageViewInfo.vkAspectFlags	= VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			depthImageViewInfo.layerStart		= 0;
+			depthImageViewInfo.layerCount		= 1;
+			depthImageViewInfo.mipStart			= 0;
+			depthImageViewInfo.mipCount			= 1;
+
+			mDepthImageViews[i] = pResources->CreateImageView(pDevice, depthImageViewInfo);
+		}
+
+
+		// PIPELINE
+
+		Array<VulkanAttachment> attachments =
 		{
 			{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
 			{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
 		};
-		renderpassInfo.subpasses =
-		{
-			{ "Color-Subpass", { 0, 1 } }
-		};
-
-		VulkanRenderpass* pRenderPass = pResources->CreateRenderpass(pGraphics->pPrimaryDevice, renderpassInfo);
 
 		VulkanGraphicsPipelineInfo pipelineInfo = {};
 		pipelineInfo.shaders				= { pVertexShader, pFragmentShader };
-		pipelineInfo.dynamicViewport		= false;
+		pipelineInfo.attachments			= attachments;
 		pipelineInfo.viewport.x				= 0;
 		pipelineInfo.viewport.y				= pGraphics->pSurface->height;
 		pipelineInfo.viewport.width			= pGraphics->pSurface->width;
@@ -188,7 +182,7 @@ namespace Quartz
 		pipelineInfo.scissor.extent.height	= pGraphics->pSurface->height;
 		pipelineInfo.vkTopology				= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		pipelineInfo.vkPolygonMode			= VK_POLYGON_MODE_FILL;
-		pipelineInfo.vkCullMode				= VK_CULL_MODE_BACK_BIT;
+		pipelineInfo.vkCullMode				= VK_CULL_MODE_NONE;
 		pipelineInfo.vkFrontFace			= VK_FRONT_FACE_CLOCKWISE;
 		pipelineInfo.lineWidth				= 1.0f;
 		pipelineInfo.multisamples			= VK_SAMPLE_COUNT_1_BIT;
@@ -200,6 +194,8 @@ namespace Quartz
 		pipelineInfo.stencil.enableTesting	= false;
 		pipelineInfo.stencil.compareOp		= VK_COMPARE_OP_LESS_OR_EQUAL;
 		pipelineInfo.usePushDescriptors		= true;
+		pipelineInfo.useDynamicViewport		= false;
+		pipelineInfo.useDynamicRendering	= true;
 
 		VkVertexInputBindingDescription vertexBufferAttachment = {};
 		vertexBufferAttachment.binding		= 0;
@@ -237,7 +233,7 @@ namespace Quartz
 		//pipelineInfo.vertexAttributes.PushBack(tangentAttrib);
 		//pipelineInfo.vertexAttributes.PushBack(texCoordAttrib);
 
-		pipelineInfo.pRenderpass			= pRenderPass;
+		pipelineInfo.pRenderpass			= nullptr; //pRenderPass;
 
 		VkPipelineColorBlendAttachmentState	blendAttachment = {};
 		blendAttachment.blendEnable			= VK_TRUE;
@@ -252,46 +248,6 @@ namespace Quartz
 		pipelineInfo.blendAttachments.PushBack(blendAttachment);
 
 		mpPipeline = pResources->CreateGraphicsPipeline(pGraphics->pPrimaryDevice, pipelineInfo, 0);
-
-
-		// Framebuffers
-
-		for (uSize i = 0; i < 3; i++)
-		{
-			VulkanImageInfo depthImageInfo = {};
-			depthImageInfo.vkFormat			= VK_FORMAT_D24_UNORM_S8_UINT;
-			depthImageInfo.vkImageType		= VK_IMAGE_TYPE_2D;
-			depthImageInfo.vkUsageFlags		= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-			depthImageInfo.width			= pGraphics->pSurface->width;
-			depthImageInfo.height			= pGraphics->pSurface->height;
-			depthImageInfo.depth			= 1;
-			depthImageInfo.layers			= 1;
-			depthImageInfo.mips				= 1;
-
-			VulkanImage* pDepthStencilImage = pResources->CreateImage(pGraphics->pPrimaryDevice, depthImageInfo);
-
-			VulkanImageViewInfo depthImageViewInfo = {};
-			depthImageViewInfo.pImage			= pDepthStencilImage;
-			depthImageViewInfo.vkImageViewType	= VK_IMAGE_VIEW_TYPE_2D;
-			depthImageViewInfo.vkFormat			= VK_FORMAT_D24_UNORM_S8_UINT;
-			depthImageViewInfo.vkAspectFlags	= VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-			depthImageViewInfo.layerStart		= 0;
-			depthImageViewInfo.layerCount		= 1;
-			depthImageViewInfo.mipStart			= 0;
-			depthImageViewInfo.mipCount			= 1;
-
-			VulkanImageView* pDepthStencilImageView = pResources->CreateImageView(pGraphics->pPrimaryDevice, depthImageViewInfo);
-
-			VulkanFramebufferInfo framebufferInfo = {};
-			framebufferInfo.renderpass	= pRenderPass;
-			framebufferInfo.attachments = { mpSwapTimer->GetSwapchain()->imageViews[i], pDepthStencilImageView };
-			framebufferInfo.width		= pGraphics->pSurface->width;
-			framebufferInfo.height		= pGraphics->pSurface->height;
-			framebufferInfo.layers		= 1;
-
-			mFramebuffers[i] = pResources->CreateFramebuffer(pGraphics->pPrimaryDevice, framebufferInfo);
-		}
-
 
 		// VERTEX DATA
 
@@ -402,8 +358,14 @@ namespace Quartz
 		VulkanCommandRecorder immediateRecorder(pImmediateCommandBuffer);
 
 		immediateRecorder.BeginRecording();
+
 		immediateRecorder.CopyBuffer(pStagingVertexBuffer, pVertexBuffer, pVertexBuffer->sizeBytes, 0, 0);
 		immediateRecorder.CopyBuffer(pStagingIndexBuffer, pIndexBuffer, pIndexBuffer->sizeBytes, 0, 0);
+
+		for (uSize i = 0; i < 3; i++)
+		{
+			immediateRecorder.CopyBuffer(mUniformTransformStagingBuffers[i], mUniformTransformBuffers[i], 128, 0, 0);
+		}
 
 		////
 		renderScene.RecordTransfers(&immediateRecorder);
@@ -435,33 +397,87 @@ namespace Quartz
 			VulkanCommandRecorder renderRecorder(mCommandBuffers[i]);
 
 			renderRecorder.BeginRecording();
-		
-			VulkanRenderpassBeginInfo renderpassBeginInfo = {};
-			renderpassBeginInfo.pFramebuffer	= mFramebuffers[i];
-			renderpassBeginInfo.renderArea		= { { 0, 0 }, {mFramebuffers[i]->width, mFramebuffers[i]->height}};
-			renderpassBeginInfo.clearValues		= { { 0.02f, 0.05f, 0.05f, 1.0f }, { 1.0f, 0 } };
 
-			renderRecorder.CopyBuffer(mUniformTransformStagingBuffers[i], mUniformTransformBuffers[i], transformUniformBufferSize, 0, 0);
+			renderRecorder.PipelineBarrierSwapchainImageBegin(mpSwapchain->images[i]);
 
-			renderRecorder.BeginRenderpass(pRenderPass, renderpassBeginInfo);
 
-			renderRecorder.SetVertexBuffers({{pVertexBuffer, 0}});
+			// DEPTH TRANSITION
+			VkImageMemoryBarrier vkDepthImageMemoryBarrier = {};
+			vkDepthImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			vkDepthImageMemoryBarrier.srcAccessMask						= 0;
+			vkDepthImageMemoryBarrier.dstAccessMask						= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			vkDepthImageMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
+			vkDepthImageMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			vkDepthImageMemoryBarrier.image								= mDepthImages[i]->vkImage;
+			vkDepthImageMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			vkDepthImageMemoryBarrier.subresourceRange.baseMipLevel		= 0;
+			vkDepthImageMemoryBarrier.subresourceRange.levelCount		= 1;
+			vkDepthImageMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
+			vkDepthImageMemoryBarrier.subresourceRange.layerCount		= 1;
+
+			VulkanPipelineBarrierInfo barrierInfo = {};
+			barrierInfo.srcStage					= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			barrierInfo.dstStage					= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			barrierInfo.dependencyFlags				= 0;
+			barrierInfo.memoryBarrierCount			= 0;
+			barrierInfo.pMemoryBarriers				= nullptr;
+			barrierInfo.bufferMemoryBarrierCount	= 0;
+			barrierInfo.pBufferMemoryBarriers		= nullptr;
+			barrierInfo.imageMemoryBarrierCount		= 1;
+			barrierInfo.pImageMemoryBarriers		= &vkDepthImageMemoryBarrier;
+
+			renderRecorder.PipelineBarrier(barrierInfo);
+
+
+
+			VulkanRenderingAttachmentInfo swapchainRenderingAttachmentInfo = {};
+			swapchainRenderingAttachmentInfo.pImageView		= mpSwapchain->imageViews[i];
+			swapchainRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			swapchainRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
+			swapchainRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
+			swapchainRenderingAttachmentInfo.clearValue		= { 0.02f, 0.05f, 0.05f, 1.0f };
+
+			VulkanRenderingAttachmentInfo depthRenderingAttachmentInfo = {};
+			depthRenderingAttachmentInfo.pImageView		= mDepthImageViews[i];
+			depthRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			depthRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
+			depthRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
+			depthRenderingAttachmentInfo.clearValue		= { 1.0f, 0 };
+
+			VulkanRenderingAttachmentInfo pColorAttachmentInfos[] = { swapchainRenderingAttachmentInfo };
+
+			VulkanRenderingBeginInfo renderingBeginInfo = {};
+			renderingBeginInfo.pColorAttachments	= pColorAttachmentInfos;
+			renderingBeginInfo.colorAttachmentCount	= 1;
+			renderingBeginInfo.pDepthAttachment		= &depthRenderingAttachmentInfo;
+			renderingBeginInfo.pStencilAttachment	= nullptr;
+			renderingBeginInfo.renderArea			= { { 0, 0 }, {pGraphics->pSurface->width, pGraphics->pSurface->height} };
+
+			renderRecorder.BeginRendering(renderingBeginInfo);
+
+			VulkanBufferBind pVertexBufferBinds[] = { {pVertexBuffer, 0} };
+
+			renderRecorder.SetVertexBuffers(pVertexBufferBinds, 1);
 			renderRecorder.SetIndexBuffer(pIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
 			renderRecorder.SetGraphicsPipeline(mpPipeline);
 
-			VulkanUniformBinding binding = {};
+			VulkanUniformBind binding = {};
 			binding.binding = 0;
 			binding.pBuffer = mUniformTransformBuffers[i];
 			binding.offset	= 0;
 			binding.range	= mUniformTransformBuffers[i]->sizeBytes;
 
-			renderRecorder.BindUniforms(mpPipeline, 0, { binding });
+			VulkanUniformBind pUniformBinds[] = { binding };
+
+			renderRecorder.BindUniforms(mpPipeline, 0, pUniformBinds, 1);
 
 			renderRecorder.DrawIndexed(1, pIndexBuffer->sizeBytes / sizeof(uInt16), 0);
 
 			renderScene.RecordRender(&renderRecorder, mpPipeline);
 
-			renderRecorder.EndRenderpass();
+			renderRecorder.EndRendering();
+
+			renderRecorder.PipelineBarrierSwapchainImageEnd(mpSwapchain->images[i]);
 
 			renderRecorder.EndRecording();
 		}

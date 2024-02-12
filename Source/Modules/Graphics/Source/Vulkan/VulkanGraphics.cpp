@@ -275,7 +275,8 @@ namespace Quartz
 		{
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
-			VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
+			VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 		};
 
 		for (VulkanPhysicalDevice& physicalDevice : pGraphics->physicalDevices)
@@ -332,9 +333,14 @@ namespace Quartz
 				queueCreateInfos.PushBack(queueInfo);
 			}
 
+			VkPhysicalDeviceDynamicRenderingFeaturesKHR vkDynamicRenderingFeatures = {};
+			vkDynamicRenderingFeatures.sType			= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+			vkDynamicRenderingFeatures.dynamicRendering = VK_TRUE;
+
 			VkPhysicalDeviceVulkan12Features vkVulkan12Features = {};
-			vkVulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-			vkVulkan12Features.timelineSemaphore = true;
+			vkVulkan12Features.sType				= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+			vkVulkan12Features.timelineSemaphore	= true;
+			vkVulkan12Features.pNext				= &vkDynamicRenderingFeatures;
 
 			VkDeviceCreateInfo deviceInfo		= {};
 			deviceInfo.sType					= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

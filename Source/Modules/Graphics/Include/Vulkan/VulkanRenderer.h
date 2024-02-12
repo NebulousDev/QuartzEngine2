@@ -28,7 +28,9 @@ namespace Quartz
 		VulkanSwapchainTimer*	mpSwapTimer;
 
 		VulkanCommandBuffer*	mCommandBuffers[3];
-		VulkanFramebuffer*		mFramebuffers[3];
+		//VulkanFramebuffer*		mFramebuffers[3];
+		VulkanImage*			mDepthImages[3];
+		VulkanImageView*		mDepthImageViews[3];
 		VulkanBuffer*			mUniformTransformStagingBuffers[3];
 		VulkanBuffer*			mUniformTransformBuffers[3];
 		VulkanBufferWriter		mUniformTransformWriters[3];

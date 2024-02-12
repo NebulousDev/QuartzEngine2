@@ -23,7 +23,6 @@ namespace Quartz
 		String					name;
 		VulkanAttachmentType	type;
 		VkFormat				vkFormat;
-
 	};
 
 	struct VulkanSubpass

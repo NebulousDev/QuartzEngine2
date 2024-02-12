@@ -14,6 +14,7 @@
 
 #include "Component/TransformComponent.h"
 #include "Component/MeshComponent.h"
+#include "Component/MaterialComponent.h"
 
 #include <vulkan/vulkan.h>
 
@@ -102,7 +103,7 @@ namespace Quartz
 				{ 1.0f, 1.0f, 1.0f }
 			);
 
-			ModelData triData =
+			ModelData triData
 			{
 				{
 					-0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
@@ -114,12 +115,18 @@ namespace Quartz
 				}
 			};
 
+			MaterialComponent material1
+			{
+				"shaders/default.vert",
+				"shaders/default.frag"
+			};
+
 			MeshComponent renderable1("simpletri0", triData);
 			MeshComponent renderable2("simpletri1", triData);
 
-			Entity eTri1 = gpWorld->CreateEntity(transform1, renderable1);
-			Entity eTri2 = gpWorld->CreateEntity(transform2, renderable2);
-			Entity eTri3 = gpWorld->CreateEntity(transform3, renderable2);
+			Entity eTri1 = gpWorld->CreateEntity(transform1, renderable1, material1);
+			Entity eTri2 = gpWorld->CreateEntity(transform2, renderable2, material1);
+			Entity eTri3 = gpWorld->CreateEntity(transform3, renderable2, material1);
 
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
