@@ -22,7 +22,8 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Component/MeshComponent.cpp"
 	"Source/Vulkan/VulkanMultiBuffer.cpp"
 	"Source/Component/MaterialComponent.cpp"
-	"Source/Vulkan/VulkanPipelineManager.cpp")
+	"Source/Vulkan/VulkanPipelineCache.cpp"
+	"Source/Vulkan/VulkanShaderCache.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

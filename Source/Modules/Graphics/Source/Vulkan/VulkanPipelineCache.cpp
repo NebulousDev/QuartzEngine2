@@ -1,8 +1,8 @@
-#include "Vulkan/VulkanPipelineManager.h"
+#include "Vulkan/VulkanPipelineCache.h"
 
 namespace Quartz
 {
-    VulkanGraphicsPipelineInfo VulkanPipelineManager::MakeGraphicsPipelineInfo(
+    VulkanGraphicsPipelineInfo VulkanPipelineCache::MakeGraphicsPipelineInfo(
 		const Array<VulkanShader*>& shaders,
 		const Array<VulkanAttachment>& attachments,
 		const Array<VkVertexInputAttributeDescription>& vertexAttributes,
@@ -46,19 +46,19 @@ namespace Quartz
         return pipelineInfo;
     }
 
-	VulkanPipelineManager::VulkanPipelineManager() :
+	VulkanPipelineCache::VulkanPipelineCache() :
 		mpDevice(nullptr), mpResourceManager(nullptr)
 	{
 		// Nothing
 	}
 
-	VulkanPipelineManager::VulkanPipelineManager(VulkanDevice* pDevice, VulkanResourceManager* pResources) :
+	VulkanPipelineCache::VulkanPipelineCache(VulkanDevice* pDevice, VulkanResourceManager* pResources) :
         mpDevice(pDevice), mpResourceManager(pResources)
     {
         // Nothing
     }
 
-    VulkanGraphicsPipeline* VulkanPipelineManager::FindOrCreateGraphicsPipeline(
+    VulkanGraphicsPipeline* VulkanPipelineCache::FindOrCreateGraphicsPipeline(
 		const Array<VulkanShader*>& shaders,
 		const Array<VulkanAttachment>& attachments,
 		const Array<VkVertexInputAttributeDescription>& vertexAttributes,

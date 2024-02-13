@@ -10,42 +10,22 @@
 
 #include "Vulkan/VulkanMultiBuffer.h"
 
-#include "shaderc/shaderc.hpp"
-
 #include "Component/MeshComponent.h"
 #include "Component/TransformComponent.h"
 
 namespace Quartz
 {
-	void CompileShader(const String& shaderName, const char* source, Array<uInt8>& spirv, shaderc_shader_kind kind)
-	{
-		shaderc::Compiler compiler;
-		shaderc::CompileOptions options;
-
-		LogInfo("Compiling Shader '%s'...", shaderName.Str());
-
-		options.SetOptimizationLevel(shaderc_optimization_level_performance);
-
-		shaderc::SpvCompilationResult module =
-			compiler.CompileGlslToSpv(source, kind, "shaderc-shader", options);
-
-		if (module.GetCompilationStatus() != shaderc_compilation_status_success)
-		{
-			LogError("Failed compiling shader '%s':\n%s", shaderName.Str(), module.GetErrorMessage().c_str());
-		}
-
-		std::vector<uInt32> binary = { module.cbegin(), module.cend() };
-		spirv.Resize(binary.size() * sizeof(unsigned int));
-		memcpy_s(spirv.Data(), spirv.Size(), binary.data(), binary.size() * sizeof(unsigned int));
-	}
 
 	void VulkanRenderer::Initialize(VulkanGraphics* pGraphics)
 	{
 		VulkanResourceManager*	pResources	= pGraphics->pResourceManager;
 		VulkanDevice*			pDevice		= pGraphics->pPrimaryDevice;
 
-		mpGraphics = pGraphics;
-
+		mpGraphics		= pGraphics;
+		mPipelineCache	= VulkanPipelineCache(pDevice, pResources);
+		mShaderCache	= VulkanShaderCache(pDevice, pResources);
+		mpSwapchain		= pResources->CreateSwapchain(pGraphics->pPrimaryDevice, *pGraphics->pSurface, 3);
+		mSwapTimer		= VulkanSwapchainTimer(mpSwapchain);
 
 		VulkanRenderSettings renderSettings = {};
 		renderSettings.useUniqueMeshBuffers				= false;
@@ -64,103 +44,11 @@ namespace Quartz
 		renderSettings.useUniformStaging				= true;
 		renderSettings.useDrawIndirect					= false;
 
-		VulkanRenderScene renderScene;
-		renderScene.Initialize(pDevice, pResources, renderSettings);
+		mRenderScene.Initialize(pDevice, pResources, renderSettings);
+		mRenderScene.BuildScene(mpGraphics->pEntityWorld);
 
-		renderScene.BuildScene(mpGraphics->pEntityWorld);
-
-
-		// SWAPCHAIN
-
-		mpSwapchain = pResources->CreateSwapchain(pGraphics->pPrimaryDevice, *pGraphics->pSurface, 3);		
-		mSwapTimer = VulkanSwapchainTimer(mpSwapchain);
-
-
-		// SHADERS
-
-		char* vertexShader = 
-		R"(
-			#version 450
-			#extension GL_ARB_separate_shader_objects : enable
-			
-			layout(location = 0) in vec3 inPosition;
-			layout(location = 1) in vec3 inNormal;
-			//layout(location = 2) in vec3 inTangent;
-			//layout(location = 3) in vec2 inTexCoord;
-			
-			layout(location = 0) out vec3 outNormal;
-
-			layout(set = 0, binding = 0) uniform TransformUBO
-			{
-				mat4 model;
-				mat4 view;
-			} ubo;
-
-			void main()
-			{
-				outNormal = inNormal;
-				gl_Position = (ubo.view * ubo.model) * vec4(inPosition, 1.0);
-			}
-		)";
-
-		char* fragmentShader =
-		R"(
-			#version 450
-			#extension GL_ARB_separate_shader_objects : enable
-			#extension GL_KHR_vulkan_glsl : enable
-			
-			layout(location = 0) in vec3 inNormal;
-
-			layout(location = 0) out vec4 fragOut;
-			
-			void main()
-			{
-				fragOut = vec4(inNormal, 1.0);
-			}
-		)";
-
-		Array<uInt8> vertexShaderSPIRV;
-		Array<uInt8> fragmentShaderSPIRV;
-
-		CompileShader("Vertex", vertexShader, vertexShaderSPIRV, shaderc_shader_kind::shaderc_glsl_vertex_shader);
-		CompileShader("Fragment", fragmentShader, fragmentShaderSPIRV, shaderc_shader_kind::shaderc_glsl_fragment_shader);
-
-		VulkanShader* pVertexShader = pResources->CreateShader(pGraphics->pPrimaryDevice, "Vertex", vertexShaderSPIRV);
-		VulkanShader* pFragmentShader = pResources->CreateShader(pGraphics->pPrimaryDevice, "Fragment", fragmentShaderSPIRV);
-
-		mPipelineManager = VulkanPipelineManager(pDevice, pResources);
-
-		// DEPTH IMAGES
-
-		for (uSize i = 0; i < 3; i++)
-		{
-			VulkanImageInfo depthImageInfo = {};
-			depthImageInfo.vkFormat		= VK_FORMAT_D24_UNORM_S8_UINT;
-			depthImageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
-			depthImageInfo.vkUsageFlags	= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-			depthImageInfo.width		= pGraphics->pSurface->width;
-			depthImageInfo.height		= pGraphics->pSurface->height;
-			depthImageInfo.depth		= 1;
-			depthImageInfo.layers		= 1;
-			depthImageInfo.mips			= 1;
-
-			mDepthImages[i] = pResources->CreateImage(pDevice, depthImageInfo);
-
-			VulkanImageViewInfo depthImageViewInfo = {};
-			depthImageViewInfo.pImage			= mDepthImages[i];
-			depthImageViewInfo.vkFormat			= VK_FORMAT_D24_UNORM_S8_UINT;
-			depthImageViewInfo.vkImageViewType	= VK_IMAGE_VIEW_TYPE_2D;
-			depthImageViewInfo.vkAspectFlags	= VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-			depthImageViewInfo.layerStart		= 0;
-			depthImageViewInfo.layerCount		= 1;
-			depthImageViewInfo.mipStart			= 0;
-			depthImageViewInfo.mipCount			= 1;
-
-			mDepthImageViews[i] = pResources->CreateImageView(pDevice, depthImageViewInfo);
-		}
-
-
-		// PIPELINE
+		VulkanShader* pVertexShader = mShaderCache.FindOrCreateShader("Shaders/default.vert", VK_SHADER_STAGE_VERTEX_BIT);
+		VulkanShader* pFragmentShader = mShaderCache.FindOrCreateShader("Shaders/default.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 		Array<VulkanAttachment> attachments =
 		{
@@ -206,10 +94,37 @@ namespace Quartz
 		vertexAttributes.PushBack(positionAttrib);
 		vertexAttributes.PushBack(normalAttrib);
 
-		mpPipeline = mPipelineManager.FindOrCreateGraphicsPipeline(
+		mpPipeline = mPipelineCache.FindOrCreateGraphicsPipeline(
 			{ pVertexShader, pFragmentShader },
 			attachments, vertexAttributes, vertexBindings
 		);
+
+		for (uSize i = 0; i < 3; i++)
+		{
+			VulkanImageInfo depthImageInfo = {};
+			depthImageInfo.vkFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+			depthImageInfo.vkImageType = VK_IMAGE_TYPE_2D;
+			depthImageInfo.vkUsageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			depthImageInfo.width = pGraphics->pSurface->width;
+			depthImageInfo.height = pGraphics->pSurface->height;
+			depthImageInfo.depth = 1;
+			depthImageInfo.layers = 1;
+			depthImageInfo.mips = 1;
+
+			mDepthImages[i] = pResources->CreateImage(pDevice, depthImageInfo);
+
+			VulkanImageViewInfo depthImageViewInfo = {};
+			depthImageViewInfo.pImage = mDepthImages[i];
+			depthImageViewInfo.vkFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+			depthImageViewInfo.vkImageViewType = VK_IMAGE_VIEW_TYPE_2D;
+			depthImageViewInfo.vkAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			depthImageViewInfo.layerStart = 0;
+			depthImageViewInfo.layerCount = 1;
+			depthImageViewInfo.mipStart = 0;
+			depthImageViewInfo.mipCount = 1;
+
+			mDepthImageViews[i] = pResources->CreateImageView(pDevice, depthImageViewInfo);
+		}
 
 		// Command Buffers
 
@@ -227,7 +142,7 @@ namespace Quartz
 		immediateRecorder.BeginRecording();
 
 		////
-		renderScene.RecordTransfers(&immediateRecorder);
+		mRenderScene.RecordTransfers(&immediateRecorder);
 		////
 
 		immediateRecorder.EndRecording();
@@ -327,7 +242,7 @@ namespace Quartz
 
 			renderRecorder.SetGraphicsPipeline(mpPipeline);
 
-			renderScene.RecordRender(&renderRecorder, mpPipeline);
+			mRenderScene.RecordRender(&renderRecorder, mpPipeline);
 
 			renderRecorder.EndRendering();
 

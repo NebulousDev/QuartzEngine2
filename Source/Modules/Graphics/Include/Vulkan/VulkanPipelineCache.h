@@ -7,7 +7,7 @@
 
 namespace Quartz
 {
-	class QUARTZ_GRAPHICS_API VulkanPipelineManager
+	class QUARTZ_GRAPHICS_API VulkanPipelineCache
 	{
 	private:
 		VulkanDevice*						mpDevice;
@@ -22,8 +22,8 @@ namespace Quartz
 			const Array<VkVertexInputBindingDescription>& vertexBindings);
 
 	public:
-		VulkanPipelineManager();
-		VulkanPipelineManager(VulkanDevice* pDevice, VulkanResourceManager* pResources);
+		VulkanPipelineCache();
+		VulkanPipelineCache(VulkanDevice* pDevice, VulkanResourceManager* pResources);
 
 		VulkanGraphicsPipeline* FindOrCreateGraphicsPipeline(
 			const Array<VulkanShader*>& shaders,

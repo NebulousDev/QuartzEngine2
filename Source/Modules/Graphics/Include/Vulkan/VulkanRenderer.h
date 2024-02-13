@@ -6,25 +6,22 @@
 #include "VulkanGraphics.h"
 #include "VulkanRenderScene.h"
 #include "VulkanSwapchainTimer.h"
-#include "VulkanPipelineManager.h"
+#include "VulkanShaderCache.h"
+#include "VulkanPipelineCache.h"
 #include "VulkanBufferWriter.h"
 
 #include "Math/Math.h"
 
 namespace Quartz
 {
-	struct TransformUniformData
-	{
-		Mat4f transform;
-		Mat4f view;
-	};
-
 	class QUARTZ_GRAPHICS_API VulkanRenderer
 	{
 	private:
 		VulkanGraphics*			mpGraphics;
 		VulkanSwapchain*		mpSwapchain;
-		VulkanPipelineManager	mPipelineManager;
+		VulkanRenderScene		mRenderScene;
+		VulkanShaderCache		mShaderCache;
+		VulkanPipelineCache		mPipelineCache;
 		VulkanSwapchainTimer	mSwapTimer;
 
 		VulkanGraphicsPipeline* mpPipeline;
@@ -32,10 +29,6 @@ namespace Quartz
 		VulkanCommandBuffer*	mCommandBuffers[3];
 		VulkanImage*			mDepthImages[3];
 		VulkanImageView*		mDepthImageViews[3];
-		VulkanBuffer*			mUniformTransformStagingBuffers[3];
-		VulkanBuffer*			mUniformTransformBuffers[3];
-		VulkanBufferWriter		mUniformTransformWriters[3];
-		TransformUniformData*	mTransformData[3];
 
 	public:
 		void Initialize(VulkanGraphics* pGraphics);
