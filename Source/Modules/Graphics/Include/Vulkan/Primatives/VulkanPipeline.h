@@ -16,7 +16,7 @@ namespace Quartz
 	{
 		Array<VulkanShader*>						shaders;
 		Array<VulkanAttachment>						attachments;
-		Array<VkVertexInputBindingDescription>		bufferAttachments;
+		Array<VkVertexInputBindingDescription>		vertexBindings;
 		Array<VkVertexInputAttributeDescription>	vertexAttributes;
 		Array<VkPipelineColorBlendAttachmentState>	blendAttachments;
 		VkViewport									viewport;

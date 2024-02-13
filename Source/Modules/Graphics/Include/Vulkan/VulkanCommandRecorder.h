@@ -84,6 +84,8 @@ namespace Quartz
 
 		void BindUniforms(VulkanGraphicsPipeline* pPipeline, uInt32 set, VulkanUniformBind* pBindings, uSize bindingCount);
 
+		void SetViewport(const VkViewport& viewport, const VkRect2D scissor);
+
 		void DrawIndexed(uInt32 instanceCount, uInt32 indexCount, uInt32 indexStart);
 
 		void CopyBuffer(VulkanBuffer* pSrcBuffer, VulkanBuffer* pDestBuffer, 

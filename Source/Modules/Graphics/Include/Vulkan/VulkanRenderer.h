@@ -6,7 +6,7 @@
 #include "VulkanGraphics.h"
 #include "VulkanRenderScene.h"
 #include "VulkanSwapchainTimer.h"
-#include "Primatives/VulkanPipeline.h"
+#include "VulkanPipelineManager.h"
 #include "VulkanBufferWriter.h"
 
 #include "Math/Math.h"
@@ -24,11 +24,12 @@ namespace Quartz
 	private:
 		VulkanGraphics*			mpGraphics;
 		VulkanSwapchain*		mpSwapchain;
+		VulkanPipelineManager	mPipelineManager;
+		VulkanSwapchainTimer	mSwapTimer;
+
 		VulkanGraphicsPipeline* mpPipeline;
-		VulkanSwapchainTimer*	mpSwapTimer;
 
 		VulkanCommandBuffer*	mCommandBuffers[3];
-		//VulkanFramebuffer*		mFramebuffers[3];
 		VulkanImage*			mDepthImages[3];
 		VulkanImageView*		mDepthImageViews[3];
 		VulkanBuffer*			mUniformTransformStagingBuffers[3];

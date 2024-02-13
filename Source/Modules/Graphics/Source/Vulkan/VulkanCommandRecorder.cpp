@@ -202,6 +202,12 @@ namespace Quartz
 			pPipeline->vkPipelineInfo.layout, set, bindingCount, writeDescriptorSets);
 	}
 
+	void VulkanCommandRecorder::SetViewport(const VkViewport& viewport, const VkRect2D scissor)
+	{
+		vkCmdSetViewport(mpCommandBuffer->vkCommandBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(mpCommandBuffer->vkCommandBuffer, 0, 1, &scissor);
+	}
+
 	void VulkanCommandRecorder::DrawIndexed(uInt32 instanceCount, uInt32 indexCount, uInt32 indexStart)
 	{
 		vkCmdDrawIndexed(mpCommandBuffer->vkCommandBuffer, indexCount, instanceCount, indexStart, 0, 0);

@@ -2,6 +2,15 @@
 
 namespace Quartz
 {
+	VulkanSwapchainTimer::VulkanSwapchainTimer() :
+		mpSwapchain(nullptr),
+		mInFlightFences(0),
+		mImageIndex(0),
+		mCurrentFrame(0)
+	{
+		// Nothing
+	}
+
 	VulkanSwapchainTimer::VulkanSwapchainTimer(VulkanSwapchain* pSwapchain) :
 		mpSwapchain(pSwapchain),
 		mInFlightFences(pSwapchain->imageFences.Size()),

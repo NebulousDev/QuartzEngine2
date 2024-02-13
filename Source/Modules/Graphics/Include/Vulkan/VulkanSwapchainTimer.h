@@ -14,6 +14,7 @@ namespace Quartz
 			uInt32					mCurrentFrame;
 
 		public:
+			VulkanSwapchainTimer();
 			VulkanSwapchainTimer(VulkanSwapchain* pSwapchain);
 
 			void AdvanceFrame();

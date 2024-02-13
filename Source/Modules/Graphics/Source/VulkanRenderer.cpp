@@ -70,10 +70,10 @@ namespace Quartz
 		renderScene.BuildScene(mpGraphics->pEntityWorld);
 
 
-		// PIPELINE
+		// SWAPCHAIN
 
 		mpSwapchain = pResources->CreateSwapchain(pGraphics->pPrimaryDevice, *pGraphics->pSurface, 3);		
-		mpSwapTimer = new VulkanSwapchainTimer(mpSwapchain);
+		mSwapTimer = VulkanSwapchainTimer(mpSwapchain);
 
 
 		// SHADERS
@@ -128,6 +128,7 @@ namespace Quartz
 		VulkanShader* pVertexShader = pResources->CreateShader(pGraphics->pPrimaryDevice, "Vertex", vertexShaderSPIRV);
 		VulkanShader* pFragmentShader = pResources->CreateShader(pGraphics->pPrimaryDevice, "Fragment", fragmentShaderSPIRV);
 
+		mPipelineManager = VulkanPipelineManager(pDevice, pResources);
 
 		// DEPTH IMAGES
 
@@ -167,42 +168,14 @@ namespace Quartz
 			{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
 		};
 
-		VulkanGraphicsPipelineInfo pipelineInfo = {};
-		pipelineInfo.shaders				= { pVertexShader, pFragmentShader };
-		pipelineInfo.attachments			= attachments;
-		pipelineInfo.viewport.x				= 0;
-		pipelineInfo.viewport.y				= pGraphics->pSurface->height;
-		pipelineInfo.viewport.width			= pGraphics->pSurface->width;
-		pipelineInfo.viewport.height		= -(float)pGraphics->pSurface->height;
-		pipelineInfo.viewport.minDepth		= 0.0f;
-		pipelineInfo.viewport.maxDepth		= 1.0f;
-		pipelineInfo.scissor.offset.x		= 0;
-		pipelineInfo.scissor.offset.y		= 0;
-		pipelineInfo.scissor.extent.width	= pGraphics->pSurface->width;
-		pipelineInfo.scissor.extent.height	= pGraphics->pSurface->height;
-		pipelineInfo.vkTopology				= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		pipelineInfo.vkPolygonMode			= VK_POLYGON_MODE_FILL;
-		pipelineInfo.vkCullMode				= VK_CULL_MODE_NONE;
-		pipelineInfo.vkFrontFace			= VK_FRONT_FACE_CLOCKWISE;
-		pipelineInfo.lineWidth				= 1.0f;
-		pipelineInfo.multisamples			= VK_SAMPLE_COUNT_1_BIT;
-		pipelineInfo.depth.enableTesting	= true;
-		pipelineInfo.depth.enableWrite		= true;
-		pipelineInfo.depth.compareOp		= VK_COMPARE_OP_LESS_OR_EQUAL;
-		pipelineInfo.depth.depthMin			= 0.0f;
-		pipelineInfo.depth.depthMax			= 1.0f;
-		pipelineInfo.stencil.enableTesting	= false;
-		pipelineInfo.stencil.compareOp		= VK_COMPARE_OP_LESS_OR_EQUAL;
-		pipelineInfo.usePushDescriptors		= true;
-		pipelineInfo.useDynamicViewport		= false;
-		pipelineInfo.useDynamicRendering	= true;
-
 		VkVertexInputBindingDescription vertexBufferAttachment = {};
 		vertexBufferAttachment.binding		= 0;
 		vertexBufferAttachment.stride		= 6 * sizeof(float);
 		vertexBufferAttachment.inputRate	= VK_VERTEX_INPUT_RATE_VERTEX;
 
-		pipelineInfo.bufferAttachments.PushBack(vertexBufferAttachment);
+		Array<VkVertexInputBindingDescription> vertexBindings;
+
+		vertexBindings.PushBack(vertexBufferAttachment);
 
 		VkVertexInputAttributeDescription positionAttrib = {};
 		positionAttrib.binding				= 0;
@@ -228,26 +201,15 @@ namespace Quartz
 		texCoordAttrib.format				= VK_FORMAT_R32G32_SFLOAT;
 		texCoordAttrib.offset				= 9 * sizeof(float);
 
-		pipelineInfo.vertexAttributes.PushBack(positionAttrib);
-		pipelineInfo.vertexAttributes.PushBack(normalAttrib);
-		//pipelineInfo.vertexAttributes.PushBack(tangentAttrib);
-		//pipelineInfo.vertexAttributes.PushBack(texCoordAttrib);
+		Array<VkVertexInputAttributeDescription> vertexAttributes;
 
-		pipelineInfo.pRenderpass			= nullptr; //pRenderPass;
+		vertexAttributes.PushBack(positionAttrib);
+		vertexAttributes.PushBack(normalAttrib);
 
-		VkPipelineColorBlendAttachmentState	blendAttachment = {};
-		blendAttachment.blendEnable			= VK_TRUE;
-		blendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		blendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		blendAttachment.colorBlendOp		= VK_BLEND_OP_ADD;
-		blendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		blendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		blendAttachment.alphaBlendOp		= VK_BLEND_OP_ADD;
-		blendAttachment.colorWriteMask		= VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-		pipelineInfo.blendAttachments.PushBack(blendAttachment);
-
-		mpPipeline = pResources->CreateGraphicsPipeline(pGraphics->pPrimaryDevice, pipelineInfo, 0);
+		mpPipeline = mPipelineManager.FindOrCreateGraphicsPipeline(
+			{ pVertexShader, pFragmentShader },
+			attachments, vertexAttributes, vertexBindings
+		);
 
 		// VERTEX DATA
 
@@ -428,7 +390,21 @@ namespace Quartz
 
 			renderRecorder.PipelineBarrier(barrierInfo);
 
+			VkViewport vkViewport = {};
+			vkViewport.x		= 0;
+			vkViewport.y		= pGraphics->pSurface->height;
+			vkViewport.width	= pGraphics->pSurface->width;
+			vkViewport.height	= -(float)pGraphics->pSurface->height;
+			vkViewport.minDepth = 0.0f;
+			vkViewport.maxDepth = 1.0f;
 
+			VkRect2D vkScissor = {};
+			vkScissor.offset.x		= 0;
+			vkScissor.offset.y		= 0;
+			vkScissor.extent.width	= pGraphics->pSurface->width;
+			vkScissor.extent.height = pGraphics->pSurface->height;
+
+			renderRecorder.SetViewport(vkViewport, vkScissor);
 
 			VulkanRenderingAttachmentInfo swapchainRenderingAttachmentInfo = {};
 			swapchainRenderingAttachmentInfo.pImageView		= mpSwapchain->imageViews[i];
@@ -485,19 +461,19 @@ namespace Quartz
 
 	void VulkanRenderer::RenderScene(VulkanRenderScene* pRenderScene)
 	{
-		mpSwapTimer->AdvanceFrame();
+		mSwapTimer.AdvanceFrame();
 
-		uInt32 resourceIdx = mpSwapTimer->GetFrameIndex();
+		uInt32 resourceIdx = mSwapTimer.GetFrameIndex();
 
 		VulkanSubmission renderSubmition	= {};
 		renderSubmition.commandBuffers		= { mCommandBuffers[resourceIdx] };
-		renderSubmition.waitSemaphores		= { mpSwapTimer->GetCurrentAcquiredSemaphore() };
+		renderSubmition.waitSemaphores		= { mSwapTimer.GetCurrentAcquiredSemaphore() };
 		renderSubmition.waitStages			= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		renderSubmition.signalSemaphores	= { mpSwapTimer->GetCurrentCompleteSemaphore() };
+		renderSubmition.signalSemaphores	= { mSwapTimer.GetCurrentCompleteSemaphore() };
 
-		mpGraphics->Submit(renderSubmition, mpGraphics->pPrimaryDevice->queues.graphics, mpSwapTimer->GetCurrentFence());
+		mpGraphics->Submit(renderSubmition, mpGraphics->pPrimaryDevice->queues.graphics, mSwapTimer.GetCurrentFence());
 
-		mpSwapTimer->Present();
+		mSwapTimer.Present();
 	}
 
 	void VulkanRenderer::RenderUpdate(Runtime* pRuntime, double delta)

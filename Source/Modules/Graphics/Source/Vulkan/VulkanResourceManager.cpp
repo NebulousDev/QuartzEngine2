@@ -999,8 +999,8 @@ namespace Quartz
 
 		VkPipelineVertexInputStateCreateInfo vkVertexInputStateInfo = {};
 		vkVertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vkVertexInputStateInfo.vertexBindingDescriptionCount	= info.bufferAttachments.Size();
-		vkVertexInputStateInfo.pVertexBindingDescriptions		= info.bufferAttachments.Data();
+		vkVertexInputStateInfo.vertexBindingDescriptionCount	= info.vertexBindings.Size();
+		vkVertexInputStateInfo.pVertexBindingDescriptions		= info.vertexBindings.Data();
 		vkVertexInputStateInfo.vertexAttributeDescriptionCount	= info.vertexAttributes.Size();
 		vkVertexInputStateInfo.pVertexAttributeDescriptions		= info.vertexAttributes.Data();
 		vkVertexInputStateInfo.flags							= 0;
@@ -1181,20 +1181,28 @@ namespace Quartz
 			vkPipelineInfo.pNext				= nullptr;
 		}
 
+		VkDynamicState pDynamicStates[16] = {};
+		VkPipelineDynamicStateCreateInfo vkDynamicStateCreateInfo = {};
+		vkDynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+
 		if (info.useDynamicViewport)
 		{
-			VkDynamicState dynamicState		= VK_DYNAMIC_STATE_VIEWPORT;
+			pDynamicStates[0] = VK_DYNAMIC_STATE_VIEWPORT;
+			pDynamicStates[1] = VK_DYNAMIC_STATE_SCISSOR;
 
-			VkPipelineDynamicStateCreateInfo vkDynamicStateCreateInfo;
-			vkDynamicStateCreateInfo.dynamicStateCount	= 1;
-			vkDynamicStateCreateInfo.pDynamicStates		= &dynamicState;
+			vkDynamicStateCreateInfo.dynamicStateCount	= 2;
+			vkDynamicStateCreateInfo.pDynamicStates		= pDynamicStates;
 
-			vkPipelineInfo.pViewportState	= nullptr;
+			vkViewportInfo.pViewports = nullptr;
+			vkViewportInfo.pScissors  = nullptr;
+
+			vkPipelineInfo.pViewportState = &vkViewportInfo;
+			vkPipelineInfo.pDynamicState = &vkDynamicStateCreateInfo;
 		}
 		else
 		{
-			vkPipelineInfo.pViewportState	= &vkViewportInfo;
-			vkPipelineInfo.pDynamicState	= nullptr;
+			vkPipelineInfo.pViewportState = &vkViewportInfo;
+			vkPipelineInfo.pDynamicState  = nullptr;
 		}
 
 		if (vkCreateGraphicsPipelines(pDevice->vkDevice, VK_NULL_HANDLE, 1, &vkPipelineInfo, nullptr, &vkPipeline) != VK_SUCCESS)
