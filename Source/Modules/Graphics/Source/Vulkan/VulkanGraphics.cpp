@@ -456,8 +456,8 @@ namespace Quartz
 
 		if (vkGetInstanceProcAddr(vkInstance, "vkEnumerateInstanceVersion") != nullptr)
 		{
-			uInt32 apiVersion;
-			if (vkEnumerateInstanceVersion(&apiVersion))
+			uInt32 apiVersion = 0;
+			if (vkEnumerateInstanceVersion(&apiVersion) == VK_SUCCESS)
 			{
 				uInt32 major = VK_API_VERSION_MAJOR(apiVersion);
 				uInt32 minor = VK_API_VERSION_MINOR(apiVersion);
@@ -471,10 +471,23 @@ namespace Quartz
 					uInt32 reqMinor = VK_API_VERSION_MINOR(version);
 					uInt32 reqpatch = VK_API_VERSION_PATCH(version);
 
-					LogError("Vulkan VersionTest failed. Requested version %d.%d.%d,\
- but vkEnumerateInstanceVersion returned %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
+					if (major >= reqMajor)
+						goto versionSuccess;
+
+					if (minor >= reqMinor)
+						goto versionSuccess;
+
+					if (patch >= reqpatch)
+						goto versionSuccess;
+
+					LogError("Vulkan VersionTest failed. Requested version %d.%d.%d, but found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
 
 					return false;
+
+				versionSuccess:
+					LogInfo("Vulkan VersionTest Succeeded. Requested version %d.%d.%d, and found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
+
+					return true;
 				}
 			}
 			else
