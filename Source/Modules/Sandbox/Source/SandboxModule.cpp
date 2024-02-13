@@ -82,27 +82,6 @@ namespace Quartz
 			// TEMP
 			gfx.pSurface = gfx.pResourceManager->CreateSurface(gfx.pPrimaryDevice, gfx.vkInstance, *(VulkanApiSurface*)pWindow->GetSurface());
 
-			TransformComponent transform1
-			( 
-				{ 0.0f, 0.0f, 1.0f }, 
-				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f), 
-				{ 1.0f, 1.0f, 1.0f }
-			);
-
-			TransformComponent transform2
-			(
-				{ -0.6f, -0.4f, -2.0f },
-				Quatf({ 0.0f, 0.0f, 0.0f }, 0.2f),
-				{ 1.0f, 1.0f, 1.0f }
-			);
-
-			TransformComponent transform3
-			(
-				{ 0.6f, 0.4f, -3.0f },
-				Quatf({ 0.0f, 0.0f, 0.0f }, -0.2f),
-				{ 1.0f, 1.0f, 1.0f }
-			);
-
 			ModelData triData
 			{
 				{
@@ -115,18 +94,73 @@ namespace Quartz
 				}
 			};
 
+			ModelData cubeData
+			{
+				{
+					-0.5f, -0.5f,  0.5f,	1.0f, 0.0f, 0.0f,	 // 0 - Front Bottom Left
+					-0.5f,  0.5f,  0.5f,	0.0f, 1.0f, 0.0f,	 // 1 - Front Top Left
+					 0.5f,  0.5f,  0.5f,	0.0f, 0.0f, 1.0f,	 // 2 - Front Top Right
+					 0.5f, -0.5f,  0.5f,	1.0f, 0.0f, 1.0f,	 // 3 - Front Bottom Right
+					
+					-0.5f, -0.5f, -0.5f,	1.0f, 1.0f, 0.0f,	 // 4 - Back Bottom Left
+					-0.5f,  0.5f, -0.5f,	0.0f, 1.0f, 1.0f,	 // 5 - Back Top Left
+					 0.5f,  0.5f, -0.5f,	1.0f, 1.0f, 1.0f,	 // 6 - Back Top Right
+					 0.5f, -0.5f, -0.5f,	0.0f, 0.0f, 0.0f,	 // 7 - Back Bottom Right
+				},
+				{
+					0, 1, 2,  0, 2, 3,		// Front
+					3, 2, 6,  3, 6, 7,		// Right
+					7, 6, 5,  7, 5, 4,		// Back
+					4, 5, 1,  4, 1, 0,		// Left
+					1, 5, 6,  1, 6, 2,		// Top
+					0, 5, 6,  0, 6, 3,		// Bottom
+
+				}
+			};
+
+			TransformComponent transform0
+			(
+				{ 0.0f, 0.0f, -1.0f },
+				Quatf({ 0.0f, 1.0f, 0.0f }, ToRadians(45.0f)),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			TransformComponent transform1
+			( 
+				{ 0.0f, 0.0f, 1.0f }, 
+				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f), 
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			TransformComponent transform2
+			(
+				{ -0.6f, -0.4f, -1.0f },
+				Quatf({ 0.0f, 0.0f, 0.0f }, 0.2f),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			TransformComponent transform3
+			(
+				{ 0.6f, 0.4f, -2.0f },
+				Quatf({ 1.0f, 1.0f, 0.0f }, -0.2f),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
 			MaterialComponent material1
 			{
 				"shaders/default.vert",
 				"shaders/default.frag"
 			};
 
-			MeshComponent renderable1("simpletri0", triData);
-			MeshComponent renderable2("simpletri1", triData);
+			MeshComponent renderable1("simpleTri", triData);
+			MeshComponent renderable2("simpleCube", cubeData);
 
-			Entity eTri1 = gpWorld->CreateEntity(transform1, renderable1, material1);
-			Entity eTri2 = gpWorld->CreateEntity(transform2, renderable2, material1);
-			Entity eTri3 = gpWorld->CreateEntity(transform3, renderable2, material1);
+			//Entity eTri0 = gpWorld->CreateEntity(transform0, renderable1, material1);
+			//Entity eTri1 = gpWorld->CreateEntity(transform1, renderable1, material1);
+			//Entity eTri2 = gpWorld->CreateEntity(transform2, renderable2, material1);
+			//Entity eTri3 = gpWorld->CreateEntity(transform3, renderable2, material1);
+
+			Entity cube = gpWorld->CreateEntity(transform0, renderable2, material1);
 
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();

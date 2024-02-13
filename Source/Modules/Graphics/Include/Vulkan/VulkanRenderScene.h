@@ -5,7 +5,6 @@
 #include "VulkanMultiBuffer.h"
 #include "Entity/World.h"
 #include "Types/Map.h"
-//#include "Types/Stack.h"
 
 #include "Component/MeshComponent.h"
 #include "Component/TransformComponent.h"

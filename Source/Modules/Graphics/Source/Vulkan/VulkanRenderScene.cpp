@@ -358,7 +358,7 @@ namespace Quartz
 				///// TEMP
 				*(Mat4f*)(pPerModelData) = transform.GetMatrix();
 				*(Mat4f*)(pPerModelData + sizeof(Mat4f)) = Mat4f().SetTranslation({ 0.0f, 0.0f, -1.0f }) * Mat4f().SetPerspective(ToRadians(90.0f),
-					(float)640 / (float)480, 0.001f, 1000.0f);
+					(float)1280 / (float)720, 0.001f, 1000.0f);
 				/////
 			}
 
@@ -390,7 +390,7 @@ namespace Quartz
 			//CopyPerModelData((uInt8*)&transformData, pPerModelStagingData, sizeof(Mat4f));
 			*(Mat4f*)(pPerModelStagingData) = transform.GetMatrix();
 			*(Mat4f*)(pPerModelStagingData + sizeof(Mat4f)) = Mat4f().SetTranslation({ 0.0f, 0.0f, -1.0f }) * Mat4f().SetPerspective(ToRadians(90.0f),
-				(float)640 / (float)480, 0.001f, 1000.0f);
+				(float)1280 / (float)720, 0.001f, 1000.0f);
 			/////
 
 			bufferLocation.perModelEntry		= perModelStagingEntry;
@@ -412,7 +412,7 @@ namespace Quartz
 			///// TEMP
 			*(Mat4f*)(pPerModelStagingData) = transform.GetMatrix();
 			*(Mat4f*)(pPerModelStagingData + sizeof(Mat4f)) = Mat4f().SetTranslation({ 0.0f, 0.0f, -1.0f }) * Mat4f().SetPerspective(ToRadians(90.0f),
-				(float)640 / (float)480, 0.001f, 1000.0f);
+				(float)1280 / (float)720, 0.001f, 1000.0f);
 			/////
 
 			bufferLocation.perModelEntry		= perModelStagingEntry;

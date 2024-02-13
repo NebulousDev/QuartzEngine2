@@ -211,101 +211,6 @@ namespace Quartz
 			attachments, vertexAttributes, vertexBindings
 		);
 
-		// VERTEX DATA
-
-		float vertexData[] =
-		{
-			-0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
-			 0.0f,  0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
-			 0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f
-		};
-
-		VulkanBufferInfo stagingVertexBufferInfo		= {};
-		stagingVertexBufferInfo.sizeBytes				= sizeof(vertexData);
-		stagingVertexBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		stagingVertexBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-		VulkanBuffer* pStagingVertexBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, stagingVertexBufferInfo);
-
-		VulkanBufferInfo vertexBufferInfo	= {};
-		vertexBufferInfo.sizeBytes			= sizeof(vertexData);
-		vertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-		vertexBufferInfo.vkMemoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-		VulkanBuffer* pVertexBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, vertexBufferInfo);
-
-		VulkanBufferWriter vertexWriter(pStagingVertexBuffer);
-		float* pVertexData = vertexWriter.Map<float>();
-
-		memcpy_s(pVertexData, vertexBufferInfo.sizeBytes, vertexData, vertexBufferInfo.sizeBytes);
-
-		vertexWriter.Unmap();
-
-
-		// INDEX DATA
-
-		uInt16 indexData[] =
-		{
-			0, 1, 2
-		};
-
-		VulkanBufferInfo stagingIndexBufferInfo		= {};
-		stagingIndexBufferInfo.sizeBytes			= sizeof(indexData);
-		stagingIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		stagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-		VulkanBuffer* pStagingIndexBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, stagingIndexBufferInfo);
-
-		VulkanBufferInfo indexBufferInfo	= {};
-		indexBufferInfo.sizeBytes			= sizeof(indexData);
-		indexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-		indexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-		VulkanBuffer* pIndexBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, indexBufferInfo);
-
-		VulkanBufferWriter indexWriter(pStagingIndexBuffer);
-		uInt16* pIndexData = indexWriter.Map<uInt16>();
-
-		memcpy_s(pIndexData, indexBufferInfo.sizeBytes, indexData, indexBufferInfo.sizeBytes);
-
-		indexWriter.Unmap();
-
-
-		// Uniform Buffers
-
-		uSize transformUniformBufferSize = pVertexShader->uniforms[0].sizeBytes;
-
-		for (uSize i = 0; i < 3; i++)
-		{
-			VulkanBufferInfo stagingUniformBufferInfo	= {};
-			stagingUniformBufferInfo.sizeBytes			= transformUniformBufferSize;
-			stagingUniformBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-			stagingUniformBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-			VulkanBuffer* pStagingUniformBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, stagingUniformBufferInfo);
-
-			VulkanBufferInfo uniformBufferInfo		= {};
-			uniformBufferInfo.sizeBytes				= transformUniformBufferSize;
-			uniformBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-			uniformBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-			VulkanBuffer* pUniformBuffer = pResources->CreateBuffer(pGraphics->pPrimaryDevice, uniformBufferInfo);
-
-			VulkanBufferWriter uniformWriter(pStagingUniformBuffer);
-			TransformUniformData* pTransformData = uniformWriter.Map<TransformUniformData>();
-
-			pTransformData->transform = Mat4f().SetRotation({0.0f, 1.0f, 0.0f}, 0.5f);
-			pTransformData->view = Mat4f().SetTranslation({ 0.0f, 0.0f, -1.0f }) * Mat4f().SetPerspective(ToRadians(90.0f),
-				(float)pGraphics->pSurface->width / (float)pGraphics->pSurface->height, 0.001f, 1000.0f);
-
-			mUniformTransformStagingBuffers[i] = pStagingUniformBuffer;
-			mUniformTransformBuffers[i] = pUniformBuffer;
-			mUniformTransformWriters[i] = uniformWriter;
-			mTransformData[i] = pTransformData;
-
-			//uniformWriter.Unmap();
-		}
-
 		// Command Buffers
 
 		VulkanCommandPoolInfo immediateTransferPoolInfo = {};
@@ -321,14 +226,6 @@ namespace Quartz
 
 		immediateRecorder.BeginRecording();
 
-		immediateRecorder.CopyBuffer(pStagingVertexBuffer, pVertexBuffer, pVertexBuffer->sizeBytes, 0, 0);
-		immediateRecorder.CopyBuffer(pStagingIndexBuffer, pIndexBuffer, pIndexBuffer->sizeBytes, 0, 0);
-
-		for (uSize i = 0; i < 3; i++)
-		{
-			immediateRecorder.CopyBuffer(mUniformTransformStagingBuffers[i], mUniformTransformBuffers[i], 128, 0, 0);
-		}
-
 		////
 		renderScene.RecordTransfers(&immediateRecorder);
 		////
@@ -342,9 +239,6 @@ namespace Quartz
 		immediateSubmition.signalSemaphores	= {};
 
 		pGraphics->Submit(immediateSubmition, pGraphics->pPrimaryDevice->queues.transfer, VK_NULL_HANDLE);
-
-		pResources->DestroyBuffer(pStagingVertexBuffer);
-		pResources->DestroyBuffer(pStagingIndexBuffer);
 
 		VulkanCommandPoolInfo renderPoolInfo = {};
 		renderPoolInfo.queueFamilyIndex			= pGraphics->pPrimaryDevice->pPhysicalDevice-> primaryQueueFamilyIndices.graphics;
@@ -431,23 +325,7 @@ namespace Quartz
 
 			renderRecorder.BeginRendering(renderingBeginInfo);
 
-			VulkanBufferBind pVertexBufferBinds[] = { {pVertexBuffer, 0} };
-
-			renderRecorder.SetVertexBuffers(pVertexBufferBinds, 1);
-			renderRecorder.SetIndexBuffer(pIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
 			renderRecorder.SetGraphicsPipeline(mpPipeline);
-
-			VulkanUniformBind binding = {};
-			binding.binding = 0;
-			binding.pBuffer = mUniformTransformBuffers[i];
-			binding.offset	= 0;
-			binding.range	= mUniformTransformBuffers[i]->sizeBytes;
-
-			VulkanUniformBind pUniformBinds[] = { binding };
-
-			renderRecorder.BindUniforms(mpPipeline, 0, pUniformBinds, 1);
-
-			renderRecorder.DrawIndexed(1, pIndexBuffer->sizeBytes / sizeof(uInt16), 0);
 
 			renderScene.RecordRender(&renderRecorder, mpPipeline);
 
