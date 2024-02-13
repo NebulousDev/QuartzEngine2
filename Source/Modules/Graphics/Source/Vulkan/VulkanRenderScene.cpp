@@ -4,16 +4,12 @@
 
 namespace Quartz
 {
-	void VulkanRenderScene::Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, const VulkanRenderSettings& settings)
+	void VulkanRenderScene::InitializeDefaultBuffers()
 	{
-		mSettings			= settings;
-		mpResourceManager	= pResourceManager;
-		mpDevice			= pDevice;
-
 		VkBufferUsageFlags		usageFlags = 0;
 		VkMemoryPropertyFlags	memoryFlags = 0;
 
-		if (settings.useMeshStaging)
+		if (mSettings.useMeshStaging)
 		{
 			usageFlags	= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -24,78 +20,78 @@ namespace Quartz
 			memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		}
 
-		if (!settings.useUniqueMeshBuffers)
+		if (!mSettings.useUniqueMeshBuffers)
 		{
 			VulkanBufferInfo vertexBufferInfo = {};
-			vertexBufferInfo.sizeBytes			= settings.vertexBufferSizeMb * (1024 * 1024);
+			vertexBufferInfo.sizeBytes			= mSettings.vertexBufferSizeMb * (1024 * 1024);
 			vertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | usageFlags;
 			vertexBufferInfo.vkMemoryProperties = memoryFlags;
 
-			mVertexBuffers.PushBack(VulkanMultiBuffer(pResourceManager->CreateBuffer(pDevice, vertexBufferInfo)));
+			mVertexBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, vertexBufferInfo)));
 
 			VulkanBufferInfo indexBufferInfo = {};
-			indexBufferInfo.sizeBytes			= settings.indexBufferSizeMb * (1024 * 1024);
+			indexBufferInfo.sizeBytes			= mSettings.indexBufferSizeMb * (1024 * 1024);
 			indexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | usageFlags;
 			indexBufferInfo.vkMemoryProperties	= memoryFlags;
 
-			mIndexBuffers.PushBack(VulkanMultiBuffer(pResourceManager->CreateBuffer(pDevice, indexBufferInfo)));
+			mIndexBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, indexBufferInfo)));
 		}
 
 		VulkanBufferInfo globalBufferInfo = {};
-		globalBufferInfo.sizeBytes				= settings.globalBufferSizeBytes;
+		globalBufferInfo.sizeBytes				= mSettings.globalBufferSizeBytes;
 		globalBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 		globalBufferInfo.vkMemoryProperties		= memoryFlags;
 
-		mGlobalBuffer = pResourceManager->CreateBuffer(pDevice, globalBufferInfo);
+		mGlobalBuffer = mpResourceManager->CreateBuffer(mpDevice, globalBufferInfo);
 
-		if (!settings.useUniqueUniformBuffers)
+		if (!mSettings.useUniqueUniformBuffers)
 		{
 			VulkanBufferInfo perInstanceBufferInfo = {};
-			perInstanceBufferInfo.sizeBytes				= settings.perInstanceBufferSizeMb * (1024 * 1024);
+			perInstanceBufferInfo.sizeBytes				= mSettings.perInstanceBufferSizeMb * (1024 * 1024);
 			perInstanceBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 			perInstanceBufferInfo.vkMemoryProperties	= memoryFlags;
 
-			mPerInstanceBuffers.PushBack(VulkanMultiBuffer(pResourceManager->CreateBuffer(pDevice, perInstanceBufferInfo)));
+			mPerInstanceBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perInstanceBufferInfo)));
 
 			VulkanBufferInfo perModelBufferInfo = {};
-			perModelBufferInfo.sizeBytes			= settings.perModelBufferSizeMb * (1024 * 1024);
+			perModelBufferInfo.sizeBytes			= mSettings.perModelBufferSizeMb * (1024 * 1024);
 			perModelBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 			perModelBufferInfo.vkMemoryProperties	= memoryFlags;
 
-			mPerModelBuffers.PushBack(VulkanMultiBuffer(pResourceManager->CreateBuffer(pDevice, perModelBufferInfo)));
+			mPerModelBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perModelBufferInfo)));
 		}
 
-		if (!settings.useUniqueMeshStagingBuffers)
+		if (!mSettings.useUniqueMeshStagingBuffers)
 		{
-			if (settings.useMeshStaging)
+			if (mSettings.useMeshStaging)
 			{
 				VulkanBufferInfo stagingVertexBufferInfo = {};
-				stagingVertexBufferInfo.sizeBytes			= settings.vertexBufferSizeMb * (1024 * 1024);
+				stagingVertexBufferInfo.sizeBytes			= mSettings.vertexBufferSizeMb * (1024 * 1024);
 				stagingVertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingVertexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-				mVertexStagingBuffers.PushBack(VulkanMultiBuffer(pResourceManager->CreateBuffer(pDevice, stagingVertexBufferInfo)));
+				mVertexStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingVertexBufferInfo)));
 
 				VulkanBufferInfo stagingGlobalBufferInfo = {};
-				stagingGlobalBufferInfo.sizeBytes			= settings.perInstanceBufferSizeMb * (1024 * 1024);
+				stagingGlobalBufferInfo.sizeBytes			= mSettings.perInstanceBufferSizeMb * (1024 * 1024);
 				stagingGlobalBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingGlobalBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-				mGlobalStagingBuffer = pResourceManager->CreateBuffer(pDevice, stagingGlobalBufferInfo);
+				mGlobalStagingBuffer = mpResourceManager->CreateBuffer(mpDevice, stagingGlobalBufferInfo);
 
 				VulkanBufferInfo stagingIndexBufferInfo = {};
-				stagingIndexBufferInfo.sizeBytes			= settings.indexBufferSizeMb * (1024 * 1024);
+				stagingIndexBufferInfo.sizeBytes			= mSettings.indexBufferSizeMb * (1024 * 1024);
 				stagingIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-				mIndexStagingBuffers.PushBack(VulkanMultiBuffer(pResourceManager->CreateBuffer(pDevice, stagingIndexBufferInfo)));
+				mIndexStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingIndexBufferInfo)));
 
 				VulkanBufferInfo stagingPerInstanceBufferInfo = {};
-				stagingPerInstanceBufferInfo.sizeBytes			= settings.perInstanceBufferSizeMb * (1024 * 1024);
+				stagingPerInstanceBufferInfo.sizeBytes			= mSettings.perInstanceBufferSizeMb * (1024 * 1024);
 				stagingPerInstanceBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingPerInstanceBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-				mPerInstanceStagingBuffers.PushBack(VulkanMultiBuffer(pResourceManager->CreateBuffer(pDevice, stagingPerInstanceBufferInfo)));
+				mPerInstanceStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingPerInstanceBufferInfo)));
 
 				mVertexStagingBuffers[0].Map();
 				mIndexStagingBuffers[0].Map();
@@ -103,25 +99,33 @@ namespace Quartz
 				mPerInstanceStagingBuffers[0].Map();
 			}
 
-			if (settings.useUniformStaging && !settings.usePerModelPushConstants)
+			if (mSettings.useUniformStaging && !mSettings.usePerModelPushConstants)
 			{
 				VulkanBufferInfo stagingPerModelBufferInfo = {};
-				stagingPerModelBufferInfo.sizeBytes				= settings.perModelBufferSizeMb * (1024 * 1024);
+				stagingPerModelBufferInfo.sizeBytes				= mSettings.perModelBufferSizeMb * (1024 * 1024);
 				stagingPerModelBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingPerModelBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-				mPerModelStagingBuffers.PushBack(VulkanMultiBuffer(pResourceManager->CreateBuffer(pDevice, stagingPerModelBufferInfo)));
+				mPerModelStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingPerModelBufferInfo)));
 
 				mPerModelStagingBuffers[0].Map();
-
 			}
 		}
 	}
 
-	void CopyMeshData(const ModelData& data, float* pVertData, uInt16* pIndexData)
+	void VulkanRenderScene::Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, const VulkanRenderSettings& settings)
 	{
-		memcpy_s(pVertData, data.vertices.Size() * sizeof(float), data.vertices.Data(), data.vertices.Size() * sizeof(float));
-		memcpy_s(pIndexData, data.indices.Size() * sizeof(uInt16), data.indices.Data(), data.indices.Size() * sizeof(uInt16));
+		mSettings			= settings;
+		mpResourceManager	= pResourceManager;
+		mpDevice			= pDevice;
+
+		InitializeDefaultBuffers();
+	}
+
+	void CopyMeshData(const ModelData* pModelData, float* pVertData, uInt16* pIndexData)
+	{
+		memcpy_s(pVertData, pModelData->vertices.Size() * sizeof(float), pModelData->vertices.Data(), pModelData->vertices.Size() * sizeof(float));
+		memcpy_s(pIndexData, pModelData->indices.Size() * sizeof(uInt16), pModelData->indices.Data(), pModelData->indices.Size() * sizeof(uInt16));
 	}
 
 	void CopyPerModelData(uInt8* pPerModelData, uInt8* pPerModelBuffer, uSize sizeBytes)
@@ -129,9 +133,9 @@ namespace Quartz
 		memcpy_s(pPerModelBuffer, sizeBytes, pPerModelData, sizeBytes);
 	}
 
-	MeshBufferLocation VulkanRenderScene::GetOrAllocateMeshBuffers(MeshComponent& renderable, bool& outFound)
+	MeshBufferLocation VulkanRenderScene::GetOrAllocateMeshBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound)
 	{
-		auto& it = mMeshBufferLookup.Find(renderable.modelURIHash);
+		auto& it = mMeshBufferLookup.Find(meshHash);
 
 		if (it != mMeshBufferLookup.End())
 		{
@@ -152,13 +156,13 @@ namespace Quartz
 			VulkanMultiBuffer* pVertexBuffer = &mVertexBuffers[vertexIndex];
 			VulkanMultiBuffer* pIndexBuffer = &mIndexBuffers[indexIndex];
 
-			pVertexBuffer->Allocate<float>(renderable.modelData.vertices.Size(), vertexEntry, nullptr);
-			pIndexBuffer->Allocate<uInt16>(renderable.modelData.indices.Size(), indexEntry, nullptr);
+			pVertexBuffer->Allocate<float>(pModelData->vertices.Size(), vertexEntry, nullptr);
+			pIndexBuffer->Allocate<uInt16>(pModelData->indices.Size(), indexEntry, nullptr);
 			
-			bufferLocation.vertexEntry			= vertexEntry;
-			bufferLocation.indexEntry			= indexEntry;
-			bufferLocation.vertexBufferIndex	= vertexIndex;
-			bufferLocation.indexBufferIndex		= indexIndex;
+			bufferLocation.vertexEntry		= vertexEntry;
+			bufferLocation.indexEntry		= indexEntry;
+			bufferLocation.pVertexBuffer	= pVertexBuffer;
+			bufferLocation.pIndexBuffer		= pIndexBuffer;
 		}
 		else
 		{
@@ -177,7 +181,7 @@ namespace Quartz
 			}
 
 			VulkanBufferInfo vertexBufferInfo = {};
-			vertexBufferInfo.sizeBytes			= renderable.modelData.vertices.Size() * sizeof(float);
+			vertexBufferInfo.sizeBytes			= pModelData->vertices.Size() * sizeof(float);
 			vertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | usageFlags;
 			vertexBufferInfo.vkMemoryProperties = memoryFlags;
 
@@ -185,7 +189,7 @@ namespace Quartz
 				&mVertexBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, vertexBufferInfo)));
 
 			VulkanBufferInfo indexBufferInfo = {};
-			indexBufferInfo.sizeBytes			= renderable.modelData.indices.Size() * sizeof(uInt16);
+			indexBufferInfo.sizeBytes			= pModelData->indices.Size() * sizeof(uInt16);
 			indexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | usageFlags;
 			indexBufferInfo.vkMemoryProperties	= memoryFlags;
 
@@ -194,8 +198,8 @@ namespace Quartz
 
 			if (mSettings.useMeshStaging)
 			{
-				pVertexBuffer->Allocate<float>(renderable.modelData.vertices.Size(), vertexEntry, nullptr);
-				pIndexBuffer->Allocate<uInt16>(renderable.modelData.indices.Size(), indexEntry, nullptr);
+				pVertexBuffer->Allocate<float>(pModelData->vertices.Size(), vertexEntry, nullptr);
+				pIndexBuffer->Allocate<uInt16>(pModelData->indices.Size(), indexEntry, nullptr);
 			}
 			else
 			{
@@ -205,28 +209,28 @@ namespace Quartz
 				pVertexBuffer->Map();
 				pIndexBuffer->Map();
 
-				pVertexBuffer->Allocate<float>(renderable.modelData.vertices.Size(), vertexEntry, &pVertexData);
-				pIndexBuffer->Allocate<uInt16>(renderable.modelData.indices.Size(), indexEntry, &pIndexData);
+				pVertexBuffer->Allocate<float>(pModelData->vertices.Size(), vertexEntry, &pVertexData);
+				pIndexBuffer->Allocate<uInt16>(pModelData->indices.Size(), indexEntry, &pIndexData);
 
-				CopyMeshData(renderable.modelData, pVertexData, pIndexData);
+				CopyMeshData(pModelData, pVertexData, pIndexData);
 			}
 
-			bufferLocation.vertexEntry			= vertexEntry;
-			bufferLocation.indexEntry			= indexEntry;
-			bufferLocation.vertexBufferIndex	= mVertexBuffers.Size() - 1;
-			bufferLocation.indexBufferIndex		= mIndexBuffers.Size() - 1;
+			bufferLocation.vertexEntry		= vertexEntry;
+			bufferLocation.indexEntry		= indexEntry;
+			bufferLocation.pVertexBuffer	= pVertexBuffer;
+			bufferLocation.pIndexBuffer		= pIndexBuffer;
 		}
 
-		mMeshBufferLookup.Put(renderable.modelURIHash, bufferLocation);
+		mMeshBufferLookup.Put(meshHash, bufferLocation);
 
 		outFound = false;
 
 		return bufferLocation;
 	}
 
-	MeshBufferLocation VulkanRenderScene::GetOrAllocateMeshStagingBuffers(MeshComponent& renderable, bool& outFound)
+	MeshBufferLocation VulkanRenderScene::GetOrAllocateMeshStagingBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound)
 	{
-		auto& it = mMeshStagingBufferLookup.Find(renderable.modelURIHash);
+		auto& it = mMeshStagingBufferLookup.Find(meshHash);
 
 		if (it != mMeshStagingBufferLookup.End())
 		{
@@ -253,20 +257,20 @@ namespace Quartz
 			pVertexStagingBuffer->Map();
 			pIndexStagingBuffer->Map();
 
-			pVertexStagingBuffer->Allocate<float>(renderable.modelData.vertices.Size(), vertexStagingEntry, &pVertexStagingData);
-			pIndexStagingBuffer->Allocate<uInt16>(renderable.modelData.indices.Size(), indexStagingEntry, &pIndexStagingData);
+			pVertexStagingBuffer->Allocate<float>(pModelData->vertices.Size(), vertexStagingEntry, &pVertexStagingData);
+			pIndexStagingBuffer->Allocate<uInt16>(pModelData->indices.Size(), indexStagingEntry, &pIndexStagingData);
 
-			CopyMeshData(renderable.modelData, pVertexStagingData, pIndexStagingData);
+			CopyMeshData(pModelData, pVertexStagingData, pIndexStagingData);
 
-			bufferLocation.vertexEntry			= vertexStagingEntry;
-			bufferLocation.indexEntry			= indexStagingEntry;
-			bufferLocation.vertexBufferIndex	= vertexStagingIndex;
-			bufferLocation.indexBufferIndex		= indexStagingIndex;
+			bufferLocation.vertexEntry		= vertexStagingEntry;
+			bufferLocation.indexEntry		= indexStagingEntry;
+			bufferLocation.pVertexBuffer	= pVertexStagingBuffer;
+			bufferLocation.pIndexBuffer		= pIndexStagingBuffer;
 		}
 		else
 		{
 			VulkanBufferInfo stagingVertexBufferInfo = {};
-			stagingVertexBufferInfo.sizeBytes			= renderable.modelData.vertices.Size() * sizeof(float);
+			stagingVertexBufferInfo.sizeBytes			= pModelData->vertices.Size() * sizeof(float);
 			stagingVertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			stagingVertexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -274,7 +278,7 @@ namespace Quartz
 				&mVertexStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingVertexBufferInfo)));
 
 			VulkanBufferInfo stagingIndexBufferInfo = {};
-			stagingIndexBufferInfo.sizeBytes			= renderable.modelData.indices.Size() * sizeof(uInt16);
+			stagingIndexBufferInfo.sizeBytes			= pModelData->indices.Size() * sizeof(uInt16);
 			stagingIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			stagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -284,25 +288,25 @@ namespace Quartz
 			pVertexStagingBuffer->Map();
 			pIndexStagingBuffer->Map();
 
-			pVertexStagingBuffer->Allocate<float>(renderable.modelData.vertices.Size(), vertexStagingEntry, &pVertexStagingData);
-			pIndexStagingBuffer->Allocate<uInt16>(renderable.modelData.indices.Size(), indexStagingEntry, &pIndexStagingData);
+			pVertexStagingBuffer->Allocate<float>(pModelData->vertices.Size(), vertexStagingEntry, &pVertexStagingData);
+			pIndexStagingBuffer->Allocate<uInt16>(pModelData->indices.Size(), indexStagingEntry, &pIndexStagingData);
 
-			CopyMeshData(renderable.modelData, pVertexStagingData, pIndexStagingData);
+			CopyMeshData(pModelData, pVertexStagingData, pIndexStagingData);
 
-			bufferLocation.vertexEntry			= vertexStagingEntry;
-			bufferLocation.indexEntry			= indexStagingEntry;
-			bufferLocation.vertexBufferIndex	= mVertexStagingBuffers.Size() - 1;
-			bufferLocation.indexBufferIndex		= mIndexStagingBuffers.Size() - 1;
+			bufferLocation.vertexEntry		= vertexStagingEntry;
+			bufferLocation.indexEntry		= indexStagingEntry;
+			bufferLocation.pVertexBuffer	= pVertexStagingBuffer;
+			bufferLocation.pIndexBuffer		= pIndexStagingBuffer;
 		}
 
-		mMeshStagingBufferLookup.Put(renderable.modelURIHash, bufferLocation);
+		mMeshStagingBufferLookup.Put(meshHash, bufferLocation);
 
 		outFound = false;
 
 		return bufferLocation;
 	}
 
-	PerModelBufferLocation VulkanRenderScene::AllocatePerModelBuffer(TransformComponent& transform)
+	PerModelBufferLocation VulkanRenderScene::AllocatePerModelBuffer(void* pPerModelData, uSize perModelSizeBytes)
 	{
 		VkBufferUsageFlags		usageFlags = 0;
 		VkMemoryPropertyFlags	memoryFlags = 0;
@@ -319,10 +323,10 @@ namespace Quartz
 
 			pPerModelBuffer = &mPerModelBuffers[perModelIndex];
 
-			pPerModelBuffer->Allocate<uInt8>(sizeof(Mat4f) * 2, perModelEntry, nullptr); // <--- TEMP SIZE
+			pPerModelBuffer->Allocate<uInt8>(perModelSizeBytes, perModelEntry, nullptr);
 
-			bufferLocation.perModelEntry		= perModelEntry;
-			bufferLocation.perModelBufferIndex	= perModelIndex;
+			bufferLocation.perModelEntry	= perModelEntry;
+			bufferLocation.pPerModelBuffer	= pPerModelBuffer;
 		}
 		else
 		{
@@ -338,7 +342,7 @@ namespace Quartz
 			}
 
 			VulkanBufferInfo perModelBufferInfo = {};
-			perModelBufferInfo.sizeBytes			= sizeof(Mat4f) * 2; // <--- TEMP SIZE
+			perModelBufferInfo.sizeBytes			= perModelSizeBytes;
 			perModelBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 			perModelBufferInfo.vkMemoryProperties	= memoryFlags;
 
@@ -346,30 +350,26 @@ namespace Quartz
 
 			if (mSettings.useUniformStaging)
 			{
-				pPerModelBuffer->Allocate<uInt8>(sizeof(Mat4f) * 2, perModelEntry, nullptr); // <--- TEMP SIZE
+				pPerModelBuffer->Allocate<uInt8>(perModelSizeBytes, perModelEntry, nullptr);
 			}
 			else
 			{
-				uInt8* pPerModelData;
+				uInt8* pPerModelBufferData;
 
 				pPerModelBuffer->Map();
-				pPerModelBuffer->Allocate<uInt8>(sizeof(Mat4f) * 2, perModelEntry, &pPerModelData); // <--- TEMP SIZE
+				pPerModelBuffer->Allocate<uInt8>(perModelSizeBytes, perModelEntry, &pPerModelBufferData);
 
-				///// TEMP
-				*(Mat4f*)(pPerModelData) = transform.GetMatrix();
-				*(Mat4f*)(pPerModelData + sizeof(Mat4f)) = Mat4f().SetTranslation({ 0.0f, 0.0f, -1.0f }) * Mat4f().SetPerspective(ToRadians(90.0f),
-					(float)1280 / (float)720, 0.001f, 1000.0f);
-				/////
+				memcpy_s(pPerModelBufferData, perModelSizeBytes, pPerModelData, perModelSizeBytes);
 			}
 
-			bufferLocation.perModelEntry		= perModelEntry;
-			bufferLocation.perModelBufferIndex	= mPerModelBuffers.Size() - 1;
+			bufferLocation.perModelEntry	= perModelEntry;
+			bufferLocation.pPerModelBuffer	= pPerModelBuffer;
 		}
 
 		return bufferLocation;
 	}
 
-	PerModelBufferLocation VulkanRenderScene::AllocatePerModelStagingBuffer(TransformComponent& transform)
+	PerModelBufferLocation VulkanRenderScene::AllocatePerModelStagingBuffer(void* pPerModelData, uSize perModelSizeBytes)
 	{
 		PerModelBufferLocation	bufferLocation = {};
 		VulkanMultiBufferEntry	perModelStagingEntry;
@@ -380,113 +380,132 @@ namespace Quartz
 			// Temporary, may be more buffers
 			constexpr const uSize perModelStagingIndex = 0;
 
-			VulkanMultiBuffer* pPerModelBuffer = &mPerModelStagingBuffers[perModelStagingIndex];
+			VulkanMultiBuffer* pPerModelStagingBuffer = &mPerModelStagingBuffers[perModelStagingIndex];
 
-			pPerModelBuffer->Map();
-			pPerModelBuffer->Allocate<uInt8>(sizeof(Mat4f) * 2, perModelStagingEntry, &pPerModelStagingData); // <--- TEMP SIZE
+			pPerModelStagingBuffer->Map();
+			pPerModelStagingBuffer->Allocate<uInt8>(perModelSizeBytes, perModelStagingEntry, &pPerModelStagingData);
 
-			///// TEMP
-			//Mat4f transformData = transform.GetMatrix();
-			//CopyPerModelData((uInt8*)&transformData, pPerModelStagingData, sizeof(Mat4f));
-			*(Mat4f*)(pPerModelStagingData) = transform.GetMatrix();
-			*(Mat4f*)(pPerModelStagingData + sizeof(Mat4f)) = Mat4f().SetTranslation({ 0.0f, 0.0f, -1.0f }) * Mat4f().SetPerspective(ToRadians(90.0f),
-				(float)1280 / (float)720, 0.001f, 1000.0f);
-			/////
+			memcpy_s(pPerModelStagingData, perModelSizeBytes, pPerModelData, perModelSizeBytes);
 
-			bufferLocation.perModelEntry		= perModelStagingEntry;
-			bufferLocation.perModelBufferIndex	= perModelStagingIndex;
+			bufferLocation.perModelEntry	= perModelStagingEntry;
+			bufferLocation.pPerModelBuffer	= pPerModelStagingBuffer;
 		}
 		else
 		{
 			VulkanBufferInfo perModelStagingBufferInfo = {};
-			perModelStagingBufferInfo.sizeBytes				= sizeof(Mat4f) * 2; // <--- TEMP SIZE
+			perModelStagingBufferInfo.sizeBytes				= perModelSizeBytes;
 			perModelStagingBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			perModelStagingBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-			VulkanMultiBuffer* pPerModelBuffer = 
+			VulkanMultiBuffer* pPerModelStagingBuffer = 
 				&mPerModelStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perModelStagingBufferInfo)));
 
-			pPerModelBuffer->Map();
-			pPerModelBuffer->Allocate<uInt8>(sizeof(Mat4f) * 2, perModelStagingEntry, &pPerModelStagingData); // <--- TEMP SIZE
+			pPerModelStagingBuffer->Map();
+			pPerModelStagingBuffer->Allocate<uInt8>(perModelSizeBytes, perModelStagingEntry, &pPerModelStagingData);
 
-			///// TEMP
-			*(Mat4f*)(pPerModelStagingData) = transform.GetMatrix();
-			*(Mat4f*)(pPerModelStagingData + sizeof(Mat4f)) = Mat4f().SetTranslation({ 0.0f, 0.0f, -1.0f }) * Mat4f().SetPerspective(ToRadians(90.0f),
-				(float)1280 / (float)720, 0.001f, 1000.0f);
-			/////
+			memcpy_s(pPerModelStagingData, perModelSizeBytes, pPerModelData, perModelSizeBytes);
 
-			bufferLocation.perModelEntry		= perModelStagingEntry;
-			bufferLocation.perModelBufferIndex	= mPerModelStagingBuffers.Size() - 1;
+			bufferLocation.perModelEntry	= perModelStagingEntry;
+			bufferLocation.pPerModelBuffer	= pPerModelStagingBuffer;
 		}
 
 		return bufferLocation;
 	}
 
-	void VulkanRenderScene::BuildScene(EntityWorld* pWorld)
+	void VulkanRenderScene::ResetPerModelBuffers()
 	{
-		auto& renderableView = pWorld->CreateView<MeshComponent, TransformComponent>();
-
-		for (Entity& entity : renderableView)
+		if (!mSettings.usePerModelPushConstants)
 		{
-			MeshComponent& renderableComponent = pWorld->Get<MeshComponent>(entity);
-			TransformComponent& transformComponent = pWorld->Get<TransformComponent>(entity);
-
-			bool meshBufferFound;
-
-			MeshBufferLocation meshBufferLocation = GetOrAllocateMeshBuffers(renderableComponent, meshBufferFound);
-			PerModelBufferLocation perModelBufferLocation = AllocatePerModelBuffer(transformComponent);
-
-			if (mSettings.useMeshStaging)
+			if (mSettings.useUniqueUniformBuffers)
 			{
-				bool meshStagingBufferFound;
-
-				MeshBufferLocation meshStagingBufferLocation = GetOrAllocateMeshStagingBuffers(renderableComponent, meshStagingBufferFound);
-
-				if (!meshBufferFound)
+				for (VulkanMultiBuffer& buffer : mPerModelBuffers)
 				{
-					TransferCommand vertexTransfer = {};
-					vertexTransfer.pSrcBuffer	= &mVertexStagingBuffers[meshStagingBufferLocation.vertexBufferIndex];
-					vertexTransfer.pDestBuffer	= &mVertexBuffers[meshBufferLocation.vertexBufferIndex];
-					vertexTransfer.srcEntry		= meshStagingBufferLocation.vertexEntry;
-					vertexTransfer.destEntry	= meshBufferLocation.vertexEntry;
+					buffer.Unmap();
+					mpResourceManager->DestroyBuffer(buffer.GetVulkanBuffer());
+				}
 
-					mReadyTransfers.PushBack(vertexTransfer);
+				mPerModelBuffers.Clear();
 
-					TransferCommand indexTransfer = {};
-					indexTransfer.pSrcBuffer	= &mIndexStagingBuffers[meshStagingBufferLocation.indexBufferIndex];
-					indexTransfer.pDestBuffer	= &mIndexBuffers[meshBufferLocation.indexBufferIndex];
-					indexTransfer.srcEntry		= meshStagingBufferLocation.indexEntry;
-					indexTransfer.destEntry		= meshBufferLocation.indexEntry;
+				if (mSettings.useUniformStaging)
+				{
+					for (VulkanMultiBuffer& buffer : mPerModelStagingBuffers)
+					{
+						buffer.Unmap();
+						mpResourceManager->DestroyBuffer(buffer.GetVulkanBuffer());
+					}
 
-					mReadyTransfers.PushBack(indexTransfer);
+					mPerModelStagingBuffers.Clear();
 				}
 			}
-
-			// @TODO: This is using a copy command for each object when one is sufficient for ubos
-
-			if (mSettings.useUniformStaging && !mSettings.usePerModelPushConstants)
+			else
 			{
-				PerModelBufferLocation perModelBufferStagingLocation = AllocatePerModelStagingBuffer(transformComponent);
+				mPerModelBuffers[0].FreeAll();
 
-				TransferCommand perModelTransfer = {};
-				perModelTransfer.pSrcBuffer		= &mPerModelStagingBuffers[perModelBufferStagingLocation.perModelBufferIndex];
-				perModelTransfer.pDestBuffer	= &mPerModelBuffers[perModelBufferLocation.perModelBufferIndex];
-				perModelTransfer.srcEntry		= perModelBufferStagingLocation.perModelEntry;
-				perModelTransfer.destEntry		= perModelBufferLocation.perModelEntry;
-
-				mReadyTransfers.PushBack(perModelTransfer);
+				if (mSettings.useUniformStaging)
+				{
+					mPerModelStagingBuffers[0].FreeAll();
+				}
 			}
+		}
+	}
 
-			VulkanRenderable renderable = {};
-			renderable.meshLocation		= meshBufferLocation;
-			renderable.perModelLocation	= perModelBufferLocation;
-			renderable.indexCount		= renderableComponent.modelData.indices.Size();
-			renderable.materialId		= 0;
+	void VulkanRenderScene::FillRenderableVertexData(VulkanRenderable& renderable, uInt64 meshHash, const ModelData* pModelData, bool& outFound)
+	{
+		bool meshBufferFound;
 
-			mRenderables.PushBack(renderable);
+		MeshBufferLocation meshBufferLocation = GetOrAllocateMeshBuffers(meshHash, pModelData, meshBufferFound);
+
+		if (mSettings.useMeshStaging)
+		{
+			bool meshStagingBufferFound;
+
+			MeshBufferLocation meshStagingBufferLocation = GetOrAllocateMeshStagingBuffers(meshHash, pModelData, meshStagingBufferFound);
+
+			if (!meshBufferFound)
+			{
+				TransferCommand vertexTransfer = {};
+				vertexTransfer.pSrcBuffer	= meshStagingBufferLocation.pVertexBuffer;
+				vertexTransfer.pDestBuffer	= meshBufferLocation.pVertexBuffer;
+				vertexTransfer.srcEntry		= meshStagingBufferLocation.vertexEntry;
+				vertexTransfer.destEntry	= meshBufferLocation.vertexEntry;
+
+				mReadyTransfers.PushBack(vertexTransfer);
+
+				TransferCommand indexTransfer = {};
+				indexTransfer.pSrcBuffer	= meshStagingBufferLocation.pIndexBuffer;
+				indexTransfer.pDestBuffer	= meshBufferLocation.pIndexBuffer;
+				indexTransfer.srcEntry		= meshStagingBufferLocation.indexEntry;
+				indexTransfer.destEntry		= meshBufferLocation.indexEntry;
+
+				mReadyTransfers.PushBack(indexTransfer);
+			}
 		}
 
-		// Sort
+		renderable.meshLocation = meshBufferLocation;
+		renderable.indexStart	= meshBufferLocation.indexEntry.offset;
+		renderable.indexCount	= meshBufferLocation.indexEntry.sizeBytes;
+	}
+
+	void VulkanRenderScene::FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes)
+	{
+		PerModelBufferLocation perModelBufferLocation = AllocatePerModelBuffer(pPerModelData, perModelSizeBytes);
+
+		// @TODO: This is using a copy command for each object when one is sufficient for ubos
+
+		if (mSettings.useUniformStaging && !mSettings.usePerModelPushConstants)
+		{
+			PerModelBufferLocation perModelBufferStagingLocation = AllocatePerModelStagingBuffer(pPerModelData, perModelSizeBytes);
+
+			TransferCommand perModelTransfer = {};
+			perModelTransfer.pSrcBuffer		= perModelBufferStagingLocation.pPerModelBuffer;
+			perModelTransfer.pDestBuffer	= perModelBufferLocation.pPerModelBuffer;
+			perModelTransfer.srcEntry		= perModelBufferStagingLocation.perModelEntry;
+			perModelTransfer.destEntry		= perModelBufferLocation.perModelEntry;
+
+			mReadyTransfers.PushBack(perModelTransfer);
+		}
+
+		renderable.perModelLocation = perModelBufferLocation;
 	}
 
 	void VulkanRenderScene::RecordTransfers(VulkanCommandRecorder* pRecorder)
@@ -499,48 +518,7 @@ namespace Quartz
 				transfer.pSrcBuffer->GetVulkanBuffer(), transfer.pDestBuffer->GetVulkanBuffer(), 
 				transfer.srcEntry.sizeBytes, transfer.srcEntry.offset, transfer.destEntry.offset);
 		}
-	}
 
-	void VulkanRenderScene::RecordRender(VulkanCommandRecorder* pRecorder, VulkanGraphicsPipeline* pPipeline)
-	{
-		if (true)//(!mSettings.useUniqueMeshBuffers)
-		{
-			if (mSettings.useDrawIndirect)
-			{
-
-			}
-			else
-			{
-				
-				for (VulkanRenderable& renderable : mRenderables)
-				{
-					pRecorder->SetIndexBuffer(mIndexBuffers[renderable.meshLocation.indexBufferIndex].GetVulkanBuffer(), 
-						renderable.meshLocation.indexEntry.offset, VK_INDEX_TYPE_UINT16);
-
-					VulkanBufferBind pVertexBufferBinds[] = 
-					{ 
-						{mVertexBuffers[renderable.meshLocation.vertexBufferIndex].GetVulkanBuffer(), renderable.meshLocation.vertexEntry.offset} 
-					};
-
-					pRecorder->SetVertexBuffers(pVertexBufferBinds, 1);
-
-					VulkanUniformBind binding = {};
-					binding.binding = 0;
-					binding.pBuffer = mPerModelBuffers[renderable.perModelLocation.perModelBufferIndex].GetVulkanBuffer();
-					binding.offset	= renderable.perModelLocation.perModelEntry.offset;
-					binding.range	= renderable.perModelLocation.perModelEntry.sizeBytes;
-
-					VulkanUniformBind pUniformBinds[] = { binding };
-
-					pRecorder->BindUniforms(pPipeline, 0, pUniformBinds, 1);
-					pRecorder->DrawIndexed(1, renderable.indexCount, 0); //renderable.meshLocation.indexEntry.offset / sizeof(uInt16)
-				}
-			}
-		}
-		else
-		{
-
-		}
-
+		mReadyTransfers.Clear();
 	}
 }

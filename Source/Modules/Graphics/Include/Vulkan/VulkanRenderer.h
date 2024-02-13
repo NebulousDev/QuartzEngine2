@@ -6,8 +6,6 @@
 #include "VulkanGraphics.h"
 #include "VulkanRenderScene.h"
 #include "VulkanSwapchainTimer.h"
-#include "VulkanShaderCache.h"
-#include "VulkanPipelineCache.h"
 #include "VulkanBufferWriter.h"
 
 #include "Math/Math.h"
@@ -19,12 +17,15 @@ namespace Quartz
 	private:
 		VulkanGraphics*			mpGraphics;
 		VulkanSwapchain*		mpSwapchain;
-		VulkanRenderScene		mRenderScene;
+		VulkanRenderScene		mBufferCache;
 		VulkanShaderCache		mShaderCache;
 		VulkanPipelineCache		mPipelineCache;
 		VulkanSwapchainTimer	mSwapTimer;
 
-		VulkanGraphicsPipeline* mpPipeline;
+		VulkanGraphicsPipeline* mpDefaultPipeline;
+
+		Array<VulkanRenderable>	mRenderables;
+		Array<VulkanRenderable>	mRenderablesSorted;
 
 		VulkanCommandBuffer*	mCommandBuffers[3];
 		VulkanImage*			mDepthImages[3];
@@ -33,7 +34,9 @@ namespace Quartz
 	public:
 		void Initialize(VulkanGraphics* pGraphics);
 
-		void RenderScene(VulkanRenderScene* pRenderScene);
+		void UpdateAll(EntityWorld* pEntityWorld);
+		void WriteCommandBuffer(VulkanCommandRecorder* pRecorder);
+		void RenderScene(EntityWorld* pEntityWorld);
 
 		void RenderUpdate(Runtime* pRuntime, double delta);
 		void Register(Runtime* pRuntime);

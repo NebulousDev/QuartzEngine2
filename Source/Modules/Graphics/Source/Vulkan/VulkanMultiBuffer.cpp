@@ -220,6 +220,30 @@ namespace Quartz
 		}
 	}
 
+	void VulkanMultiBuffer::FreeAll()
+	{
+		VulkanMultiBufferEntry* pEntry = mpHead;
+		while (pEntry != nullptr)
+		{
+			VulkanMultiBufferEntry* pOldEntry = pEntry;
+			pEntry = pEntry->pNext;
+			delete pOldEntry;
+		}
+
+		VulkanMultiBufferEntry* pInitialEntry = new VulkanMultiBufferEntry();
+		pInitialEntry->offset		= 0;
+		pInitialEntry->sizeBytes	= mpBuffer->sizeBytes;
+		pInitialEntry->allocated	= false;
+		pInitialEntry->pNext		= nullptr;
+		pInitialEntry->pLast		= nullptr;
+
+		mpHead = pInitialEntry;
+		mpTail = pInitialEntry;
+		mpFirstEmpty = pInitialEntry;
+
+		mUsedBytes = 0;
+	}
+
 	bool VulkanMultiBuffer::Map()
 	{
 		mpMappedData = mBufferWriter.Map<uInt8>();

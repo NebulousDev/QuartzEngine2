@@ -120,48 +120,35 @@ namespace Quartz
 
 			TransformComponent transform0
 			(
-				{ 0.0f, 0.0f, -1.0f },
+				{ -1.0f, 0.0f, -1.0f },
 				Quatf({ 0.0f, 1.0f, 0.0f }, ToRadians(45.0f)),
 				{ 1.0f, 1.0f, 1.0f }
 			);
 
 			TransformComponent transform1
 			( 
-				{ 0.0f, 0.0f, 1.0f }, 
+				{ 1.0f, 0.0f, -1.0f }, 
 				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f), 
-				{ 1.0f, 1.0f, 1.0f }
-			);
-
-			TransformComponent transform2
-			(
-				{ -0.6f, -0.4f, -1.0f },
-				Quatf({ 0.0f, 0.0f, 0.0f }, 0.2f),
-				{ 1.0f, 1.0f, 1.0f }
-			);
-
-			TransformComponent transform3
-			(
-				{ 0.6f, 0.4f, -2.0f },
-				Quatf({ 1.0f, 1.0f, 0.0f }, -0.2f),
 				{ 1.0f, 1.0f, 1.0f }
 			);
 
 			MaterialComponent material1
 			{
-				"shaders/default.vert",
-				"shaders/default.frag"
+				"Shaders/default.vert",
+				"Shaders/default.frag"
+			};
+
+			MaterialComponent material2
+			{
+				"Shaders/default2.vert",
+				"Shaders/default2.frag"
 			};
 
 			MeshComponent renderable1("simpleTri", triData);
 			MeshComponent renderable2("simpleCube", cubeData);
 
-			//Entity eTri0 = gpWorld->CreateEntity(transform0, renderable1, material1);
-			//Entity eTri1 = gpWorld->CreateEntity(transform1, renderable1, material1);
-			//Entity eTri2 = gpWorld->CreateEntity(transform2, renderable2, material1);
-			//Entity eTri3 = gpWorld->CreateEntity(transform3, renderable2, material1);
-
 			Entity cube = gpWorld->CreateEntity(transform0, renderable2, material1);
-
+			Entity tri	= gpWorld->CreateEntity(transform1, renderable1, material2);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
 			pRenderer->Register(gpRuntime);

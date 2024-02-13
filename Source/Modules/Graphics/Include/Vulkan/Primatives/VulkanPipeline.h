@@ -19,6 +19,7 @@ namespace Quartz
 		Array<VkVertexInputBindingDescription>		vertexBindings;
 		Array<VkVertexInputAttributeDescription>	vertexAttributes;
 		Array<VkPipelineColorBlendAttachmentState>	blendAttachments;
+		VulkanRenderpass*							pRenderpass;
 		VkViewport									viewport;
 		VkRect2D									scissor;
 		VkPrimitiveTopology							vkTopology;
@@ -45,7 +46,6 @@ namespace Quartz
 		}
 		stencil;
 
-		VulkanRenderpass*							pRenderpass;
 		bool										usePushDescriptors;
 		bool										useDynamicViewport;
 		bool										useDynamicRendering;

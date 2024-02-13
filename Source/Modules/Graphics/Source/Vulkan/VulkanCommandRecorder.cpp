@@ -55,7 +55,7 @@ namespace Quartz
 		VkRenderingInfoKHR vkRenderInfo = {};
 		vkRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
 
-		VkRenderingAttachmentInfoKHR vkColorAttachments[maxColorAttachmentSize];
+		VkRenderingAttachmentInfoKHR vkColorAttachments[maxColorAttachmentSize] = {};
 		VkRenderingAttachmentInfoKHR vkDepthAttachment = {};
 		VkRenderingAttachmentInfoKHR vkStencilAttachment = {};
 

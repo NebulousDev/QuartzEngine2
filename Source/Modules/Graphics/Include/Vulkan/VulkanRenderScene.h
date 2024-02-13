@@ -2,6 +2,8 @@
 
 #include "VulkanResourceManager.h"
 #include "VulkanCommandRecorder.h"
+#include "VulkanShaderCache.h"
+#include "VulkanPipelineCache.h"
 #include "VulkanMultiBuffer.h"
 #include "Entity/World.h"
 #include "Types/Map.h"
@@ -75,17 +77,21 @@ namespace Quartz
 		VulkanRenderSettings		mSettings;
 
 	private:
-		MeshBufferLocation		GetOrAllocateMeshBuffers(MeshComponent& renderable, bool& outFound);
-		MeshBufferLocation		GetOrAllocateMeshStagingBuffers(MeshComponent& renderable, bool& outFound);
-		PerModelBufferLocation	AllocatePerModelBuffer(TransformComponent& transform);
-		PerModelBufferLocation	AllocatePerModelStagingBuffer(TransformComponent& transform);
+		void					InitializeDefaultBuffers();
+
+		MeshBufferLocation		GetOrAllocateMeshBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound);
+		MeshBufferLocation		GetOrAllocateMeshStagingBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound);
+		PerModelBufferLocation	AllocatePerModelBuffer(void* pPerModelData, uSize perModelSizeBytes);
+		PerModelBufferLocation	AllocatePerModelStagingBuffer(void* pPerModelData, uSize perModelSizeBytes);
 
 	public:
-		void Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, const VulkanRenderSettings& settings);
+		void					Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, const VulkanRenderSettings& settings);
 
-		void BuildScene(EntityWorld* pWorld);
+		void					ResetPerModelBuffers();
 
-		void RecordTransfers(VulkanCommandRecorder* pRecorder);
-		void RecordRender(VulkanCommandRecorder* pRecorder, VulkanGraphicsPipeline* pPipeline);
+		void					FillRenderableVertexData(VulkanRenderable& renderable, uInt64 meshHash, const ModelData* pModelData, bool& outFound);
+		void					FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes);
+
+		void					RecordTransfers(VulkanCommandRecorder* pRecorder);
 	};
 }

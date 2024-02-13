@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanMultiBuffer.h"
+#include "Primatives/VulkanPipeline.h"
 #include "Types/Types.h"
 
 namespace Quartz
@@ -9,21 +10,23 @@ namespace Quartz
 	{
 		VulkanMultiBufferEntry	vertexEntry;
 		VulkanMultiBufferEntry	indexEntry;
-		uInt32					vertexBufferIndex;
-		uInt32					indexBufferIndex;
+		VulkanMultiBuffer*		pVertexBuffer;
+		VulkanMultiBuffer*		pIndexBuffer;
 	};
 
 	struct PerModelBufferLocation
 	{
 		VulkanMultiBufferEntry	perModelEntry;
-		uInt32					perModelBufferIndex;
+		VulkanMultiBuffer*		pPerModelBuffer;
 	};
 
 	struct VulkanRenderable
 	{
 		MeshBufferLocation		meshLocation;
 		PerModelBufferLocation	perModelLocation;
+		VulkanGraphicsPipeline* pPipeline;
+		float					distance;
+		uInt32					indexStart;
 		uInt32					indexCount;
-		uInt32					materialId;
 	};
 }

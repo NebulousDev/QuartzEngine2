@@ -41,6 +41,7 @@ namespace Quartz
 		}
 
 		void Free(const VulkanMultiBufferEntry& entry);
+		void FreeAll();
 
 		bool Map();
 		bool Unmap();

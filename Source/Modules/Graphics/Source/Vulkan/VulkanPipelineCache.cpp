@@ -8,7 +8,11 @@ namespace Quartz
 		const Array<VkVertexInputAttributeDescription>& vertexAttributes,
 		const Array<VkVertexInputBindingDescription>& vertexBindings)
     {
-        VulkanGraphicsPipelineInfo pipelineInfo = {};
+        VulkanGraphicsPipelineInfo pipelineInfo;
+
+		// Intentional memset to ensure memcmp works with padding later
+		memset(&pipelineInfo, 0, sizeof(VulkanGraphicsPipelineInfo));
+
 		pipelineInfo.shaders				= shaders;
 		pipelineInfo.attachments			= attachments;
 		pipelineInfo.vkTopology				= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -78,7 +82,7 @@ namespace Quartz
 			for (uSize i = 0; i < shaders.Size(); i++)
 			{
 				if (shaders[i]->vkShader != info.shaders[i]->vkShader)
-					continue;
+					goto breakContinue;
 			}
 
 			if (attachments.Size() != info.attachments.Size())
@@ -87,10 +91,10 @@ namespace Quartz
 			for (uSize i = 0; i < attachments.Size(); i++)
 			{
 				if (attachments[i].vkFormat != info.attachments[i].vkFormat)
-					continue;
+					goto breakContinue;
 
 				if (attachments[i].type != info.attachments[i].type)
-					continue;
+					goto breakContinue;
 			}
 
 			if (vertexAttributes.Size() != info.vertexAttributes.Size())
@@ -112,13 +116,14 @@ namespace Quartz
 				uSize result = memcmp(&vertexBindings[i], &info.vertexBindings[i], sizeof(VkVertexInputBindingDescription));
 
 				if (result != 0)
-					continue;
+					goto breakContinue;
 			}
 
-			uSize result = memcmp(
-				&info + offsetof(VulkanGraphicsPipelineInfo, viewport),
-				&pipelineInfo + offsetof(VulkanGraphicsPipelineInfo, viewport),
-				sizeof(VulkanGraphicsPipelineInfo));
+			uSize offsetStart	= offsetof(VulkanGraphicsPipelineInfo, vkTopology);
+			uSize offsetEnd		= offsetof(VulkanGraphicsPipelineInfo, useDynamicRendering) + 1; // +1 bool
+			uSize size			= offsetEnd - offsetStart;
+
+			uSize result = memcmp(((uInt8*)&info) + offsetStart, ((uInt8*)&pipelineInfo) + offsetStart, size);
 
 			if (result != 0)
 				continue;
@@ -126,6 +131,9 @@ namespace Quartz
 			pFoundPipelineInfo = &info;
 
 			break;
+
+		breakContinue:
+			continue;
 		}
 
 		if (pFoundPipelineInfo)

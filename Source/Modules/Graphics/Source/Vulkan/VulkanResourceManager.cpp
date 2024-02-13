@@ -1141,6 +1141,8 @@ namespace Quartz
 		VkFormat depthAttachmentFormat		= VK_FORMAT_UNDEFINED;
 		VkFormat stencilAttachmentFormat	= VK_FORMAT_UNDEFINED;
 
+		VkPipelineRenderingCreateInfoKHR vkPipelineRenderingInfo = {};
+
 		if (info.useDynamicRendering)
 		{
 			for (const VulkanAttachment& attachment : info.attachments)
@@ -1163,12 +1165,12 @@ namespace Quartz
 				}
 			}
 
-			VkPipelineRenderingCreateInfoKHR vkPipelineRenderingInfo = {};
 			vkPipelineRenderingInfo.sType					= VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
 			vkPipelineRenderingInfo.colorAttachmentCount	= colorAttachmentFormats.Size();
 			vkPipelineRenderingInfo.pColorAttachmentFormats = colorAttachmentFormats.Data();
 			vkPipelineRenderingInfo.depthAttachmentFormat	= depthAttachmentFormat;
 			vkPipelineRenderingInfo.stencilAttachmentFormat = stencilAttachmentFormat;
+			vkPipelineRenderingInfo.pNext					= nullptr;
 
 			vkPipelineInfo.renderPass			= VK_NULL_HANDLE;
 			vkPipelineInfo.subpass				= 0;
