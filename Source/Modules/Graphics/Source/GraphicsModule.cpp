@@ -7,7 +7,6 @@
 #include "Graphics.h"
 
 #include "Vulkan/VulkanGraphics.h"
-#include "Vulkan/VulkanState.h"
 
 #include "gl/glew.h"
 #include "gl/GL.h"

@@ -6,7 +6,7 @@
 #include "Vulkan/VulkanCommandRecorder.h"
 #include "Vulkan/VulkanSwapchainTimer.h"
 #include "Vulkan/VulkanBufferWriter.h"
-#include "Vulkan/VulkanRenderScene.h"
+#include "Vulkan/VulkanBufferCache.h"
 
 #include "Vulkan/VulkanMultiBuffer.h"
 

@@ -4,7 +4,7 @@
 #include "Runtime/Runtime.h"
 
 #include "VulkanGraphics.h"
-#include "VulkanRenderScene.h"
+#include "VulkanBufferCache.h"
 #include "VulkanSwapchainTimer.h"
 #include "VulkanBufferWriter.h"
 
@@ -17,7 +17,7 @@ namespace Quartz
 	private:
 		VulkanGraphics*			mpGraphics;
 		VulkanSwapchain*		mpSwapchain;
-		VulkanRenderScene		mBufferCache;
+		VulkanBufferCache		mBufferCache;
 		VulkanShaderCache		mShaderCache;
 		VulkanPipelineCache		mPipelineCache;
 		VulkanSwapchainTimer	mSwapTimer;

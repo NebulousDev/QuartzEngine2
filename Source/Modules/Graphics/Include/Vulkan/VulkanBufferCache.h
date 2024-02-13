@@ -41,7 +41,7 @@ namespace Quartz
 		bool useDrawIndirect; // TODO
 	};
 
-	class VulkanRenderScene
+	class VulkanBufferCache
 	{
 	private:
 		struct TransferCommand

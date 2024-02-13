@@ -1,10 +1,10 @@
-#include "Vulkan/VulkanRenderScene.h"
+#include "Vulkan/VulkanBufferCache.h"
 
 #include "Log.h"
 
 namespace Quartz
 {
-	void VulkanRenderScene::InitializeDefaultBuffers()
+	void VulkanBufferCache::InitializeDefaultBuffers()
 	{
 		VkBufferUsageFlags		usageFlags = 0;
 		VkMemoryPropertyFlags	memoryFlags = 0;
@@ -113,7 +113,7 @@ namespace Quartz
 		}
 	}
 
-	void VulkanRenderScene::Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, const VulkanRenderSettings& settings)
+	void VulkanBufferCache::Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, const VulkanRenderSettings& settings)
 	{
 		mSettings			= settings;
 		mpResourceManager	= pResourceManager;
@@ -133,7 +133,7 @@ namespace Quartz
 		memcpy_s(pPerModelBuffer, sizeBytes, pPerModelData, sizeBytes);
 	}
 
-	MeshBufferLocation VulkanRenderScene::GetOrAllocateMeshBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound)
+	MeshBufferLocation VulkanBufferCache::GetOrAllocateMeshBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound)
 	{
 		auto& it = mMeshBufferLookup.Find(meshHash);
 
@@ -228,7 +228,7 @@ namespace Quartz
 		return bufferLocation;
 	}
 
-	MeshBufferLocation VulkanRenderScene::GetOrAllocateMeshStagingBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound)
+	MeshBufferLocation VulkanBufferCache::GetOrAllocateMeshStagingBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound)
 	{
 		auto& it = mMeshStagingBufferLookup.Find(meshHash);
 
@@ -306,7 +306,7 @@ namespace Quartz
 		return bufferLocation;
 	}
 
-	PerModelBufferLocation VulkanRenderScene::AllocatePerModelBuffer(void* pPerModelData, uSize perModelSizeBytes)
+	PerModelBufferLocation VulkanBufferCache::AllocatePerModelBuffer(void* pPerModelData, uSize perModelSizeBytes)
 	{
 		VkBufferUsageFlags		usageFlags = 0;
 		VkMemoryPropertyFlags	memoryFlags = 0;
@@ -369,7 +369,7 @@ namespace Quartz
 		return bufferLocation;
 	}
 
-	PerModelBufferLocation VulkanRenderScene::AllocatePerModelStagingBuffer(void* pPerModelData, uSize perModelSizeBytes)
+	PerModelBufferLocation VulkanBufferCache::AllocatePerModelStagingBuffer(void* pPerModelData, uSize perModelSizeBytes)
 	{
 		PerModelBufferLocation	bufferLocation = {};
 		VulkanMultiBufferEntry	perModelStagingEntry;
@@ -412,7 +412,7 @@ namespace Quartz
 		return bufferLocation;
 	}
 
-	void VulkanRenderScene::ResetPerModelBuffers()
+	void VulkanBufferCache::ResetPerModelBuffers()
 	{
 		if (!mSettings.usePerModelPushConstants)
 		{
@@ -449,7 +449,7 @@ namespace Quartz
 		}
 	}
 
-	void VulkanRenderScene::FillRenderableVertexData(VulkanRenderable& renderable, uInt64 meshHash, const ModelData* pModelData, bool& outFound)
+	void VulkanBufferCache::FillRenderableVertexData(VulkanRenderable& renderable, uInt64 meshHash, const ModelData* pModelData, bool& outFound)
 	{
 		bool meshBufferFound;
 
@@ -486,7 +486,7 @@ namespace Quartz
 		renderable.indexCount	= meshBufferLocation.indexEntry.sizeBytes;
 	}
 
-	void VulkanRenderScene::FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes)
+	void VulkanBufferCache::FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes)
 	{
 		PerModelBufferLocation perModelBufferLocation = AllocatePerModelBuffer(pPerModelData, perModelSizeBytes);
 
@@ -508,7 +508,7 @@ namespace Quartz
 		renderable.perModelLocation = perModelBufferLocation;
 	}
 
-	void VulkanRenderScene::RecordTransfers(VulkanCommandRecorder* pRecorder)
+	void VulkanBufferCache::RecordTransfers(VulkanCommandRecorder* pRecorder)
 	{
 		while (!mReadyTransfers.IsEmpty())
 		{

@@ -1,5 +1,4 @@
 #include "Vulkan/VulkanGraphics.h"
-#include "Vulkan/VulkanState.h"
 
 #include "Log.h"
 
@@ -504,8 +503,7 @@ namespace Quartz
 			CreateVulkanInstance(this) &&
 			QueryVulkanPhysicalDevices(this) &&
 			CreateVulkanDevices(this) &&
-			ChoosePrimaryDevices(this) &&
-			CreateVulkanState(this, pState);
+			ChoosePrimaryDevices(this);
 
 		pResourceManager = new VulkanResourceManager();
 

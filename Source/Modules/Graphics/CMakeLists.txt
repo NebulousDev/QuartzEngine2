@@ -8,9 +8,9 @@ add_compile_definitions(QUARTZ_GRAPHICS_EXPORT)
 
 add_library(${PROJECT_NAME} SHARED 
 	"Source/GraphicsModule.cpp"
-	"Source/Vulkan/VulkanRenderScene.cpp"
+	"Source/Vulkan/VulkanBufferCache.cpp"
     "Source/Vulkan/VulkanGraphics.cpp"
-	"Source/Vulkan/VulkanState.cpp"
+	
 	"Source/OpenGL/GLGraphics.cpp"
     "Source/VulkanRenderer.cpp"
 	"Source/Vulkan/VulkanSwapchianTimer.cpp"
