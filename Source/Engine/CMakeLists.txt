@@ -8,15 +8,12 @@ set(QUARTZENGINE_COMIPLE_DEFINITIONS)
 
 set(QUARTZENGINE_SOURCE_FILES
 	"Source/Quartz.cpp"
-
     "Source/Entity/EntityDatabase.cpp"
     "Source/Entity/EntityGraph.cpp"
     "Source/Entity/World.cpp"
-
     "Source/System/System.cpp"
     "Source/System/SystemAdmin.cpp"
     "Source/System/DynamicLibrary.cpp"
-
     "Source/Runtime/Runtime.cpp"
 )
 

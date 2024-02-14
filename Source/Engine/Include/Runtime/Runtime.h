@@ -14,10 +14,10 @@ namespace Quartz
 {
 	class Runtime;
 
-	template<typename Payload, typename Scope>
-	using ScopedRuntimeTriggerFunc	= void (Scope::*)(Runtime* pRuntime, const Payload& payload);
-	template<typename Payload>
-	using RuntimeTriggerFunc		= void (*)(Runtime* pRuntime, const Payload& payload);
+	template<typename Event, typename Scope>
+	using ScopedRuntimeEventFunc	= void (Scope::*)(Runtime* pRuntime, const Event& event);
+	template<typename Event>
+	using RuntimeEventFunc			= void (*)(Runtime* pRuntime, const Event& event);
 
 	template<typename Scope>
 	using ScopedRuntimeUpdateFunc	= void (Scope::*)(Runtime* pRuntime, double delta);
@@ -75,56 +75,56 @@ namespace Quartz
 			}
 		};
 
-		struct TriggerFunctorBase { virtual void VFT_Filler() {}; };
+		struct EventFunctorBase { virtual void VFT_Filler() {}; };
 
-		template<typename Payload>
-		struct TriggerFunctor : public TriggerFunctorBase
+		template<typename Event>
+		struct EventFunctor : public EventFunctorBase
 		{
 			void* pInstance;
-			RuntimeTriggerFunc<Payload> triggerFunc;
+			RuntimeEventFunc<Event> eventFunc;
 
-			virtual void Call(Runtime* pRuntime, const Payload& payload)
+			virtual void Call(Runtime* pRuntime, const Event& event)
 			{
-				triggerFunc(pRuntime, payload);
+				eventFunc(pRuntime, event);
 			}
 		};
 
-		template<typename Payload, typename Scope>
-		struct ScopedTriggerFunctor : public TriggerFunctor<Payload>
+		template<typename Event, typename Scope>
+		struct ScopedEventFunctor : public EventFunctor<Event>
 		{
-			void Call(Runtime* pRuntime, const Payload& payload) override
+			void Call(Runtime* pRuntime, const Event& event) override
 			{
-				ScopedRuntimeTriggerFunc<Payload, Scope>* pfunc = 
-					(ScopedRuntimeTriggerFunc<Payload, Scope>*)reinterpret_cast<void**>(&triggerFunc);
-				(static_cast<Scope*>(pInstance)->**pfunc)(pRuntime, payload);
+				ScopedRuntimeEventFunc<Event, Scope>* pfunc = 
+					(ScopedRuntimeEventFunc<Event, Scope>*)reinterpret_cast<void**>(&eventFunc);
+				(static_cast<Scope*>(pInstance)->**pfunc)(pRuntime, event);
 			}
 		};
 
 	private:
 
-		Map<String, uSize>	mTriggerIdMap;
-		uSize				mTriggerIdCount = 0;
+		Map<String, uSize>	mEventIdMap;
+		uSize				mEventIdCount = 0;
 
-		uSize GetPayloadId(const String& triggerName);
+		uSize GetEventId(const String& eventName);
 
-		template<typename Payload>
-		uSize GetPayloadId()
+		template<typename Event>
+		uSize GetEventId()
 		{
-			static uSize sTriggerId = GetPayloadId(TypeName<Payload>::Value());
-			return sTriggerId;
+			static uSize sEventId = GetEventId(TypeName<Event>::Value());
+			return sEventId;
 		}
 
-		bool IsValidPayloadId(uSize triggerId);
+		bool IsValidEventId(uSize eventId);
 
 	private:
 		Array<UpdateFunctor*>				mUpdates;
 		Array<TickFunctor*>					mTicks;
-		Array<Array<TriggerFunctorBase*>>	mTriggers;
-		Array<std::function<void()>>		mDefferedTriggers;
+		Array<Array<EventFunctorBase*>>		mEvents;
+		Array<std::function<void()>>		mDeferredEvents;
 
 		uSize mDirtyUpdateCount		= 0;
 		uSize mDirtyTickCount		= 0;
-		uSize mDirtyTriggerCount	= 0;
+		uSize mDirtyEventCount		= 0;
 
 		uInt64 mTargetUPS;
 		uInt64 mTargetTPS;
@@ -138,56 +138,56 @@ namespace Quartz
 		void UpdateAll(double delta);
 		void TickAll(uSize tick);
 
-		void CleanTriggers();
+		void CleanEvents();
 
-		template<typename TriggerPayload>
-		void RegisterTriggerType()
+		template<typename Event>
+		void RegisterEventType()
 		{
-			uSize triggerId = GetPayloadId<TriggerPayload>();
+			uSize eventId = GetEventId<Event>();
 
-			if (mTriggers.Size() >= triggerId)
+			if (mEvents.Size() >= eventId)
 			{
-				mTriggers.Resize(triggerId + 1);
+				mEvents.Resize(eventId + 1);
 			}
 		}
 
-		template<typename Payload>
-		void TriggerNow(const Payload& payload)
+		template<typename Event>
+		void TriggerNow(const Event& event)
 		{
-			uSize triggerId = GetPayloadId<Payload>();
+			uSize eventId = GetEventId<Event>();
 
-			if (!IsValidPayloadId(triggerId))
+			if (!IsValidEventId(eventId))
 			{
-				RegisterTriggerType<Payload>();
+				RegisterEventType<Event>();
 			}
 
-			for (TriggerFunctorBase* pFunctorBase : mTriggers[triggerId])
+			for (EventFunctorBase* pFunctorBase : mEvents[eventId])
 			{
-				TriggerFunctor<Payload>* pFunctor = 
-					static_cast<TriggerFunctor<Payload>*>(*reinterpret_cast<void**>(&pFunctorBase));
+				EventFunctor<Event>* pFunctor = 
+					static_cast<EventFunctor<Event>*>(*reinterpret_cast<void**>(&pFunctorBase));
 
-				if (pFunctor->triggerFunc)
+				if (pFunctor->eventFunc)
 				{
-					pFunctor->Call(this, payload);
+					pFunctor->Call(this, event);
 				}
 			}
 
-			if (mDirtyTriggerCount > 0)
+			if (mDirtyEventCount > 0)
 			{
-				Array<TriggerFunctorBase*> cleanTriggers(mTriggers[triggerId].Size() - mDirtyTriggerCount);
+				Array<EventFunctorBase*> cleanTriggers(mEvents[eventId].Size() - mDirtyEventCount);
 
-				for (TriggerFunctorBase* pFunctorBase : mTriggers[triggerId])
+				for (EventFunctorBase* pFunctorBase : mEvents[eventId])
 				{
-					TriggerFunctor<Payload>* pFunctor =
-						static_cast<TriggerFunctor<Payload>*>(*reinterpret_cast<void**>(&pFunctorBase));
+					EventFunctor<Event>* pFunctor =
+						static_cast<EventFunctor<Event>*>(*reinterpret_cast<void**>(&pFunctorBase));
 
-					if (pFunctor->triggerFunc)
+					if (pFunctor->eventFunc)
 					{
 						cleanTriggers.PushBack(pFunctor);
 					}
 				}
 
-				Swap(mTriggers[triggerId], cleanTriggers);
+				Swap(mEvents[eventId], cleanTriggers);
 				mDirtyTickCount = 0;
 			}
 		}
@@ -207,6 +207,8 @@ namespace Quartz
 			mUpdates.PushBack(pFunctor);
 		}
 
+		void RegisterOnUpdate(std::function<void()>);
+
 		void RegisterOnTick(RuntimeTickFunc tickFunc);
 
 		template<typename Scope>
@@ -219,38 +221,38 @@ namespace Quartz
 			mTicks.PushBack(pFunctor);
 		}
 
-		template<typename Payload>
-		void RegisterOnTrigger(RuntimeTriggerFunc<Payload> triggerFunc)
+		template<typename Event>
+		void RegisterOnEvent(RuntimeEventFunc<Event> eventFunc)
 		{
-			uSize payloadId = GetPayloadId<Payload>();
+			uSize eventId = GetEventId<Event>();
 
-			if (!IsValidPayloadId(payloadId))
+			if (!IsValidEventId(eventId))
 			{
-				RegisterTriggerType<Payload>();
+				RegisterEventType<Event>();
 			}
 
-			TriggerFunctor<Payload> pFunctor = new TriggerFunctor<Payload>();
-			pFunctor->pInstance = pInstance;
-			pFunctor->tickFunc = triggerFunc;
+			EventFunctor<Event>* pFunctor = new EventFunctor<Event>();
+			pFunctor->pInstance = nullptr;
+			pFunctor->eventFunc = eventFunc;
 
-			mTriggers[payloadId].PushBack(pFunctor);
+			mEvents[eventId].PushBack(pFunctor);
 		}
 
-		template<typename Payload, typename Scope>
-		void RegisterOnTrigger(ScopedRuntimeTriggerFunc<Payload, Scope> triggerFunc, Scope* pInstance)
+		template<typename Event, typename Scope>
+		void RegisterOnEvent(ScopedRuntimeEventFunc<Event, Scope> eventFunc, Scope* pInstance)
 		{
-			uSize payloadId = GetPayloadId<Payload>();
+			uSize eventId = GetEventId<Event>();
 
-			if (!IsValidPayloadId(payloadId))
+			if (!IsValidEventId(eventId))
 			{
-				RegisterTriggerType<Payload>();
+				RegisterEventType<Event>();
 			}
 
-			ScopedTriggerFunctor<Payload, Scope>* pFunctor = new ScopedTriggerFunctor<Payload, Scope>();
+			ScopedEventFunctor<Event, Scope>* pFunctor = new ScopedEventFunctor<Event, Scope>();
 			pFunctor->pInstance = pInstance;
-			pFunctor->triggerFunc = static_cast<RuntimeTriggerFunc<Payload>>(*reinterpret_cast<void**>(&triggerFunc));
+			pFunctor->eventFunc = static_cast<RuntimeEventFunc<Event>>(*reinterpret_cast<void**>(&eventFunc));
 
-			mTriggers[payloadId].PushBack(pFunctor);
+			mEvents[eventId].PushBack(pFunctor);
 		}
 
 		void UnregisterOnUpdate(RuntimeUpdateFunc updateFunc);
@@ -285,63 +287,63 @@ namespace Quartz
 			}
 		}
 
-		template<typename Payload>
-		void UnregisterOnTrigger(RuntimeTriggerFunc<Payload> triggerFunc)
+		template<typename Event>
+		void UnregisterOnEvent(RuntimeEventFunc<Event> eventFunc)
 		{
-			uSize payloadId = GetPayloadId<Payload>();
+			uSize eventId = GetEventId<Event>();
 
-			if (IsValidTriggerId(payloadId))
+			if (IsValidEventId(eventId))
 			{
-				auto& triggers = mTriggers[payloadId];
-				for (TriggerFunctorBase* pFunctorBase : triggers)
+				auto& events = mEvents[eventId];
+				for (EventFunctorBase* pFunctorBase : events)
 				{
-					TriggerFunctor<Payload>* pFunctor =
-						static_cast<TriggerFunctor<Payload>*>(*reinterpret_cast<void**>(&pFunctorBase));
+					EventFunctor<Event>* pFunctor =
+						static_cast<EventFunctor<Event>*>(*reinterpret_cast<void**>(&pFunctorBase));
 
-					if (pFunctor->triggerFunc == static_cast<RuntimeTriggerFunc<Payload>>(*reinterpret_cast<void**>(&triggerFunc))
+					if (pFunctor->eventFunc == static_cast<RuntimeEventFunc<Event>>(*reinterpret_cast<void**>(&eventFunc))
 						&& pFunctor->pInstance == pInstance)
 					{
-						pFunctor->triggerFunc = nullptr;
-						mDirtyTriggerCount++;
+						pFunctor->eventFunc = nullptr;
+						mDirtyEventCount++;
 					}
 				}
 			}
 		}
 
-		template<typename Payload, typename Scope>
-		void UnregisterOnTrigger(ScopedRuntimeTriggerFunc<Payload, Scope> triggerFunc, Scope* pInstance)
+		template<typename Event, typename Scope>
+		void UnregisterOnEvent(ScopedRuntimeEventFunc<Event, Scope> eventFunc, Scope* pInstance)
 		{
-			uSize payloadId = GetPayloadId<Payload>();
+			uSize eventId = GetEventId<Event>();
 
-			if (IsValidPayloadId(payloadId))
+			if (IsValidEventId(eventId))
 			{
-				auto& triggers = mTriggers[payloadId];
-				for(TriggerFunctorBase * pFunctorBase : triggers)
+				auto& events = mEvents[eventId];
+				for(EventFunctorBase * pFunctorBase : events)
 				{
-					ScopedTriggerFunctor<Payload, Scope>* pFunctor =
-						static_cast<ScopedTriggerFunctor<Payload, Scope>*>(*reinterpret_cast<void**>(&pFunctorBase));
+					ScopedEventFunctor<Event, Scope>* pFunctor =
+						static_cast<ScopedEventFunctor<Event, Scope>*>(*reinterpret_cast<void**>(&pFunctorBase));
 
-					if (pFunctor->triggerFunc == static_cast<RuntimeTriggerFunc<Payload>>(*reinterpret_cast<void**>(&triggerFunc))
+					if (pFunctor->eventFunc == static_cast<RuntimeEventFunc<Event>>(*reinterpret_cast<void**>(&eventFunc))
 						&& pFunctor->pInstance == pInstance)
 					{
-						pFunctor->triggerFunc = nullptr;
-						mDirtyTriggerCount++;
+						pFunctor->eventFunc = nullptr;
+						mDirtyEventCount++;
 					}
 				}
 			}
 		}
 
-		template<typename TriggerPayload>
-		void Trigger(const TriggerPayload& payload, bool now = false)
+		template<typename Event>
+		void Trigger(const Event& event, bool now = false)
 		{
 			if (now)
 			{
-				TriggerNow<TriggerPayload>(payload);
+				TriggerNow<Event>(event);
 			}
 			else
 			{
-				auto& deferedTrigger = [this,payload]() { this->TriggerNow<TriggerPayload>(payload); };
-				mDefferedTriggers.PushBack(deferedTrigger);
+				auto& deferredEvent = [this,event]() { this->TriggerNow<Event>(event); };
+				mDeferredEvents.PushBack(deferredEvent);
 			}
 		}
 

@@ -6,26 +6,28 @@
 
 namespace Quartz
 {
-	uSize Runtime::GetPayloadId(const String& triggerName)
+	uSize Runtime::GetEventId(const String& eventName)
 	{
-		auto& idIt = mTriggerIdMap.Find(triggerName);
-		if (idIt != mTriggerIdMap.End())
+		auto& idIt = mEventIdMap.Find(eventName);
+		if (idIt != mEventIdMap.End())
 		{
 			return idIt->value;
 		}
 
-		return mTriggerIdMap.Put(triggerName, mTriggerIdCount++);
+		return mEventIdMap.Put(eventName, mEventIdCount++);
 	}
 
 	Runtime::Runtime() :
 		mRunning(false),
 		mTargetTPS(RUNTIME_DEFAULT_TPS),
-		mTargetUPS(RUNTIME_DEFAULT_UPS)
+		mTargetUPS(RUNTIME_DEFAULT_UPS),
+		mCurrentUPS(0),
+		mCurrentTPS(0)
 	{ }
 
-	bool Runtime::IsValidPayloadId(uSize triggerId)
+	bool Runtime::IsValidEventId(uSize eventId)
 	{
-		return mTriggers.Size() > triggerId;
+		return mEvents.Size() > eventId;
 	}
 
 	void Runtime::RegisterOnUpdate(RuntimeUpdateFunc updateFunc)
@@ -135,25 +137,25 @@ namespace Quartz
 	}
 
 	// Specific type not needed to check null values
-	using TriggerType = int;
+	using EventType = int;
 
-	void Runtime::CleanTriggers()
+	void Runtime::CleanEvents()
 	{
-		if (mDirtyTriggerCount > 0)
+		if (mDirtyEventCount > 0)
 		{
-			for (Array<TriggerFunctorBase*>& triggerType : mTriggers)
+			for (Array<EventFunctorBase*>& eventType : mEvents)
 			{
-				Array<TriggerFunctorBase*> cleanTriggerType(mTriggers.Size() - mDirtyTriggerCount);
+				Array<EventFunctorBase*> cleanEventType(mEvents.Size() - mDirtyEventCount);
 				uSize index = 0;
 
-				for (TriggerFunctorBase* pFunctorBase : triggerType)
+				for (EventFunctorBase* pFunctorBase : eventType)
 				{
-					TriggerFunctor<TriggerType>* pFunctor =
-						static_cast<TriggerFunctor<TriggerType>*>(*reinterpret_cast<void**>(&pFunctorBase));
+					EventFunctor<EventType>* pFunctor =
+						static_cast<EventFunctor<EventType>*>(*reinterpret_cast<void**>(&pFunctorBase));
 
-					if (pFunctor->triggerFunc != nullptr)
+					if (pFunctor->eventFunc != nullptr)
 					{
-						cleanTriggerType[index++] = (TriggerFunctorBase*)pFunctor;
+						cleanEventType[index++] = (EventFunctorBase*)pFunctor;
 					}
 					else
 					{
@@ -161,11 +163,11 @@ namespace Quartz
 					}
 				}
 
-				Swap(triggerType, cleanTriggerType);
+				Swap(eventType, cleanEventType);
 			}
 		}
 
-		mDirtyTriggerCount = 0;
+		mDirtyEventCount = 0;
 	}
 
 	uInt64 GetTimeNanoseconds()
@@ -231,17 +233,17 @@ namespace Quartz
 				accumulatedUpdateTime = 0;
 			}
 
-			if (mDefferedTriggers.Size() > 0)
+			if (mDeferredEvents.Size() > 0)
 			{
-				for (std::function<void()>& defferedTrigger : mDefferedTriggers)
+				for (std::function<void()>& deferredEvent : mDeferredEvents)
 				{
-					defferedTrigger();
+					deferredEvent();
 				}
 
-				mDefferedTriggers.Clear();
+				mDeferredEvents.Clear();
 			}
 
-			CleanTriggers();
+			CleanEvents();
 		}
 	}
 

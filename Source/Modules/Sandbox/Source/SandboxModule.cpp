@@ -15,6 +15,7 @@
 #include "Component/TransformComponent.h"
 #include "Component/MeshComponent.h"
 #include "Component/MaterialComponent.h"
+#include "Component/CameraComponent.h"
 
 #include <vulkan/vulkan.h>
 
@@ -66,12 +67,17 @@ namespace Quartz
 			if (deltaAcc > 1.0)
 			{
 				deltaAcc = 0;
-				LogInfo("> FPS: %lf", pRuntime->GetCurrentUps());
+				LogInfo("> FPS: %.1lf", pRuntime->GetCurrentUps());
 			}
 
 			TransformComponent& transform = gpWorld->Get<TransformComponent>(gpCamera);
-			transform.rotation *= Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, 0.01f);
+			transform.rotation *= Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, 1.0f * delta);
 		}
+
+		struct TestEvent
+		{
+			uInt32 value;
+		};
 
 		void QUARTZ_ENGINE_API SystemInit()
 		{
@@ -168,14 +174,26 @@ namespace Quartz
 			Entity cube = gpWorld->CreateEntity(transform0, renderable2, material1);
 			Entity tri	= gpWorld->CreateEntity(transform1, renderable1, material2);
 
+			CameraComponent camera(70.0f, 0.001f, 1000.f);
+			TransformComponent cameraTransform({ 0.0f, 0.0f, -2.0f }, { { 0.0f, 0.0f, 0.0f }, 0.0f }, { 1.0f, 1.0f, 1.0f });
+			gpCamera = gpWorld->CreateEntity(camera, cameraTransform);
+
 			VulkanRenderer* pRenderer = new VulkanRenderer();
 			pRenderer->Register(gpRuntime);
 			pRenderer->Initialize(&gfx);
+			pRenderer->SetCamera(gpCamera);
 
-			gpRuntime->SetTargetUps(1000000);
+			gpRuntime->SetTargetUps(350);
 			gpRuntime->RegisterOnUpdate(OnUpdate);
 
-			gpCamera = cube;
+			gpRuntime->RegisterOnEvent<TestEvent>(
+				[](Runtime* pRuntime, const TestEvent& event)
+				{
+					LogSuccess("Lambdas!");
+				}
+			);
+
+			gpRuntime->Trigger(TestEvent{}, false);
 		}
 
 	}
