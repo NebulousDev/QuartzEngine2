@@ -2,6 +2,9 @@
 
 #include "Log.h"
 
+#define DEBUG_EXT_IN_RELEASE 1
+#define DEBUG_EXT DEBUG_EXT_IN_RELEASE || not defined NDEBUG
+
 namespace Quartz
 {
 	const char* VendorNameFromID(uInt32 vendorID)
@@ -128,7 +131,9 @@ namespace Quartz
 
 		Array<const char*> extentions =
 		{
+#if DEBUG_EXT
 			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
 			VK_KHR_SURFACE_EXTENSION_NAME,
 			"VK_KHR_win32_surface",
 			VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
@@ -142,9 +147,12 @@ namespace Quartz
 
 		Array<const char*> enabledLayers =
 		{
+#ifndef NDEBUG
 			"VK_LAYER_KHRONOS_validation"
+#endif
 		};
 
+#if DEBUG_EXT
 		VkDebugUtilsMessengerCreateInfoEXT vkDebugMessengerInfo = {};
 		vkDebugMessengerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		vkDebugMessengerInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
@@ -156,6 +164,7 @@ namespace Quartz
 		vkDebugMessengerInfo.pfnUserCallback = DebugCallback;
 		vkDebugMessengerInfo.pUserData	= NULL;
 		vkDebugMessengerInfo.pNext		= NULL;
+#endif
 
 		VkInstanceCreateInfo vkInstanceInfo		= {};
 		vkInstanceInfo.sType					= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -164,7 +173,12 @@ namespace Quartz
 		vkInstanceInfo.ppEnabledExtensionNames	= extentions.Data();
 		vkInstanceInfo.enabledLayerCount		= enabledLayers.Size();
 		vkInstanceInfo.ppEnabledLayerNames		= enabledLayers.Data();
+
+#if DEBUG_EXT
 		vkInstanceInfo.pNext					= &vkDebugMessengerInfo;
+#else
+		vkInstanceInfo.pNext					= nullptr;
+#endif
 
 		VkResult result = vkCreateInstance(&vkInstanceInfo, nullptr, &vkInstance);
 
@@ -178,7 +192,7 @@ namespace Quartz
 		}
 		else
 		{
-			LogFatal("Failed to create Vulkan instance: vkCreateInstance failed. See Vulkan logs for details.");
+			LogFatal("Failed to create Vulkan instance: vkCreateInstance failed.");
 			return false;
 		}
 	}
@@ -188,7 +202,7 @@ namespace Quartz
 		uSize physicalDeviceCount;
 		if (vkEnumeratePhysicalDevices(pGraphics->vkInstance, &physicalDeviceCount, VK_NULL_HANDLE) != VK_SUCCESS)
 		{
-			LogFatal("Failed to enumerate Vulkan physical devices: vkEnumeratePhysicalDevices failed. See Vulkan logs for details.");
+			LogFatal("Failed to enumerate Vulkan physical devices: vkEnumeratePhysicalDevices failed.");
 			return false;
 		}
 
@@ -356,8 +370,8 @@ namespace Quartz
 
 			if (vkCreateDevice(physicalDevice.vkPhysicalDevice, &deviceInfo, nullptr, &vulkanDevice.vkDevice) != VK_SUCCESS)
 			{
-				LogFatal("Failed to create logical vulkan device: vkCreateDevice failed. See Vulkan logs for details.");
-				return false;
+				LogError("Failed to create logical vulkan device [%s]: vkCreateDevice failed.", physicalDevice.vkProperties.deviceName);
+				continue;
 			}
 
 			vulkanDevice.pPhysicalDevice = &physicalDevice;
@@ -367,7 +381,15 @@ namespace Quartz
 			vkGetDeviceQueue(vulkanDevice.vkDevice, physicalDevice.primaryQueueFamilyIndices.transfer, 0, &vulkanDevice.queues.transfer);
 			vkGetDeviceQueue(vulkanDevice.vkDevice, physicalDevice.primaryQueueFamilyIndices.present, 0, &vulkanDevice.queues.present);
 
+			LogInfo("Registered vulkan logical device [%s]", physicalDevice.vkProperties.deviceName);
+
 			pGraphics->devices.PushBack(vulkanDevice);
+		}
+
+		if (pGraphics->devices.IsEmpty())
+		{
+			LogFail("No valid vulkan devices initialized.");
+			return false;
 		}
 
 		return true;
@@ -388,7 +410,7 @@ namespace Quartz
 			uInt32 versionMinor = VK_API_VERSION_MINOR(physicalDevice.vkProperties.apiVersion);
 
 			if (versionMajor < 1) continue;
-			if (versionMinor < 3) continue;
+			if (versionMinor < 2) continue;
 
 			if (physicalDevice.primaryQueueFamilyIndices.graphics == -1) continue;
 
@@ -412,12 +434,14 @@ namespace Quartz
 
 		if (bestDeviceIndex == -1)
 		{
-			LogFatal("No suitable Vulkan devices found. Check that you have a Vulkan 1.2 supported GPU (or higher), and that your drivers are up to date.");
+			LogFatal("Vulkan ChoosePrimaryDevices failed: No suitable Vulkan devices found.");
 			return false;
 		}
 
 		pGraphics->primaryPhysicalDevice = pGraphics->physicalDevices[bestDeviceIndex];
 		pGraphics->pPrimaryDevice = &pGraphics->devices[bestDeviceIndex];
+
+		LogInfo("Using porimary vulkan logical device [%s]", pGraphics->physicalDevices[bestDeviceIndex].vkProperties.deviceName);
 
 		return true;
 	}
@@ -433,9 +457,12 @@ namespace Quartz
 
 		Array<const char*> extentions =
 		{
+#if DEBUG_EXT
 			VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+#endif
 		};
 
+#if DEBUG_EXT
 		VkDebugUtilsMessengerCreateInfoEXT vkDebugMessengerInfo = {};
 		vkDebugMessengerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		vkDebugMessengerInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
@@ -444,13 +471,19 @@ namespace Quartz
 		vkDebugMessengerInfo.pfnUserCallback = DebugCallback;
 		vkDebugMessengerInfo.pUserData	= NULL;
 		vkDebugMessengerInfo.pNext		= NULL;
+#endif
 
 		VkInstanceCreateInfo vkInstanceInfo		= {};
 		vkInstanceInfo.pApplicationInfo			= &vkAppInfo;
 		vkInstanceInfo.enabledExtensionCount	= extentions.Size();
 		vkInstanceInfo.ppEnabledExtensionNames	= extentions.Data();
 		vkInstanceInfo.enabledLayerCount		= 0;
+
+#if DEBUG_EXT
 		vkInstanceInfo.pNext					= (VkDebugUtilsMessengerCreateInfoEXT*)&vkDebugMessengerInfo;
+#else
+		vkInstanceInfo.pNext					= nullptr;
+#endif
 
 		VkResult result = vkCreateInstance(&vkInstanceInfo, nullptr, &vkInstance);
 
@@ -462,8 +495,6 @@ namespace Quartz
 				uInt32 major = VK_API_VERSION_MAJOR(apiVersion);
 				uInt32 minor = VK_API_VERSION_MINOR(apiVersion);
 				uInt32 patch = VK_API_VERSION_PATCH(apiVersion);
-
-				LogInfo("vkEnumerateInstanceVersion returned version: %d.%d.%d", major, minor, patch);
 
 				if (apiVersion != version)
 				{
@@ -480,25 +511,25 @@ namespace Quartz
 					if (patch >= reqpatch)
 						goto versionSuccess;
 
-					LogError("Vulkan VersionTest failed. Requested version %d.%d.%d, but found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
+					LogFail("Vulkan VersionTest failed. Requested version %d.%d.%d, found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
 
 					return false;
 
 				versionSuccess:
-					LogInfo("Vulkan VersionTest Succeeded. Requested version %d.%d.%d, and found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
+					LogSuccess("Vulkan VersionTest Succeeded. Requested version %d.%d.%d, found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
 
 					return true;
 				}
 			}
 			else
 			{
-				LogError("Vulkan VersionTest failed failed. vkEnumerateInstanceVersion returned false.");
+				LogFail("Vulkan VersionTest failed failed. vkEnumerateInstanceVersion returned false.");
 				return false;
 			}
 		}
 		else
 		{
-			LogError("Vulkan VersionTest failed failed. vkGetInstanceProcAddr failed to retrieve vkEnumerateInstanceVersion. Vulkan version is too low.");
+			LogFail("Vulkan VersionTest failed failed. vkGetInstanceProcAddr failed to retrieve vkEnumerateInstanceVersion. Vulkan version is too low.");
 			return false;
 		}
 
