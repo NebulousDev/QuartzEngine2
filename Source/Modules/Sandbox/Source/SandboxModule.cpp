@@ -27,6 +27,8 @@ namespace Quartz
 		EntityWorld*	gpWorld;
 		Runtime*		gpRuntime;
 
+		Entity			gpCamera;
+
 		bool QUARTZ_ENGINE_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
 		{
 			systemQuery.name = "SandboxModule";
@@ -53,6 +55,22 @@ namespace Quartz
 		void QUARTZ_ENGINE_API SystemPreInit()
 		{
 
+		}
+
+		double deltaAcc;
+
+		void OnUpdate(Runtime* pRuntime, double delta)
+		{
+			deltaAcc += delta;
+
+			if (deltaAcc > 1.0)
+			{
+				deltaAcc = 0;
+				LogInfo("> FPS: %lf", pRuntime->GetCurrentUps());
+			}
+
+			TransformComponent& transform = gpWorld->Get<TransformComponent>(gpCamera);
+			transform.rotation *= Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, 0.01f);
 		}
 
 		void QUARTZ_ENGINE_API SystemInit()
@@ -153,6 +171,11 @@ namespace Quartz
 			VulkanRenderer* pRenderer = new VulkanRenderer();
 			pRenderer->Register(gpRuntime);
 			pRenderer->Initialize(&gfx);
+
+			gpRuntime->SetTargetUps(1000000);
+			gpRuntime->RegisterOnUpdate(OnUpdate);
+
+			gpCamera = cube;
 		}
 
 	}

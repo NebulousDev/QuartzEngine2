@@ -191,8 +191,8 @@ namespace Quartz
 		uInt64 accumulatedUpdates		= 0;
 		uInt64 accumulatedTicks			= 0;
 
-		uInt64 targetTickTime   = SECOND / (mTargetTPS + 1);
-		uInt64 targetUpdateTime = SECOND / (mTargetUPS + 1);
+		uInt64 targetTickTime   = SECOND / (mTargetTPS);
+		uInt64 targetUpdateTime = SECOND / (mTargetUPS);
 
 		currentTime = GetTimeNanoseconds();
 		lastTime = currentTime;
@@ -209,12 +209,12 @@ namespace Quartz
 
 			if (accumulatedTime >= SECOND)
 			{
-				accumulatedTickTime = 0;
-				accumulatedUpdateTime = 0;
-				accumulatedTime = 0;
+				mCurrentUPS = accumulatedUpdates;
+				mCurrentTPS = accumulatedTicks;
 
-				accumulatedUpdates = 0;
+				accumulatedTime = 0;
 				accumulatedTicks = 0;
+				accumulatedUpdates = 0;
 			}
 
 			if (accumulatedTickTime >= targetTickTime)
@@ -227,7 +227,7 @@ namespace Quartz
 			if (accumulatedUpdateTime >= targetUpdateTime)
 			{
 				accumulatedUpdates++;
-				UpdateAll((double)(deltaTime / SECOND));
+				UpdateAll(((double)accumulatedUpdateTime / (double)SECOND));
 				accumulatedUpdateTime = 0;
 			}
 

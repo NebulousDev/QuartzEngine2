@@ -129,6 +129,9 @@ namespace Quartz
 		uInt64 mTargetUPS;
 		uInt64 mTargetTPS;
 
+		double mCurrentUPS;
+		double mCurrentTPS;
+
 		bool mRunning;
 
 	private:
@@ -344,5 +347,14 @@ namespace Quartz
 
 		void Start();
 		void Stop();
+
+		inline void SetTargetUps(uInt64 ups) { mTargetUPS = ups; }
+		inline void SetTargetTps(uInt64 tps) { mTargetTPS = tps; }
+
+		inline double GetCurrentUps() const { return mCurrentUPS; }
+		inline double GetCurrentTps() const { return mCurrentTPS; }
+
+		inline double GetTargetUps() const { return mTargetUPS; }
+		inline double GetTargetTps() const { return mTargetUPS; }
 	};
 }
