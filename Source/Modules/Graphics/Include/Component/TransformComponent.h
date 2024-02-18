@@ -23,5 +23,6 @@ namespace Quartz
 		Vec3f GetDown();
 
 		Mat4f GetMatrix();
+		Mat4f GetViewMatrix();
 	};
 }

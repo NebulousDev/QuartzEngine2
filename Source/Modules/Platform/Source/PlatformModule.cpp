@@ -1,10 +1,13 @@
-#include "System/System.h"
+#include "Module/Module.h"
 
+#include "Engine.h"
 #include "Entity/World.h"
+#include "Input/Input.h"
 #include "Runtime/Runtime.h"
 #include "Types/Array.h"
 #include "Log.h"
 
+#include "PlatformAPI.h"
 #include "Platform.h"
 #include "Application.h"
 
@@ -14,6 +17,8 @@
 #else
 #include "Surface.h"
 #endif
+
+#include "Windows/WinApi.h"
 
 namespace Quartz
 {
@@ -31,8 +36,6 @@ namespace Quartz
 
 	/////////////////////
 
-	EntityWorld*		gpEntityWorld;
-	Runtime*			gpRuntime;
 	Application*		gpApp;
 	PlatformSingleton*	gpPlatform;
 
@@ -40,12 +43,14 @@ namespace Quartz
 	{
 		switch (level)
 		{
-		case LOG_LEVEL_TRACE:   LogTrace(message);   return;
-		case LOG_LEVEL_DEBUG:   LogDebug(message);   return;
-		case LOG_LEVEL_INFO:    LogInfo(message);    return;
-		case LOG_LEVEL_WARNING: LogWarning(message); return;
-		case LOG_LEVEL_ERROR:   LogError(message);   return;
-		case LOG_LEVEL_FATAL:   LogFatal(message);   return;
+			case LOG_LEVEL_TRACE:   LogTrace(message);   return;
+			case LOG_LEVEL_DEBUG:   LogDebug(message);   return;
+			case LOG_LEVEL_INFO:    LogInfo(message);    return;
+			case LOG_LEVEL_WARNING: LogWarning(message); return;
+			case LOG_LEVEL_ERROR:   LogError(message);   return;
+			case LOG_LEVEL_FATAL:   LogFatal(message);   return;
+			case LOG_LEVEL_SUCCESS: LogSuccess(message); return;
+			case LOG_LEVEL_FAIL:	LogFail(message);    return;
 		}
 	}
 
@@ -58,7 +63,7 @@ namespace Quartz
 	void WindowClosedCallback(Window* pWindow)
 	{
 		LogTrace("[%s] Closed", pWindow->GetTitle().Str());
-		gpRuntime->Stop();
+		Engine::GetRuntime().Stop();
 	}
 
 	void WindowResizedCallback(Window* pWindow, uSize width, uSize height)
@@ -73,22 +78,24 @@ namespace Quartz
 
 	void WindowMaximizedCallback(Window* pWindow, bool restored)
 	{
-		LogTrace("[%s] %s", pWindow->GetTitle().Str(), restored ? "Maximization Restored" : "Maximized");
+		//LogTrace("[%s] %s", pWindow->GetTitle().Str(), restored ? "Maximization Restored" : "Maximized");
 	}
 
 	void WindowMinimizedCallback(Window* pWindow, bool restored)
 	{
-		LogTrace("[%s] %s", pWindow->GetTitle().Str(), restored ? "Minimization Restored" : "Minimized");
+		//LogTrace("[%s] %s", pWindow->GetTitle().Str(), restored ? "Minimization Restored" : "Minimized");
 	}
 
 	void WindowFocusedCallback(Window* pWindow, bool lost)
 	{
-		LogTrace("[%s] %s", pWindow->GetTitle().Str(), lost ? "Focus Lost" : "Focus Gained");
+		//LogTrace("[%s] %s", pWindow->GetTitle().Str(), lost ? "Focus Lost" : "Focus Gained");
 	}
 
 	void KeyCallback(Window* pWindow, uInt16 scancode, bool down, bool repeat)
 	{
-		LogTrace("KEY: %d %s", scancode, down ? (repeat ? "DOWN - REPEAT" : "DOWN") : "UP\n");
+		//LogTrace("KEY: %d %s", scancode, down ? (repeat ? "DOWN - REPEAT" : "DOWN") : "UP\n");
+		InputActions actions = (down ? INPUT_ACTION_DOWN : INPUT_ACTION_UP) | (repeat ? INPUT_ACTION_REPEAT : 0);
+		Engine::GetInput().SendButtonInput(INPUT_KEYBOARD_ANY, scancode, actions, 1.0f);
 	}
 
 	void KeyTypedCallback(Window* pWindow, char caracter, bool repeat)
@@ -101,14 +108,15 @@ namespace Quartz
 		//LogTrace("MOUSE MOVED: %d,%d", mouseX, mouseY);
 	}
 
-	void MouseMovedRelativeCallback(Window* pWindow, uSize relX, uSize relY)
+	void MouseMovedRelativeCallback(Window* pWindow, sSize relX, sSize relY)
 	{
 		//LogTrace("MOUSE MOVED: %d,%d - RELATIVE", relX, relY);
+		Engine::GetInput().SendAxisInput(INPUT_MOUSE_ANY, 0, INPUT_ACTION_MOVE, { (float)relX, (float)relY });
 	}
 
 	void MouseEnteredCallback(Window* pWindow, bool entered)
 	{
-		//LogTrace("[%s] MOUSE %s", pWindow->GetTitle().Str(), entered ? "ENTERED" : "EXITED");
+		LogTrace("[%s] MOUSE %s", pWindow->GetTitle().Str(), entered ? "ENTERED" : "EXITED");
 	}
 
 	void Update(Runtime* pRuntime, double delta)
@@ -121,29 +129,28 @@ extern "C"
 {
 	using namespace Quartz;
 
-	bool QUARTZ_ENGINE_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
+	bool QUARTZ_PLATFORM_API ModuleQuery(bool isEditor, ModuleQueryInfo& moduleQuery)
 	{
-		systemQuery.name = "PlatformModule";
-		systemQuery.version = "1.0.0";
+		moduleQuery.name = "PlatformModule";
+		moduleQuery.version = "1.0.0";
 
 		return true;
 	}
 
-	bool QUARTZ_ENGINE_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
+	bool QUARTZ_PLATFORM_API ModuleLoad(Log& engineLog, Engine& engine)
 	{
-		Log::SetGlobalLog(engineLog);
-		gpEntityWorld = &entityWorld;
-		gpRuntime = &runtime;
+		Log::SetInstance(engineLog);
+		Engine::SetInstance(engine);
 		return true;
 	}
 
-	void QUARTZ_ENGINE_API SystemUnload()
+	void QUARTZ_PLATFORM_API ModuleUnload()
 	{
 		DestroyApplication(gpApp);
 		DestroyPlatform(gpPlatform);
 	}
 
-	void QUARTZ_ENGINE_API SystemPreInit()
+	void QUARTZ_PLATFORM_API ModulePreInit()
 	{
 		ApplicationInfo appInfo = {};
 
@@ -154,34 +161,67 @@ extern "C"
 
 		gpApp = CreateApplication(appInfo);
 
-		gpPlatform = &gpEntityWorld->CreateSingleton<PlatformSingleton>();
+		gpPlatform = &Engine::GetWorld().CreateSingleton<PlatformSingleton>();
 		CreatePlatform(gpApp, gpPlatform);
 
 		gpPlatform->pApplication = gpApp;
 	}
 
-	void QUARTZ_ENGINE_API SystemInit()
+	void CreateDevices()
 	{
-		/*
-#ifdef QUARTZAPP_VULKAN
+		InputDeviceInfo genericMouseInfo = {};
+		genericMouseInfo.deviceName		= "Generic Mouse";
+		genericMouseInfo.deviceType		= INPUT_DEVICE_TYPE_MOUSE;
+		genericMouseInfo.buttonCount	= 2;
+		genericMouseInfo.axisCount		= 1;
 
-		VkSurfaceFormatKHR format = {};
-		format.format		= VK_FORMAT_B8G8R8A8_SRGB;
-		format.colorSpace	= VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		InputDeviceCallbacks genericMouseCallbacks = {};
 
-		VulkanSurfaceInfo apiInfo = {};
-		apiInfo.instance			= gpVulkanData->vkInstance;
-		apiInfo.exclusiveFullscreen = false;
-		apiInfo.physicalDevice		= gpVulkanData->primaryPhysicalDevice.vkPhysicalDevice;
-		apiInfo.surfaceFormat		= format;
+#ifdef _WIN32
+
+		genericMouseCallbacks.onMouseSetPositionFunc =
+			[](const InputDevice& device, Vec2i absPosition)
+		{
+			return (bool)SetCursorPos(absPosition.x, absPosition.y);
+		};
+
+		genericMouseCallbacks.onMouseGetPositionFunc = 
+			[](const InputDevice& device, Vec2i& outAbsPosition)
+		{
+			POINT cursorPos = {};
+			bool result = GetCursorPos(&cursorPos);
+			outAbsPosition.x = cursorPos.x;
+			outAbsPosition.y = cursorPos.y;
+			return result;
+		};
+
+		genericMouseCallbacks.onMouseSetBoundsFunc =
+			[](const Window& windowContext, const InputDevice& device, Bounds2i absBounds, bool enabled)
+		{
+			RECT clipRect = {};
+			clipRect.left	= absBounds.BottomLeft().x;
+			clipRect.right	= absBounds.TopRight().x;
+			clipRect.top	= absBounds.BottomLeft().y;
+			clipRect.bottom = absBounds.TopRight().y;
+			bool result = ClipCursor(enabled ? &clipRect : NULL);
+			return result;
+		};
+
+		genericMouseCallbacks.onMouseSetHiddenFunc =
+			[](const Window& windowContext, const InputDevice& device, bool hidden)
+		{
+			ShowCursor(!hidden);
+			return true;
+		};
 
 #endif
 
-		WindowInfo		windowInfo		= { "Quartz Sandbox", 1280, 720, 100, 100, WINDOW_WINDOWED };
-		SurfaceInfo		surfaceInfo		= { SURFACE_API_VULKAN, &apiInfo };
-		Window*			pWindow			= gpApp->CreateWindow(windowInfo, surfaceInfo);
+		Engine::GetDeviceRegistry().RegisterDevice(genericMouseInfo, genericMouseCallbacks);
+	}
 
-		gpApp->SetWindowCloseRequestedCallback(WindowCloseRequestedCallback); 
+	void QUARTZ_PLATFORM_API ModuleInit()
+	{
+		gpApp->SetWindowCloseRequestedCallback(WindowCloseRequestedCallback);
 		gpApp->SetWindowClosedCallback(WindowClosedCallback);
 		gpApp->SetWindowResizedCallback(WindowResizedCallback);
 		gpApp->SetWindowMovedCallback(WindowMovedCallback);
@@ -194,11 +234,8 @@ extern "C"
 		gpApp->SetMouseMovedRelativeCallback(MouseMovedRelativeCallback);
 		gpApp->SetMouseEnteredCallback(MouseEnteredCallback);
 
-		gpWindow = pWindow;
+		CreateDevices();
 
-		//gpVulkanData->vkSurface = ((VulkanSurface*)pWindow->GetSurface())->GetVkSurface();
-		*/
-
-		gpRuntime->RegisterOnUpdate(Update);
+		Engine::GetRuntime().RegisterOnUpdate(Update);
 	}
 }

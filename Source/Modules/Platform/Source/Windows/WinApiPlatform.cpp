@@ -1,6 +1,6 @@
 #include "Platform.h"
 
-#include "WinApi.h"
+#include "Windows/WinApi.h"
 
 namespace Quartz
 {

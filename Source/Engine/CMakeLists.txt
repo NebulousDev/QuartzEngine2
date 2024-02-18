@@ -8,13 +8,17 @@ set(QUARTZENGINE_COMIPLE_DEFINITIONS)
 
 set(QUARTZENGINE_SOURCE_FILES
 	"Source/Quartz.cpp"
+    "Source/Engine.cpp"
     "Source/Entity/EntityDatabase.cpp"
     "Source/Entity/EntityGraph.cpp"
     "Source/Entity/World.cpp"
-    "Source/System/System.cpp"
-    "Source/System/SystemAdmin.cpp"
-    "Source/System/DynamicLibrary.cpp"
+    "Source/Module/Module.cpp"
+    "Source/Module/ModuleRegistry.cpp"
+    "Source/Module/DynamicLibrary.cpp"
     "Source/Runtime/Runtime.cpp"
+    "Source/Input/Input.cpp"
+    "Source/Input/InputDevice.cpp"
+    "Source/Input/InputDeviceRegistry.cpp"
 )
 
 if(WIN32)
@@ -23,9 +27,9 @@ if(WIN32)
 	set(QUARTZENGINE_WINAPI PARENT_SCOPE)
 
 	set(QUARTZENGINE_SOURCE_FILES ${QUARTZENGINE_SOURCE_FILES}
-		"Source/System/Windows/WinApiLibraryLoader.cpp"
-        "Source/System/Windows/WinApiDynamicLibrary.cpp"
-        "Source/System/Windows/WinApi.cpp" 
+		"Source/Module/Windows/WinApiLibraryLoader.cpp"
+        "Source/Module/Windows/WinApiDynamicLibrary.cpp"
+        "Source/Module/Windows/WinApi.cpp" 
 	)
 
 elseif(UNIX)
@@ -34,8 +38,8 @@ elseif(UNIX)
 	set(QUARTZENGINE_LINUX PARENT_SCOPE)
 	
 	set(QUARTZENGINE_SOURCE_FILES ${QUARTZENGINE_SOURCE_FILES}
-		"Source/System/Linux/LinuxLibraryLoader.cpp"
-        "Source/System/Linux/LinuxDynamicLibrary.cpp"
+		"Source/Module/Linux/LinuxLibraryLoader.cpp"
+        "Source/Module/Linux/LinuxDynamicLibrary.cpp"
 	)
 
 endif()

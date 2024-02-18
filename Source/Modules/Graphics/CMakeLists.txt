@@ -23,7 +23,7 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Vulkan/VulkanMultiBuffer.cpp"
 	"Source/Component/MaterialComponent.cpp"
 	"Source/Vulkan/VulkanPipelineCache.cpp"
-	"Source/Vulkan/VulkanShaderCache.cpp")
+	"Source/Vulkan/VulkanShaderCache.cpp" "Source/Component/CameraComponent.cpp" "Include/Component/CameraComponent.h")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

@@ -1,5 +1,6 @@
-#include "System/System.h"
+#include "Module/Module.h"
 
+#include "Engine.h"
 #include "EngineAPI.h"
 #include "Entity/World.h"
 #include "Log.h"
@@ -19,59 +20,41 @@
 
 #include <vulkan/vulkan.h>
 
+#include "Input/Input.h"
+
 namespace Quartz
 {
 	extern "C"
 	{
 		using namespace Quartz;
 
-		EntityWorld*	gpWorld;
-		Runtime*		gpRuntime;
-
+		Window*			gpWindow;
 		Entity			gpCamera;
 
-		bool QUARTZ_ENGINE_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
+		bool QUARTZ_ENGINE_API ModuleQuery(bool isEditor, Quartz::ModuleQueryInfo& moduleQuery)
 		{
-			systemQuery.name = "SandboxModule";
-			systemQuery.version = "1.0.0";
+			moduleQuery.name = "SandboxModule";
+			moduleQuery.version = "1.0.0";
 
 			return true;
 		}
 
-		bool QUARTZ_ENGINE_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
+		bool QUARTZ_ENGINE_API ModuleLoad(Log& engineLog, Engine& engine)
 		{
-			Log::SetGlobalLog(engineLog);
-
-			gpWorld = &entityWorld;
-			gpRuntime = &runtime;
+			Log::SetInstance(engineLog);
+			Engine::SetInstance(engine);
 
 			return true;
 		}
 
-		void QUARTZ_ENGINE_API SystemUnload()
+		void QUARTZ_ENGINE_API ModuleUnload()
 		{
 
 		}
 
-		void QUARTZ_ENGINE_API SystemPreInit()
+		void QUARTZ_ENGINE_API ModulePreInit()
 		{
 
-		}
-
-		double deltaAcc;
-
-		void OnUpdate(Runtime* pRuntime, double delta)
-		{
-			deltaAcc += delta;
-
-			if (deltaAcc > 1.0)
-			{
-				deltaAcc = 0;
-				LogInfo("> FPS: %.1lf", pRuntime->GetCurrentUps());
-			}
-
-			TransformComponent& transform = gpWorld->Get<TransformComponent>(gpCamera);
-			transform.rotation *= Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, 1.0f * delta);
 		}
 
 		struct TestEvent
@@ -79,15 +62,26 @@ namespace Quartz
 			uInt32 value;
 		};
 
-		void QUARTZ_ENGINE_API SystemInit()
+		bool moveForward	= false;
+		bool moveBackward	= false;
+		bool moveLeft		= false;
+		bool moveRight		= false;
+
+		bool captured		= false;
+
+		void QUARTZ_ENGINE_API ModuleInit()
 		{
 			LogInfo("Starting Sandbox");
 
 			StartVulkan();
 
-			// TODO: Transition entity system to pointers
-			PlatformSingleton& platform = gpWorld->Get<PlatformSingleton>();
-			VulkanGraphics&    gfx      = gpWorld->Get<VulkanGraphics>();
+			EntityWorld& world	= Engine::GetWorld();
+			Input& input		= Engine::GetInput();
+			Runtime& runtime	= Engine::GetRuntime();
+
+			// TODO: Transition entity module to pointers
+			PlatformSingleton& platform = world.Get<PlatformSingleton>();
+			VulkanGraphics&    gfx      = world.Get<VulkanGraphics>();
 
 			VkSurfaceFormatKHR format = {};
 			format.format		= VK_FORMAT_B8G8R8A8_SRGB;
@@ -101,10 +95,10 @@ namespace Quartz
 
 			WindowInfo		windowInfo		= { "QuartzEngine 2 - Sandbox", 1280, 720, 100, 100, WINDOW_WINDOWED };
 			SurfaceInfo		surfaceInfo		= { SURFACE_API_VULKAN, &apiInfo };
-			Window*			pWindow			= platform.pApplication->CreateWindow(windowInfo, surfaceInfo);
+							gpWindow		= platform.pApplication->CreateWindow(windowInfo, surfaceInfo);
 
 			// TEMP
-			gfx.pSurface = gfx.pResourceManager->CreateSurface(gfx.pPrimaryDevice, gfx.vkInstance, *(VulkanApiSurface*)pWindow->GetSurface());
+			gfx.pSurface = gfx.pResourceManager->CreateSurface(gfx.pPrimaryDevice, gfx.vkInstance, *(VulkanApiSurface*)gpWindow->GetSurface());
 
 			ModelData triData
 			{
@@ -137,7 +131,7 @@ namespace Quartz
 					7, 6, 5,  7, 5, 4,		// Back
 					4, 5, 1,  4, 1, 0,		// Left
 					1, 5, 6,  1, 6, 2,		// Top
-					0, 5, 6,  0, 6, 3,		// Bottom
+					0, 7, 4,  0, 3, 7,		// Bottom
 
 				}
 			};
@@ -171,29 +165,117 @@ namespace Quartz
 			MeshComponent renderable1("simpleTri", triData);
 			MeshComponent renderable2("simpleCube", cubeData);
 
-			Entity cube = gpWorld->CreateEntity(transform0, renderable2, material1);
-			Entity tri	= gpWorld->CreateEntity(transform1, renderable1, material2);
+			Entity cube = world.CreateEntity(transform0, renderable2, material1);
+			Entity tri	= world.CreateEntity(transform1, renderable1, material2);
 
 			CameraComponent camera(70.0f, 0.001f, 1000.f);
 			TransformComponent cameraTransform({ 0.0f, 0.0f, -2.0f }, { { 0.0f, 0.0f, 0.0f }, 0.0f }, { 1.0f, 1.0f, 1.0f });
-			gpCamera = gpWorld->CreateEntity(camera, cameraTransform);
+			gpCamera = world.CreateEntity(camera, cameraTransform);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
-			pRenderer->Register(gpRuntime);
+			pRenderer->Register(&runtime);
 			pRenderer->Initialize(&gfx);
 			pRenderer->SetCamera(gpCamera);
 
-			gpRuntime->SetTargetUps(350);
-			gpRuntime->RegisterOnUpdate(OnUpdate);
+			runtime.SetTargetUps(350);
 
-			gpRuntime->RegisterOnEvent<TestEvent>(
+			runtime.RegisterOnUpdate(
+				[](Runtime* pRuntime, double delta)
+				{
+					static double deltaAcc = 0;
+					deltaAcc += delta;
+
+					if (deltaAcc > 1.0)
+					{
+						deltaAcc = 0;
+						LogInfo("> FPS: %.1lf", pRuntime->GetCurrentUps());
+					}
+
+					TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
+
+					float speed = 1.0f;
+
+					if(moveForward)
+						transform.position += transform.GetForward() * speed * delta;
+
+					if (moveBackward)
+						transform.position += transform.GetBackward() * speed * delta;
+
+					if (moveLeft)
+						transform.position += transform.GetLeft() * speed * delta;
+
+					if (moveRight)
+						transform.position += transform.GetRight() * speed * delta;
+				}
+			);
+
+			runtime.RegisterOnEvent<TestEvent>(
 				[](Runtime* pRuntime, const TestEvent& event)
 				{
 					LogSuccess("Lambdas!");
 				}
 			);
 
-			gpRuntime->Trigger(TestEvent{}, false);
+			runtime.Trigger(TestEvent{}, false);
+
+			input.MapMouseAxis("MouseLook",			INPUT_MOUSE_ANY,				INPUT_ACTION_MOVE);
+
+			input.MapKeyboardButton("MoveForward",	INPUT_KEYBOARD_ANY, 17 /* W */, INPUT_ACTION_ANY);
+			input.MapKeyboardButton("MoveForward",	INPUT_KEYBOARD_ANY, 72 /* ^ */, INPUT_ACTION_ANY);
+			input.MapKeyboardButton("MoveBackward",	INPUT_KEYBOARD_ANY, 31 /* S */, INPUT_ACTION_ANY);
+			input.MapKeyboardButton("MoveBackward",	INPUT_KEYBOARD_ANY, 80 /* v */, INPUT_ACTION_ANY);
+			input.MapKeyboardButton("MoveLeft",		INPUT_KEYBOARD_ANY, 30 /* A */, INPUT_ACTION_ANY);
+			input.MapKeyboardButton("MoveLeft",		INPUT_KEYBOARD_ANY, 75 /* < */, INPUT_ACTION_ANY);
+			input.MapKeyboardButton("MoveRight",	INPUT_KEYBOARD_ANY, 32 /* D */, INPUT_ACTION_ANY);
+			input.MapKeyboardButton("MoveRight",	INPUT_KEYBOARD_ANY, 77 /* > */, INPUT_ACTION_ANY);
+
+			input.MapKeyboardButton("Interact",		INPUT_KEYBOARD_ANY, 18 /* E */, INPUT_ACTION_RELEASED);
+
+			input.RegisterOnAxisInput("MouseLook",
+				[](Vec2f direction, InputActions actions)
+				{
+					float upSpeed = 1.0f;
+					float rightSpeed = 1.0f;
+
+					Input& input = Engine::GetInput();
+					Runtime& runtime = Engine::GetRuntime();
+
+					TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
+					transform.rotation *= Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, direction.x * upSpeed * runtime.GetUpdateDelta());
+					transform.rotation *= Quatf().SetAxisAngle(transform.GetRight(), direction.y * -rightSpeed * runtime.GetUpdateDelta());
+				}
+			);
+
+			input.RegisterOnButtonInput("MoveForward",
+				[](float value, InputActions actions) { moveForward = actions & INPUT_ACTION_DOWN; }
+			);
+
+			input.RegisterOnButtonInput("MoveBackward",
+				[](float value, InputActions actions) { moveBackward = actions & INPUT_ACTION_DOWN; }
+			);
+
+			input.RegisterOnButtonInput("MoveLeft",
+				[](float value, InputActions actions) { moveLeft = actions & INPUT_ACTION_DOWN; }
+			);
+
+			input.RegisterOnButtonInput("MoveRight",
+				[](float value, InputActions actions) { moveRight = actions & INPUT_ACTION_DOWN; }
+			);
+
+			input.RegisterOnButtonInput("Interact",
+				[](float value, InputActions actions)
+				{
+					Input& input = Engine::GetInput();
+				
+					LogSuccess("Capturing!");
+
+					captured = !captured;
+
+					const InputMouse& mouse = Engine::GetDeviceRegistry().GetDevices()[0];
+					//input.SetMouseHidden(*gpWindow, mouse, captured);
+					input.SetMouseBounds(*gpWindow, mouse, gpWindow->GetBounds(), captured);
+				}
+			);
 		}
 
 	}

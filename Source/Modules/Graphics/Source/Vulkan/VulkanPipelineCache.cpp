@@ -17,7 +17,7 @@ namespace Quartz
 		pipelineInfo.attachments			= attachments;
 		pipelineInfo.vkTopology				= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		pipelineInfo.vkPolygonMode			= VK_POLYGON_MODE_FILL;
-		pipelineInfo.vkCullMode				= VK_CULL_MODE_BACK_BIT;
+		pipelineInfo.vkCullMode				= VK_CULL_MODE_NONE;
 		pipelineInfo.vkFrontFace			= VK_FRONT_FACE_CLOCKWISE;
 		pipelineInfo.lineWidth				= 1.0f;
 		pipelineInfo.multisamples			= VK_SAMPLE_COUNT_1_BIT;

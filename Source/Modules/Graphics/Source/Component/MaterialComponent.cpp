@@ -14,6 +14,4 @@ namespace Quartz
 		vertexURIHash = Hash(vertexURI);
 		fragmentURIHash = Hash(fragmentURI);
 	}
-
-
 }

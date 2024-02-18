@@ -58,10 +58,15 @@ namespace Quartz
 				return false;
 			}
 
-			ComponentStorage<Component>& storage = 
-				*static_cast<ComponentStorage<Component>*>(mStorageSets[typeIndex]);
+			ComponentStorage<Component>* pStorage = 
+				static_cast<ComponentStorage<Component>*>(mStorageSets[typeIndex]);
 
-			return storage.Contains(entity);
+			if (!pStorage)
+			{
+				return false;
+			}
+
+			return pStorage->Contains(entity);
 		}
 
 		template<typename Component>

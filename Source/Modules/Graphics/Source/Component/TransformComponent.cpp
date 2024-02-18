@@ -35,7 +35,7 @@ namespace Quartz
 
     Vec3f TransformComponent::GetRight()
     {
-        return rotation * Vec3f( -1.0f, 0.0f, 1.0f );
+        return rotation * Vec3f( -1.0f, 0.0f, 0.0f );
     }
 
     Vec3f TransformComponent::GetUp()
@@ -61,6 +61,15 @@ namespace Quartz
             Mat4f().SetRotation(rotation)) *
             Mat4f().SetTranslation(position);
 #endif
+    }
+
+    Mat4f TransformComponent::GetViewMatrix()
+    {       
+        return
+            Mat4f().SetTranslation(position) *
+            Mat4f().SetRotation(rotation) *
+            Mat4f().SetScale(scale);
+
     }
 }
 

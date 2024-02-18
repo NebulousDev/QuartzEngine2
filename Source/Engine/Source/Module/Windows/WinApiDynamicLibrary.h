@@ -1,4 +1,4 @@
-#include "System/DynamicLibrary.h"
+#include "Module/DynamicLibrary.h"
 
 #include "WinApi.h"
 

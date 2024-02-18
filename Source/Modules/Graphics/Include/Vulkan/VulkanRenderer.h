@@ -8,6 +8,9 @@
 #include "VulkanSwapchainTimer.h"
 #include "VulkanBufferWriter.h"
 
+#include "Component/CameraComponent.h"
+#include "Component/TransformComponent.h"
+
 #include "Math/Math.h"
 
 namespace Quartz
@@ -31,12 +34,18 @@ namespace Quartz
 		VulkanImage*			mDepthImages[3];
 		VulkanImageView*		mDepthImageViews[3];
 
+		Entity					mCameraEntity;
+		CameraComponent*		mpCameraComponent;
+		TransformComponent*		mpCameraTransformComponent;
+
 	public:
 		void Initialize(VulkanGraphics* pGraphics);
 
-		void UpdateAll(EntityWorld* pEntityWorld);
+		void SetCamera(Entity cameraEntity);
+
+		void UpdateAll(EntityWorld* pWorld);
 		void WriteCommandBuffer(VulkanCommandRecorder* pRecorder);
-		void RenderScene(EntityWorld* pEntityWorld);
+		void RenderScene(EntityWorld* pWorld);
 
 		void RenderUpdate(Runtime* pRuntime, double delta);
 		void Register(Runtime* pRuntime);

@@ -1,6 +1,6 @@
-#include "System/LibraryLoader.h"
+#include "Module/LibraryLoader.h"
 
-#include "System/Windows/WinApiDynamicLibrary.h"
+#include "Module/Windows/WinApiDynamicLibrary.h"
 #include "Log.h"
 
 namespace Quartz

@@ -1,6 +1,7 @@
 #include "Vulkan/VulkanRenderer.h"
 
 #include "Log.h"
+#include "Engine.h"
 #include "Vulkan/VulkanGraphics.h"
 #include "Vulkan/Primatives/VulkanPipeline.h"
 #include "Vulkan/VulkanCommandRecorder.h"
@@ -133,10 +134,24 @@ namespace Quartz
 		pResources->CreateCommandBuffers(pRenderPool, 3, mCommandBuffers);
 	}
 
+	void VulkanRenderer::SetCamera(Entity cameraEntity)
+	{
+		if (!Engine::GetWorld().HasComponent<CameraComponent>(cameraEntity) ||
+			!Engine::GetWorld().HasComponent<TransformComponent>(cameraEntity))
+		{
+			return; // Error
+		}
+
+		mCameraEntity				= cameraEntity;
+		mpCameraComponent			= &Engine::GetWorld().Get<CameraComponent>(cameraEntity);
+		mpCameraTransformComponent	= &Engine::GetWorld().Get<TransformComponent>(cameraEntity);
+	}
+
 	struct PerModelUBO
 	{
 		Mat4f model;
 		Mat4f view;
+		Mat4f proj;
 	};
 
 	void VulkanRenderer::UpdateAll(EntityWorld* pWorld)
@@ -159,7 +174,8 @@ namespace Quartz
 
 			PerModelUBO perModelUbo = {};
 			perModelUbo.model	= transformComponent.GetMatrix();
-			perModelUbo.view	= Mat4f().SetTranslation({ 0.0f, 0.0f, -1.0f }) * Mat4f().SetPerspective(ToRadians(70.0f), (float)1280 / (float)720, 0.001f, 1000.0f);
+			perModelUbo.view	= mpCameraTransformComponent->GetViewMatrix();
+			perModelUbo.proj	= mpCameraComponent->GetProjectionMatrix(1280, 720);
 
 			mBufferCache.FillRenderablePerModelData(renderable, 0, &perModelUbo, sizeof(PerModelUBO));
 
@@ -323,7 +339,7 @@ namespace Quartz
 
 	void VulkanRenderer::RenderUpdate(Runtime* pRuntime, double delta)
 	{
-		RenderScene(mpGraphics->pEntityWorld);
+		RenderScene(&Engine::GetWorld());
 	}
 
 	void VulkanRenderer::Register(Runtime* pRuntime)

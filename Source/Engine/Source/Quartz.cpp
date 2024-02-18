@@ -1,14 +1,30 @@
+#include "Engine.h"
+
 #include "EngineAPI.h"
-
 #include "Sinks/Windows/WinApiConsoleSink.h"
-
-#include "Entity/World.h"
-#include "System/SystemAdmin.h"
-#include "System/LibraryLoader.h"
+#include "Module/LibraryLoader.h"
 
 #include "Banner.h"
 
 using namespace Quartz;
+
+class EngineImpl : public Engine
+{
+public:
+	Engine::mpWorld;
+	Engine::mpRuntime;
+	Engine::mpInput;
+	Engine::mpDeviceRegistry;
+	Engine::mpModuleRegistry;
+	Engine::mpLog;
+
+	inline void SetWorld(EntityWorld* pWorld) { mpWorld = pWorld; }
+	inline void SetRuntime(Runtime* pRuntime) { mpRuntime = pRuntime; }
+	inline void SetInput(Input* pInput) { mpInput = pInput; }
+	inline void SetDeviceRegistry(InputDeviceRegistry* pDeviceRegistry) { mpDeviceRegistry = pDeviceRegistry; }
+	inline void SetModuleRegistry(ModuleRegistry* pModuleRegistry) { mpModuleRegistry = pModuleRegistry; }
+	inline void SetLog(Log* pLog) { mpLog = pLog; }
+};
 
 int main()
 {
@@ -24,7 +40,7 @@ int main()
 	Log engineLog = Log({});
 #endif
 	
-	Log::SetGlobalLog(engineLog);
+	Log::SetInstance(engineLog);
 
 	PrintBanner();
 
@@ -32,7 +48,7 @@ int main()
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	/* Create Entity Databases */
+	/* Create Entity World */
 
 	EntityDatabase database;
 	EntityGraph graph(&database);
@@ -42,11 +58,38 @@ int main()
 
 	/* Create Runtime */
 
-	Runtime& runtime = world.CreateSingleton<Runtime>();
+	Runtime& runtime						= world.CreateSingleton<Runtime>();
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	/* Load Systems */
+	/* Create Input */
+
+	Input& input							= world.CreateSingleton<Input>();
+	InputDeviceRegistry& deviceRegistry		= world.CreateSingleton<InputDeviceRegistry>();
+
+	/////////////////////////////////////////////////////////////////////////////////
+
+	/* Create Module Admin */
+
+	ModuleRegistry& moduleRegistry			= world.CreateSingleton<ModuleRegistry>();
+
+	/////////////////////////////////////////////////////////////////////////////////
+
+	/* Create Engine */
+
+	EngineImpl engineImpl;
+	engineImpl.mpWorld			= &world;
+	engineImpl.mpRuntime		= &runtime;
+	engineImpl.mpInput			= &input;
+	engineImpl.mpDeviceRegistry = &deviceRegistry;
+	engineImpl.mpModuleRegistry	= &moduleRegistry;
+	engineImpl.mpLog			= &engineLog;
+
+	Engine::SetInstance(engineImpl);
+
+	/////////////////////////////////////////////////////////////////////////////////
+
+	/* Load Modules */
 
 #ifdef QUARTZENGINE_WINAPI 
 	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("Platform.dll");
@@ -58,14 +101,14 @@ int main()
 	DynamicLibrary* pSandboxLibrary  = LoadDynamicLibrary("libSandbox.so");
 #endif
 
-	System* pPlatformSystem = SystemAdmin::CreateAndRegisterSystem(pPlatformLibrary);
-	System* pGraphicsSystem = SystemAdmin::CreateAndRegisterSystem(pGraphicsLibrary);
-	System* pSandboxSystem  = SystemAdmin::CreateAndRegisterSystem(pSandboxLibrary);
+	Module* pPlatformModule = moduleRegistry.CreateAndRegisterModule(pPlatformLibrary);
+	Module* pGraphicsModule = moduleRegistry.CreateAndRegisterModule(pGraphicsLibrary);
+	Module* pSandboxModule  = moduleRegistry.CreateAndRegisterModule(pSandboxLibrary);
 
-	SystemAdmin::LoadAll(engineLog, world, runtime);
-	SystemAdmin::PreInitAll();
-	SystemAdmin::InitAll();
-	SystemAdmin::PostInitAll();
+	moduleRegistry.LoadAll(engineLog, Engine::GetInstance());
+	moduleRegistry.PreInitAll();
+	moduleRegistry.InitAll();
+	moduleRegistry.PostInitAll();
 
 	/////////////////////////////////////////////////////////////////////////////////
 
@@ -77,8 +120,8 @@ int main()
 
 	/* Shutdown */
 
-	SystemAdmin::UnloadAll();
-	SystemAdmin::DestroyAll();
+	moduleRegistry.UnloadAll();
+	moduleRegistry.DestroyAll();
 
 	return 0;
 }

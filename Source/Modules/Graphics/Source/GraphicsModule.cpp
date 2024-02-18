@@ -1,5 +1,6 @@
-#include "System/System.h"
+#include "Module/Module.h"
 
+#include "Engine.h"
 #include "EngineAPI.h"
 #include "Entity/World.h"
 #include "Log.h"
@@ -13,8 +14,6 @@
 
 namespace Quartz
 {
-	EntityWorld*		gpEntityWorld;
-	Runtime*			gpRuntime;
 	Graphics*			gpGraphics;
 	VulkanGraphics*		gpVulkanGraphics;
 
@@ -40,7 +39,7 @@ namespace Quartz
 
 	bool StartVulkan()
 	{
-		gpVulkanGraphics = &gpEntityWorld->CreateSingleton<VulkanGraphics>();
+		gpVulkanGraphics = &Engine::GetWorld().CreateSingleton<VulkanGraphics>();
 
 		if (gpVulkanGraphics->ready)
 		{
@@ -53,15 +52,13 @@ namespace Quartz
 			gpGraphics->activeApi = GRAPHICS_API_VULKAN;
 		}
 
-		gpVulkanGraphics->pEntityWorld = gpEntityWorld; // @TODO: find a better solution
-
 		return false;
 	}
 
 	bool StopVulkan()
 	{
 		gpVulkanGraphics->Destroy();
-		gpEntityWorld->DestroySingleton<VulkanGraphics>();
+		Engine::GetWorld().DestroySingleton<VulkanGraphics>();
 		return true;
 	}
 }
@@ -70,30 +67,29 @@ extern "C"
 {
 	using namespace Quartz;
 
-	bool QUARTZ_ENGINE_API SystemQuery(bool isEditor, Quartz::SystemQueryInfo& systemQuery)
+	bool QUARTZ_ENGINE_API ModuleQuery(bool isEditor, Quartz::ModuleQueryInfo& moduleQuery)
 	{
-		systemQuery.name = "GraphicsModule";
-		systemQuery.version = "1.0.0";
+		moduleQuery.name = "GraphicsModule";
+		moduleQuery.version = "1.0.0";
 
 		return true;
 	}
 
-	bool QUARTZ_ENGINE_API SystemLoad(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
+	bool QUARTZ_ENGINE_API ModuleLoad(Log& engineLog, Engine& engine)
 	{
-		Log::SetGlobalLog(engineLog);
-		gpEntityWorld = &entityWorld;
-		gpRuntime = &runtime;
+		Log::SetInstance(engineLog);
+		Engine::SetInstance(engine);
 		return true;
 	}
 
-	void QUARTZ_ENGINE_API SystemUnload()
+	void QUARTZ_ENGINE_API ModuleUnload()
 	{
 		gpVulkanGraphics->Destroy();
 	}
 
-	void QUARTZ_ENGINE_API SystemPreInit()
+	void QUARTZ_ENGINE_API ModulePreInit()
 	{
-		gpGraphics = &gpEntityWorld->CreateSingleton<Graphics>();
+		gpGraphics = &Engine::GetWorld().CreateSingleton<Graphics>();
 
 		/* Check API Availability */
 
@@ -113,7 +109,7 @@ extern "C"
 		}
 	}
 
-	void QUARTZ_ENGINE_API SystemInit()
+	void QUARTZ_ENGINE_API ModuleInit()
 	{
 		
 	}

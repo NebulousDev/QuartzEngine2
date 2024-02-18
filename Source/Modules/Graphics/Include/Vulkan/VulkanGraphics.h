@@ -29,7 +29,6 @@ namespace Quartz
 		VulkanDevice*				pPrimaryDevice;
 		Array<VulkanDevice>			devices;
 		VulkanResourceManager*		pResourceManager;
-		EntityWorld*				pEntityWorld;
 
 		//TEMP
 		VulkanSurface* pSurface;

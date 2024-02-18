@@ -132,6 +132,8 @@ namespace Quartz
 		double mCurrentUPS;
 		double mCurrentTPS;
 
+		double mUpdateDelta;
+
 		bool mRunning;
 
 	private:
@@ -358,5 +360,7 @@ namespace Quartz
 
 		inline double GetTargetUps() const { return mTargetUPS; }
 		inline double GetTargetTps() const { return mTargetUPS; }
+
+		inline double GetUpdateDelta() const { return mUpdateDelta; }
 	};
 }

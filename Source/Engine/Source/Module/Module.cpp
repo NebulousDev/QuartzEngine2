@@ -1,60 +1,60 @@
-#include "System/System.h"
+#include "Module/Module.h"
 
 namespace Quartz
 {
-	void System::SetLoaded(bool loaded)
+	void Module::SetLoaded(bool loaded)
 	{
 		mLoaded = loaded;
 	}
 
-	bool System::Query(bool isEditor, SystemQueryInfo& queryInfo)
+	bool Module::Query(bool isEditor, ModuleQueryInfo& queryInfo)
 	{
 		mQueryResult = mQueryFunc(isEditor, queryInfo);
 		return mQueryResult;
 	}
 
-	bool System::Load(Log& engineLog, EntityWorld& entityWorld, Runtime& runtime)
+	bool Module::Load(Log& engineLog, Engine& engine)
 	{
-		if(mLoadFunc) return mLoadFunc(engineLog, entityWorld, runtime);
+		if(mLoadFunc) return mLoadFunc(engineLog, engine);
 		return true;
 	}
 
-	void System::Unload()
+	void Module::Unload()
 	{
 		if (mUnloadFunc) mUnloadFunc();
 	}
 
-	void System::PreInit()
+	void Module::PreInit()
 	{
 		if (mPreInitFunc) mPreInitFunc();
 	}
 
-	void System::Init()
+	void Module::Init()
 	{
 		if (mInitFunc) mInitFunc();
 	}
 
-	void System::PostInit()
+	void Module::PostInit()
 	{
 		if (mPostInitFunc) mPostInitFunc();
 	}
 
-	void System::Shutdown()
+	void Module::Shutdown()
 	{
 		if (mShutdownFunc) mShutdownFunc();
 	}
 
-	System::System(
+	Module::Module(
 		DynamicLibrary*		pLibrary,
 		bool				queryResult,
-		SystemQueryInfo&	queryInfo,
-		SystemQueryFunc		queryFunc,
-		SystemLoadFunc		loadFunc,
-		SystemUnloadFunc	unloadFunc,
-		SystemPreInitFunc	preInitFunc,
-		SystemInitFunc		initFunc,
-		SystemPostInitFunc	postInitFunc,
-		SystemShutdownFunc	shutdownFunc
+		ModuleQueryInfo&	queryInfo,
+		ModuleQueryFunc		queryFunc,
+		ModuleLoadFunc		loadFunc,
+		ModuleUnloadFunc	unloadFunc,
+		ModulePreInitFunc	preInitFunc,
+		ModuleInitFunc		initFunc,
+		ModulePostInitFunc	postInitFunc,
+		ModuleShutdownFunc	shutdownFunc
 	) :
 		mpLibrary(pLibrary),
 		mQueryResult(queryResult),
@@ -69,32 +69,32 @@ namespace Quartz
 		mPostInitFunc(postInitFunc),
 		mShutdownFunc(shutdownFunc) { }
 
-	bool System::QuerySuccess() const
+	bool Module::QuerySuccess() const
 	{
 		return mQueryResult == true;
 	}
 
-	bool System::IsLoaded() const
+	bool Module::IsLoaded() const
 	{
 		return mLoaded;
 	}
 
-	const String& System::GetName() const
+	const String& Module::GetName() const
 	{
 		return mName;
 	}
 
-	const String& System::GetVersion() const
+	const String& Module::GetVersion() const
 	{
 		return mVersion;
 	}
 
-	const String& System::GetPath() const
+	const String& Module::GetPath() const
 	{
 		return mpLibrary->GetPath();
 	}
 
-	DynamicLibrary* System::GetLibrary()
+	DynamicLibrary* Module::GetLibrary()
 	{
 		return mpLibrary;
 	}
