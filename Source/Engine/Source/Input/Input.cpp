@@ -5,12 +5,13 @@ namespace Quartz
 	template<>
 	uInt32 Hash<Input::InputMapping>(const Input::InputMapping& value)
 	{
-		return Hash<uInt64>((uInt64)value.pDevice + ((uInt64)value.type << 24) + ((uInt64)value.input << 16) + 1);
+		return Hash<uInt64>(32101010123 + ((uInt64)value.type << 24) + ((uInt64)value.input << 16) + 1);
 	}
 
 	bool operator==(const Input::InputMapping& mapping0, const Input::InputMapping& mapping1)
 	{
-		return mapping0.pDevice == mapping1.pDevice &&
+		return ((mapping0.pDevice == mapping1.pDevice) || 
+			mapping0.pDevice == nullptr || mapping1.pDevice == nullptr) &&
 			mapping0.input == mapping1.input &&
 			mapping0.type == mapping1.type &&
 			(mapping0.actions & mapping1.actions);

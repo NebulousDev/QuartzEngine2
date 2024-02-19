@@ -10,6 +10,7 @@
 #include "PlatformAPI.h"
 #include "Platform.h"
 #include "Application.h"
+#include "Windows/RawInput.h"
 
 #ifdef QUARTZAPP_VULKAN
 #include <vulkan/vulkan.h>
@@ -38,6 +39,7 @@ namespace Quartz
 
 	Application*		gpApp;
 	PlatformSingleton*	gpPlatform;
+	RawInput			gRawInput;
 
 	void QuartzAppLogCallback(LogLevel level, const char* message)
 	{
@@ -111,7 +113,7 @@ namespace Quartz
 	void MouseMovedRelativeCallback(Window* pWindow, sSize relX, sSize relY)
 	{
 		//LogTrace("MOUSE MOVED: %d,%d - RELATIVE", relX, relY);
-		Engine::GetInput().SendAxisInput(INPUT_MOUSE_ANY, 0, INPUT_ACTION_MOVE, { (float)relX, (float)relY });
+		//Engine::GetInput().SendAxisInput(INPUT_MOUSE_ANY, 0, INPUT_ACTION_MOVE, { (float)relX, (float)relY });
 	}
 
 	void MouseEnteredCallback(Window* pWindow, bool entered)
@@ -121,7 +123,16 @@ namespace Quartz
 
 	void Update(Runtime* pRuntime, double delta)
 	{
+		gRawInput.PollInput();
 		gpApp->Update();
+	}
+
+	void Tick(Runtime* pRuntime, uSize tick)
+	{
+		if (tick == 0)
+		{
+			gRawInput.PollConnections();
+		}
 	}
 }
 
@@ -156,10 +167,11 @@ extern "C"
 
 		appInfo.appName     = "Quartz";
 		appInfo.version     = "2.0.0";
-		appInfo.windowApi   = WINDOW_API_GLFW;
+		appInfo.windowApi   = WINDOW_API_WINAPI;
 		appInfo.logCallback = QuartzAppLogCallback;
 
 		gpApp = CreateApplication(appInfo);
+		gpApp->UseRawInput(true);
 
 		gpPlatform = &Engine::GetWorld().CreateSingleton<PlatformSingleton>();
 		CreatePlatform(gpApp, gpPlatform);
@@ -169,8 +181,10 @@ extern "C"
 
 	void CreateDevices()
 	{
+		/*
 		InputDeviceInfo genericMouseInfo = {};
-		genericMouseInfo.deviceName		= "Generic Mouse";
+		genericMouseInfo.deviceName		= L"Generic Mouse";
+		genericMouseInfo.deviceVendor	= L"Unknown Vendor";
 		genericMouseInfo.deviceType		= INPUT_DEVICE_TYPE_MOUSE;
 		genericMouseInfo.buttonCount	= 2;
 		genericMouseInfo.axisCount		= 1;
@@ -217,6 +231,7 @@ extern "C"
 #endif
 
 		Engine::GetDeviceRegistry().RegisterDevice(genericMouseInfo, genericMouseCallbacks);
+		*/
 	}
 
 	void QUARTZ_PLATFORM_API ModuleInit()
@@ -234,8 +249,10 @@ extern "C"
 		gpApp->SetMouseMovedRelativeCallback(MouseMovedRelativeCallback);
 		gpApp->SetMouseEnteredCallback(MouseEnteredCallback);
 
-		CreateDevices();
+		gRawInput.Init();
+		gRawInput.PollConnections();
 
 		Engine::GetRuntime().RegisterOnUpdate(Update);
+		Engine::GetRuntime().RegisterOnTick(Tick);
 	}
 }

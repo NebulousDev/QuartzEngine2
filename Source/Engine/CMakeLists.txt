@@ -16,6 +16,7 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Module/ModuleRegistry.cpp"
     "Source/Module/DynamicLibrary.cpp"
     "Source/Runtime/Runtime.cpp"
+    "Source/Runtime/Timer.cpp"
     "Source/Input/Input.cpp"
     "Source/Input/InputDevice.cpp"
     "Source/Input/InputDeviceRegistry.cpp"

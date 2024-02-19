@@ -178,6 +178,7 @@ namespace Quartz
 			pRenderer->SetCamera(gpCamera);
 
 			runtime.SetTargetUps(350);
+			runtime.SetTargetTps(20);
 
 			runtime.RegisterOnUpdate(
 				[](Runtime* pRuntime, double delta)
@@ -209,15 +210,6 @@ namespace Quartz
 				}
 			);
 
-			runtime.RegisterOnEvent<TestEvent>(
-				[](Runtime* pRuntime, const TestEvent& event)
-				{
-					LogSuccess("Lambdas!");
-				}
-			);
-
-			runtime.Trigger(TestEvent{}, false);
-
 			input.MapMouseAxis("MouseLook",			INPUT_MOUSE_ANY,				INPUT_ACTION_MOVE);
 
 			input.MapKeyboardButton("MoveForward",	INPUT_KEYBOARD_ANY, 17 /* W */, INPUT_ACTION_ANY);
@@ -240,9 +232,12 @@ namespace Quartz
 					Input& input = Engine::GetInput();
 					Runtime& runtime = Engine::GetRuntime();
 
-					TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
-					transform.rotation *= Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, direction.x * upSpeed * runtime.GetUpdateDelta());
-					transform.rotation *= Quatf().SetAxisAngle(transform.GetRight(), direction.y * -rightSpeed * runtime.GetUpdateDelta());
+					if (captured)
+					{
+						TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
+						transform.rotation *= Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, direction.x * upSpeed * runtime.GetUpdateDelta());
+						transform.rotation *= Quatf().SetAxisAngle(transform.GetRight(), direction.y * -rightSpeed * runtime.GetUpdateDelta());
+					}
 				}
 			);
 
@@ -267,12 +262,15 @@ namespace Quartz
 				{
 					Input& input = Engine::GetInput();
 				
-					LogSuccess("Capturing!");
-
 					captured = !captured;
 
-					const InputMouse& mouse = Engine::GetDeviceRegistry().GetDevices()[0];
-					//input.SetMouseHidden(*gpWindow, mouse, captured);
+					if (captured)
+						LogSuccess("Capturing!");
+					else
+						LogSuccess("Uncapturing!");
+
+					const InputMouse& mouse = *Engine::GetDeviceRegistry().GetPrimaryMouse();
+					input.SetMouseHidden(*gpWindow, mouse, captured);
 					input.SetMouseBounds(*gpWindow, mouse, gpWindow->GetBounds(), captured);
 				}
 			);

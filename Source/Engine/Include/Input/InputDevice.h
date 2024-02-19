@@ -25,7 +25,9 @@ namespace Quartz
 
 	struct InputDeviceInfo
 	{
-		String			deviceName;
+		StringW			deviceName;
+		StringW			devicePath;
+		StringW			deviceVendor;
 		InputDeviceType	deviceType;
 		uInt32			axisCount;
 		uInt32			buttonCount;
@@ -49,7 +51,9 @@ namespace Quartz
 		InputDevice();
 		InputDevice(const InputDeviceInfo& deviceInfo, const InputDeviceCallbacks& callbacks);
 
-		inline const String&		GetDeviceName() const { return mDeviceInfo.deviceName; }
+		inline const StringW&		GetDeviceName() const { return mDeviceInfo.deviceName; }
+		inline const StringW&		GetDevicePath() const { return mDeviceInfo.devicePath; }
+		inline const StringW&		GetDeviceVendor() const { return mDeviceInfo.deviceVendor; }
 		inline InputDeviceType		GetDeviceType() const { return mDeviceInfo.deviceType; }
 		inline uInt32				GetAxisCount() const { return mDeviceInfo.axisCount; }
 		inline uInt32				GetButtonCount() const { return mDeviceInfo.buttonCount; }
