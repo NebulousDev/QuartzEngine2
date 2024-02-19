@@ -1,7 +1,6 @@
 #include "Runtime/Runtime.h"
 
-#include <chrono>
-
+#include "Runtime/Timer.h"
 #include "Log.h"
 
 namespace Quartz
@@ -170,44 +169,49 @@ namespace Quartz
 		mDirtyEventCount = 0;
 	}
 
-	uInt64 GetTimeNanoseconds()
-	{
-		auto& now = std::chrono::high_resolution_clock::now().time_since_epoch();
-		return std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
-	}
-
 	void Runtime::Start()
 	{
 		// Dont run more than one runtime
 		if (mRunning) return; 
 		mRunning = true;
 
-		constexpr uInt64 SECOND = 1000000000ll;
+		constexpr double SECOND = 1000000000.0;
 		
-		uInt64 currentTime				= 0;
-		uInt64 lastTime					= 0;
-		uInt64 deltaTime				= 0;
-		uInt64 accumulatedTime			= 0;
-		uInt64 accumulatedTickTime		= 0;
-		uInt64 accumulatedUpdateTime	= 0;
+		double deltaTime				= 0;
+		double accumulatedTime			= 0;
+		double accumulatedTickTime		= 0;
+		double accumulatedUpdateTime	= 0;
 		uInt64 accumulatedUpdates		= 0;
 		uInt64 accumulatedTicks			= 0;
 
-		uInt64 targetTickTime   = SECOND / (mTargetTPS);
-		uInt64 targetUpdateTime = SECOND / (mTargetUPS);
+		double targetTickTime   = SECOND / (double)mTargetTPS;
+		double targetUpdateTime = SECOND / (double)mTargetUPS;
 
-		currentTime = GetTimeNanoseconds();
-		lastTime = currentTime;
+		Timer timer;
+		timer.Start();
 
 		while (mRunning)
 		{
-			currentTime			= GetTimeNanoseconds();
-			deltaTime			= currentTime - lastTime;
-			lastTime			= currentTime;
+			deltaTime				= timer.Mark();
 
 			accumulatedTime			+= deltaTime;
 			accumulatedUpdateTime	+= deltaTime;
 			accumulatedTickTime		+= deltaTime;
+
+			if (accumulatedTickTime >= targetTickTime)
+			{
+				TickAll(accumulatedTicks);
+				accumulatedTicks++;
+				accumulatedTickTime = 0;
+			}
+
+			if (accumulatedUpdateTime >= targetUpdateTime)
+			{
+				mUpdateDelta = accumulatedUpdateTime / SECOND;
+				UpdateAll(mUpdateDelta);
+				accumulatedUpdates++;
+				accumulatedUpdateTime = 0;
+			}
 
 			if (accumulatedTime >= SECOND)
 			{
@@ -217,21 +221,6 @@ namespace Quartz
 				accumulatedTime = 0;
 				accumulatedTicks = 0;
 				accumulatedUpdates = 0;
-			}
-
-			if (accumulatedTickTime >= targetTickTime)
-			{
-				accumulatedTicks++;
-				TickAll(accumulatedTicks - 1);
-				accumulatedTickTime = 0;
-			}
-
-			if (accumulatedUpdateTime >= targetUpdateTime)
-			{
-				accumulatedUpdates++;
-				mUpdateDelta = (double)accumulatedUpdateTime / (double)SECOND;
-				UpdateAll(mUpdateDelta);
-				accumulatedUpdateTime = 0;
 			}
 
 			if (mDeferredEvents.Size() > 0)
