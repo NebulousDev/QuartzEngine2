@@ -22,10 +22,6 @@
 *.dylib
 *.dll
 
-# Fortran module files
-*.mod
-*.smod
-
 # Compiled Static libraries
 *.lai
 *.la
@@ -63,6 +59,5 @@ _deps
 #########################
 #     Build Ignores     #
 #########################
-
 [Bb]uild/
 [Bb]inary/

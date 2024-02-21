@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.25.0)
 
+set (CMAKE_SYSTEM_VERSION 10.0.19041.0)
+
 project(PlatformSystem)
 
 include(GNUInstallDirs)
@@ -10,7 +12,8 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/PlatformModule.cpp"
 	"Source/Windows/WinApi.cpp"
 	"Source/Windows/WinApiPlatform.cpp"
- "Source/Windows/RawInput.cpp" "Include/Windows/RawInput.h")
+	"Source/Windows/RawInput.cpp"
+)
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

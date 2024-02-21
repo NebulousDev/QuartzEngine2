@@ -4,6 +4,7 @@
 #include "Entity/World.h"
 #include "Input/Input.h"
 #include "Runtime/Runtime.h"
+#include "Runtime/Timer.h"
 #include "Types/Array.h"
 #include "Log.h"
 

@@ -125,6 +125,7 @@ namespace Quartz
 		VkInstance vkInstance;
 
 		VkApplicationInfo vkAppInfo = {};
+		vkAppInfo.sType				= VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		vkAppInfo.apiVersion		= VK_API_VERSION_1_2;
 		vkAppInfo.pEngineName		= "Quartz Engine 2";
 		vkAppInfo.pApplicationName	= "Quartz Sandbox";
@@ -451,6 +452,7 @@ namespace Quartz
 		VkInstance vkInstance;
 
 		VkApplicationInfo vkAppInfo = {};
+		vkAppInfo.sType				= VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		vkAppInfo.apiVersion		= version;
 		vkAppInfo.pEngineName		= "Quartz Vulkan Test";
 		vkAppInfo.pApplicationName	= "Quartz Vulkan Test";
@@ -474,68 +476,74 @@ namespace Quartz
 #endif
 
 		VkInstanceCreateInfo vkInstanceInfo		= {};
+		vkInstanceInfo.sType					= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		vkInstanceInfo.pApplicationInfo			= &vkAppInfo;
 		vkInstanceInfo.enabledExtensionCount	= extentions.Size();
 		vkInstanceInfo.ppEnabledExtensionNames	= extentions.Data();
 		vkInstanceInfo.enabledLayerCount		= 0;
 
 #if DEBUG_EXT
-		vkInstanceInfo.pNext					= (VkDebugUtilsMessengerCreateInfoEXT*)&vkDebugMessengerInfo;
+		vkInstanceInfo.pNext					= &vkDebugMessengerInfo;
 #else
 		vkInstanceInfo.pNext					= nullptr;
 #endif
 
 		VkResult result = vkCreateInstance(&vkInstanceInfo, nullptr, &vkInstance);
 
-		if (vkGetInstanceProcAddr(vkInstance, "vkEnumerateInstanceVersion") != nullptr)
+		if (result == VK_SUCCESS)
 		{
-			uInt32 apiVersion = 0;
-			if (vkEnumerateInstanceVersion(&apiVersion) == VK_SUCCESS)
+			if (vkGetInstanceProcAddr(vkInstance, "vkEnumerateInstanceVersion") != nullptr)
 			{
-				uInt32 major = VK_API_VERSION_MAJOR(apiVersion);
-				uInt32 minor = VK_API_VERSION_MINOR(apiVersion);
-				uInt32 patch = VK_API_VERSION_PATCH(apiVersion);
-
-				if (apiVersion != version)
+				uInt32 apiVersion = 0;
+				if (vkEnumerateInstanceVersion(&apiVersion) == VK_SUCCESS)
 				{
-					uInt32 reqMajor = VK_API_VERSION_MAJOR(version);
-					uInt32 reqMinor = VK_API_VERSION_MINOR(version);
-					uInt32 reqpatch = VK_API_VERSION_PATCH(version);
+					uInt32 major = VK_API_VERSION_MAJOR(apiVersion);
+					uInt32 minor = VK_API_VERSION_MINOR(apiVersion);
+					uInt32 patch = VK_API_VERSION_PATCH(apiVersion);
 
-					if (major >= reqMajor)
-						goto versionSuccess;
+					if (apiVersion != version)
+					{
+						uInt32 reqMajor = VK_API_VERSION_MAJOR(version);
+						uInt32 reqMinor = VK_API_VERSION_MINOR(version);
+						uInt32 reqpatch = VK_API_VERSION_PATCH(version);
 
-					if (minor >= reqMinor)
-						goto versionSuccess;
+						if (major >= reqMajor)
+							goto versionSuccess;
 
-					if (patch >= reqpatch)
-						goto versionSuccess;
+						if (minor >= reqMinor)
+							goto versionSuccess;
 
-					LogFail("Vulkan VersionTest failed. Requested version %d.%d.%d, found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
+						if (patch >= reqpatch)
+							goto versionSuccess;
 
+						LogFail("Vulkan VersionTest failed. Requested version %d.%d.%d, found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
+
+						return false;
+
+					versionSuccess:
+						LogSuccess("Vulkan VersionTest Succeeded. Requested version %d.%d.%d, found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
+
+						return true;
+					}
+				}
+				else
+				{
+					LogFail("Vulkan VersionTest failed failed. vkEnumerateInstanceVersion returned false.");
 					return false;
-
-				versionSuccess:
-					LogSuccess("Vulkan VersionTest Succeeded. Requested version %d.%d.%d, found driver version %d.%d.%d", reqMajor, reqMinor, reqpatch, major, minor, patch);
-
-					return true;
 				}
 			}
 			else
 			{
-				LogFail("Vulkan VersionTest failed failed. vkEnumerateInstanceVersion returned false.");
+				LogFail("Vulkan VersionTest failed failed. vkGetInstanceProcAddr failed to retrieve vkEnumerateInstanceVersion. Vulkan version is too low.");
 				return false;
 			}
-		}
-		else
-		{
-			LogFail("Vulkan VersionTest failed failed. vkGetInstanceProcAddr failed to retrieve vkEnumerateInstanceVersion. Vulkan version is too low.");
-			return false;
+
+			vkDestroyInstance(vkInstance, nullptr);
+			
+			return true;
 		}
 
-		vkDestroyInstance(vkInstance, nullptr);
-
-		return result == VK_SUCCESS;
+		return false;
 	}
 
 	bool VulkanGraphics::Create()

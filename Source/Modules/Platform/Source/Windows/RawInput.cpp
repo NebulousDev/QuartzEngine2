@@ -4,6 +4,8 @@
 #include "Types/Array.h"
 #include "Log.h"
 
+#include "Runtime/Timer.h"
+
 #include <initguid.h>
 #include <Cfgmgr32.h>
 #include <Devpkey.h>

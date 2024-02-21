@@ -293,7 +293,7 @@ namespace Quartz
 		vulkanImage.layers			= info.layers;
 		vulkanImage.mips			= info.mips;
 
-		Register(vulkanImage);
+		return Register(vulkanImage);
 	}
 
 	VkResult CreateVkImageView(VkDevice vkDevice, VkImageView* pVkImageView, VkImage vkImage,

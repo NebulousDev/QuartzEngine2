@@ -1,10 +1,11 @@
 #pragma once
 
+#include "../EngineAPI.h"
 #include <chrono>
 
 namespace Quartz
 {
-	class Timer
+	class QUARTZ_ENGINE_API Timer
 	{
 	private:
 		using ClockType = std::chrono::steady_clock;

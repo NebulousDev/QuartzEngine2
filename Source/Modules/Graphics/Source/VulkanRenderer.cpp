@@ -98,6 +98,11 @@ namespace Quartz
 			attachments, vertexAttributes, vertexBindings
 		);
 
+		if (!mpDefaultPipeline)
+		{
+			LogFatal("Failed to create Pipeline!");
+		}
+
 		for (uSize i = 0; i < 3; i++)
 		{
 			VulkanImageInfo depthImageInfo = {};
@@ -111,6 +116,7 @@ namespace Quartz
 			depthImageInfo.mips			= 1;
 
 			mDepthImages[i] = pResources->CreateImage(pDevice, depthImageInfo);
+			LogInfo("Image %p", mDepthImages[i]);
 
 			VulkanImageViewInfo depthImageViewInfo = {};
 			depthImageViewInfo.pImage			= mDepthImages[i];
@@ -123,6 +129,7 @@ namespace Quartz
 			depthImageViewInfo.mipCount			= 1;
 
 			mDepthImageViews[i] = pResources->CreateImageView(pDevice, depthImageViewInfo);
+			LogInfo("View %p", mDepthImageViews[i]);
 		}
 
 		VulkanCommandPoolInfo renderPoolInfo = {};

@@ -55,6 +55,16 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     },
     {
+      "name": "quartz-x64-win-release-w-debug",
+      "displayName": "Quartz x64 - Release w/ Debug (Windows)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
+    },
+    {
       "name": "quartz-x86-win-debug",
       "displayName": "Quartz x86 - Debug (Windows)",
       "inherits": "windows-base",
@@ -73,6 +83,16 @@
         "strategy": "external"
       },
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "quartz-x86-win-release-w-debug",
+      "displayName": "Quartz x86 - Release w/ Debug (Windows)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
     },
 
     {
