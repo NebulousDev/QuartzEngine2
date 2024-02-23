@@ -8,14 +8,14 @@ namespace Quartz
 		// Nothing
 	}
 
-	CameraComponent::CameraComponent(float fovDeg, float nearPlane, float farPlane) :
-		fov(fovDeg), near(nearPlane), far(farPlane)
+	CameraComponent::CameraComponent(float width, float height, float fovDeg, float nearPlane, float farPlane) :
+		fov(fovDeg), near(nearPlane), far(farPlane), width(width), height(height)
 	{
 		// Nothing
 	}
 
-	Mat4f CameraComponent::GetProjectionMatrix(float width, float hight)
+	Mat4f CameraComponent::GetProjectionMatrix()
 	{
-		return Mat4f().SetPerspective(ToRadians(fov), width / hight, near, far);
+		return Mat4f().SetPerspective(ToRadians(fov), width / height, near, far);
 	}
 }

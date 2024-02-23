@@ -1345,6 +1345,8 @@ namespace Quartz
 
 			ppOutCommandBuffers[i] = Register(vulkanCommandBuffer);
 		}
+
+		return true;
 	}
 
 	VulkanFramebuffer* VulkanResourceManager::CreateFramebuffer(VulkanDevice* pDevice, const VulkanFramebufferInfo& info)

@@ -13,6 +13,8 @@
 
 #include "Math/Math.h"
 
+#include "../TerrainRenderer.h"
+
 namespace Quartz
 {
 	class QUARTZ_GRAPHICS_API VulkanRenderer
@@ -37,6 +39,8 @@ namespace Quartz
 		Entity					mCameraEntity;
 		CameraComponent*		mpCameraComponent;
 		TransformComponent*		mpCameraTransformComponent;
+
+		VulkanTerrainRenderer	mTerrainRenderer;
 
 	public:
 		void Initialize(VulkanGraphics* pGraphics);

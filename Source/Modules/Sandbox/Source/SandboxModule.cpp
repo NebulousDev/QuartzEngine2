@@ -142,8 +142,8 @@ namespace Quartz
 				}
 			};
 
-			TerrainRenderer terrainRenderer;
-			ModelData terrainData = terrainRenderer.CreateTerrainChunkMesh(250);
+			//VulkanTerrainRenderer terrainRenderer;
+			//ModelData terrainData = terrainRenderer.CreateChunkMesh(250);
 
 			TransformComponent transformCube
 			(
@@ -186,15 +186,15 @@ namespace Quartz
 
 			MeshComponent renderable1("simpleTri", triData);
 			MeshComponent renderable2("simpleCube", cubeData);
-			MeshComponent renderable3("terrain", terrainData);
-			TerrainComponent terrainComponent;
+			//MeshComponent renderable3("terrain", terrainData);
+			//TerrainComponent terrainComponent;
 
 			Entity cube = world.CreateEntity(transformCube, renderable2, material1);
 			//Entity tri	= world.CreateEntity(transformTri, renderable1, material2);
-			Entity terr = world.CreateEntity(transformTerrain, renderable3, material3, terrainComponent);
+			//Entity terr = world.CreateEntity(transformTerrain, renderable3, material3, terrainComponent);
 
-			CameraComponent camera(70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ 0.0f, -14.0f, 0.0f }, { { 0.0f, 0.0f, 0.0f }, 0.0f }, { 1.0f, 1.0f, 1.0f });
+			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
+			TransformComponent cameraTransform({ -10.0f, -14.0f, 0.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(180.0f)}, {1.0f, 1.0f, 1.0f});
 			gpCamera = world.CreateEntity(camera, cameraTransform);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
@@ -219,7 +219,7 @@ namespace Quartz
 
 					TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
 
-					float speed = 1.0f;
+					float speed = 15.0f;
 
 					if(moveForward)
 						transform.position += transform.GetForward() * speed * delta;

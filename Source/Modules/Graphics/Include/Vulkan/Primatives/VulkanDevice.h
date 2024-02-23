@@ -1,11 +1,10 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include "VulkanPhysicalDevice.h"
 
 namespace Quartz
 {
-	struct VulkanPhysicalDevice;
-
 	struct VulkanDevice
 	{
 		VkDevice				vkDevice;

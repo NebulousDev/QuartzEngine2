@@ -13,9 +13,12 @@ namespace Quartz
 		float near;
 		float far;
 
-		CameraComponent();
-		CameraComponent(float fovDeg, float nearPlane, float farPlane);
+		float width;
+		float height;
 
-		Mat4f GetProjectionMatrix(float width, float hight);
+		CameraComponent();
+		CameraComponent(float width, float height, float fovDeg, float nearPlane, float farPlane);
+
+		Mat4f GetProjectionMatrix();
 	};
 }
