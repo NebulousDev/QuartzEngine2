@@ -16,6 +16,6 @@ namespace Quartz
 
 	Mat4f CameraComponent::GetProjectionMatrix(float width, float hight)
 	{
-		return Mat4f().SetPerspective(fov, width / hight, near, far);
+		return Mat4f().SetPerspective(ToRadians(fov), width / hight, near, far);
 	}
 }

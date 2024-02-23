@@ -51,6 +51,7 @@ namespace Quartz
 		LogInfo("Compiling Shader '%s'...", filepath.Str());
 
 		options.SetOptimizationLevel(shaderc_optimization_level_performance);
+		options.SetGenerateDebugInfo();
 
 		shaderc::SpvCompilationResult module =
 			compiler.CompileGlslToSpv(source, kind, "shaderc-shader", options);

@@ -18,57 +18,49 @@ namespace Quartz
         // Nothing
     }
 
-    Vec3f TransformComponent::GetForward()
+    Vec3f TransformComponent::GetForward() const
     {
         return rotation * Vec3f( 0.0f, 0.0f, 1.0f );
     }
 
-    Vec3f TransformComponent::GetBackward()
+    Vec3f TransformComponent::GetBackward() const
     {
         return rotation * Vec3f( 0.0f, 0.0f, -1.0f );
     }
 
-    Vec3f TransformComponent::GetLeft()
-    {
-        return rotation * Vec3f( 1.0f, 0.0f, 0.0f );
-    }
-
-    Vec3f TransformComponent::GetRight()
+    Vec3f TransformComponent::GetLeft() const
     {
         return rotation * Vec3f( -1.0f, 0.0f, 0.0f );
     }
 
-    Vec3f TransformComponent::GetUp()
+    Vec3f TransformComponent::GetRight() const
+    {
+        return rotation * Vec3f( 1.0f, 0.0f, 0.0f );
+    }
+
+    Vec3f TransformComponent::GetUp() const
     {
         return rotation * Vec3f( 0.0f, 1.0f, 1.0f );
     }
 
-    Vec3f TransformComponent::GetDown()
+    Vec3f TransformComponent::GetDown() const
     {
         return rotation * Vec3f( 0.0f, -1.0f, 1.0f );
     }
 
-    Mat4f TransformComponent::GetMatrix()
+    Mat4f TransformComponent::GetMatrix() const
     {
-#if 0
-        return 
-            Mat4f().SetTranslation(position) *
-            Mat4f().SetRotation(rotation) *
-            Mat4f().SetScale(scale);
-#else
         return
-            (Mat4f().SetScale(scale) *
-            Mat4f().SetRotation(rotation)) *
+            Mat4f().SetScale(scale) *
+            Mat4f().SetRotation(rotation) *
             Mat4f().SetTranslation(position);
-#endif
     }
 
-    Mat4f TransformComponent::GetViewMatrix()
+    Mat4f TransformComponent::GetViewMatrix() const
     {       
         return
             Mat4f().SetTranslation(position) *
-            Mat4f().SetRotation(rotation) *
-            Mat4f().SetScale(scale);
+            Mat4f().SetRotation(rotation);
 
     }
 }

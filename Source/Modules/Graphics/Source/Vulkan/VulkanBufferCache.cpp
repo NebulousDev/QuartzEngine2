@@ -482,8 +482,8 @@ namespace Quartz
 		}
 
 		renderable.meshLocation = meshBufferLocation;
-		renderable.indexStart	= meshBufferLocation.indexEntry.offset;
-		renderable.indexCount	= meshBufferLocation.indexEntry.sizeBytes;
+		renderable.indexStart	= meshBufferLocation.indexEntry.offset / sizeof(float);
+		renderable.indexCount	= meshBufferLocation.indexEntry.sizeBytes / sizeof(uInt16);
 	}
 
 	void VulkanBufferCache::FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes)

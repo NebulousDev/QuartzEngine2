@@ -28,5 +28,8 @@ namespace Quartz
 		float					distance;
 		uInt32					indexStart;
 		uInt32					indexCount;
+
+		//temp
+		bool					isTerrain;
 	};
 }

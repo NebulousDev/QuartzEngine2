@@ -132,7 +132,7 @@ namespace Quartz
 	{
 		if (tick == 0)
 		{
-			gRawInput.PollConnections();
+			//gRawInput.PollConnections();
 		}
 	}
 }

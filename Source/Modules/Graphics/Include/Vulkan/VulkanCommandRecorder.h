@@ -45,12 +45,20 @@ namespace Quartz
 		VkImageMemoryBarrier*	pImageMemoryBarriers;
 	};
 
-	struct VulkanUniformBind
+	struct VulkanUniformBufferBind
 	{
 		uInt32			binding;
 		VulkanBuffer*	pBuffer;
 		uSize			offset;
 		uSize			range;
+	};
+
+	struct VulkanUniformImageBind
+	{
+		uInt32				binding;
+		VkSampler			vkSampler;
+		VulkanImageView*	pImageView;
+		VkImageLayout		vkLayout;
 	};
 
 	struct VulkanBufferBind
@@ -70,6 +78,8 @@ namespace Quartz
 		void BeginRecording();
 		void EndRecording();
 
+		void Reset();
+
 		void BeginRenderpass(VulkanRenderpass* pRenderpass, const VulkanRenderpassBeginInfo& beginInfo);
 		void EndRenderpass();
 
@@ -82,7 +92,9 @@ namespace Quartz
 		void SetVertexBuffers(VulkanBufferBind* pBuffers, uSize bufferCount);
 		void SetIndexBuffer(VulkanBuffer* pIndexBuffer, uSize offset, VkIndexType indexType);
 
-		void BindUniforms(VulkanGraphicsPipeline* pPipeline, uInt32 set, VulkanUniformBind* pBindings, uSize bindingCount);
+		void BindUniforms(VulkanGraphicsPipeline* pPipeline, uInt32 set, 
+			VulkanUniformBufferBind* pBufferBinds, uSize bufferCount,
+			VulkanUniformImageBind* pImageBinds, uSize imageCount);
 
 		void SetViewport(const VkViewport& viewport, const VkRect2D scissor);
 
@@ -90,6 +102,9 @@ namespace Quartz
 
 		void CopyBuffer(VulkanBuffer* pSrcBuffer, VulkanBuffer* pDestBuffer, 
 			uSize sizeBytes, uSize srcOffset, uSize destOffset);
+
+		void CopyBufferToImage(VulkanBuffer* pSrcBuffer, VulkanImage* pDestImage,
+			VkImageLayout vkLayout, const Array<VkBufferImageCopy>& regions);
 
 		void PipelineBarrier(const VulkanPipelineBarrierInfo& barrierInfo);
 		void PipelineBarrierSwapchainImageBegin(VulkanImage* pSwapchainImage);

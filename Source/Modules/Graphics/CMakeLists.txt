@@ -10,7 +10,6 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/GraphicsModule.cpp"
 	"Source/Vulkan/VulkanBufferCache.cpp"
     "Source/Vulkan/VulkanGraphics.cpp"
-	
 	"Source/OpenGL/GLGraphics.cpp"
     "Source/VulkanRenderer.cpp"
 	"Source/Vulkan/VulkanSwapchianTimer.cpp"
@@ -23,7 +22,9 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Vulkan/VulkanMultiBuffer.cpp"
 	"Source/Component/MaterialComponent.cpp"
 	"Source/Vulkan/VulkanPipelineCache.cpp"
-	"Source/Vulkan/VulkanShaderCache.cpp" "Source/Component/CameraComponent.cpp" "Include/Component/CameraComponent.h")
+	"Source/Vulkan/VulkanShaderCache.cpp"
+	"Source/Component/CameraComponent.cpp"
+	"Source/TerrainRenderer.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

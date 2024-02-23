@@ -15,14 +15,14 @@ namespace Quartz
 		TransformComponent();
 		TransformComponent(const Vec3f& position, const Quatf& rotation, const Vec3f& scale);
 
-		Vec3f GetForward();
-		Vec3f GetBackward();
-		Vec3f GetLeft();
-		Vec3f GetRight();
-		Vec3f GetUp();
-		Vec3f GetDown();
+		Vec3f GetForward() const;
+		Vec3f GetBackward() const;
+		Vec3f GetLeft() const;
+		Vec3f GetRight() const;
+		Vec3f GetUp() const;
+		Vec3f GetDown() const;
 
-		Mat4f GetMatrix();
-		Mat4f GetViewMatrix();
+		Mat4f GetMatrix() const;
+		Mat4f GetViewMatrix() const;
 	};
 }

@@ -21,6 +21,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Input/Input.h"
+#include "TerrainRenderer.h"
 
 namespace Quartz
 {
@@ -73,6 +74,11 @@ namespace Quartz
 		{
 			LogInfo("Starting Sandbox");
 
+			//// TESTING ////
+
+
+			/////////////////
+
 			StartVulkan();
 
 			EntityWorld& world	= Engine::GetWorld();
@@ -115,15 +121,15 @@ namespace Quartz
 			ModelData cubeData
 			{
 				{
-					-0.5f, -0.5f,  0.5f,	1.0f, 0.0f, 0.0f,	 // 0 - Front Bottom Left
-					-0.5f,  0.5f,  0.5f,	0.0f, 1.0f, 0.0f,	 // 1 - Front Top Left
-					 0.5f,  0.5f,  0.5f,	0.0f, 0.0f, 1.0f,	 // 2 - Front Top Right
-					 0.5f, -0.5f,  0.5f,	1.0f, 0.0f, 1.0f,	 // 3 - Front Bottom Right
+					-0.5f, -0.5f, -0.5f,	1.0f, 0.0f, 0.0f,	 // 0 - Front Bottom Left
+					-0.5f,  0.5f, -0.5f,	0.0f, 1.0f, 0.0f,	 // 1 - Front Top Left
+					 0.5f,  0.5f, -0.5f,	0.0f, 0.0f, 1.0f,	 // 2 - Front Top Right
+					 0.5f, -0.5f, -0.5f,	1.0f, 0.0f, 1.0f,	 // 3 - Front Bottom Right
 					
-					-0.5f, -0.5f, -0.5f,	1.0f, 1.0f, 0.0f,	 // 4 - Back Bottom Left
-					-0.5f,  0.5f, -0.5f,	0.0f, 1.0f, 1.0f,	 // 5 - Back Top Left
-					 0.5f,  0.5f, -0.5f,	1.0f, 1.0f, 1.0f,	 // 6 - Back Top Right
-					 0.5f, -0.5f, -0.5f,	0.0f, 0.0f, 0.0f,	 // 7 - Back Bottom Right
+					-0.5f, -0.5f,  0.5f,	1.0f, 1.0f, 0.0f,	 // 4 - Back Bottom Left
+					-0.5f,  0.5f,  0.5f,	0.0f, 1.0f, 1.0f,	 // 5 - Back Top Left
+					 0.5f,  0.5f,  0.5f,	1.0f, 1.0f, 1.0f,	 // 6 - Back Top Right
+					 0.5f, -0.5f,  0.5f,	0.0f, 0.0f, 0.0f,	 // 7 - Back Bottom Right
 				},
 				{
 					0, 1, 2,  0, 2, 3,		// Front
@@ -136,18 +142,28 @@ namespace Quartz
 				}
 			};
 
-			TransformComponent transform0
+			TerrainRenderer terrainRenderer;
+			ModelData terrainData = terrainRenderer.CreateTerrainChunkMesh(250);
+
+			TransformComponent transformCube
 			(
-				{ -1.0f, 0.0f, -1.0f },
-				Quatf({ 0.0f, 1.0f, 0.0f }, ToRadians(45.0f)),
+				{ 1.0f, 1.0f, 1.0f },
+				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
 				{ 1.0f, 1.0f, 1.0f }
 			);
 
-			TransformComponent transform1
+			TransformComponent transformTri
 			( 
-				{ 1.0f, 0.0f, -1.0f }, 
+				{ -1.0f, -1.0f, -1.0f }, 
 				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f), 
 				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			TransformComponent transformTerrain
+			(
+				{ 0.0f, 0.0f, 0.0f },
+				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
+				{ 20.0f, 20.0f, 20.0f }
 			);
 
 			MaterialComponent material1
@@ -162,14 +178,23 @@ namespace Quartz
 				"Shaders/default2.frag"
 			};
 
+			MaterialComponent material3
+			{
+				"Shaders/default3.vert",
+				"Shaders/default3.frag"
+			};
+
 			MeshComponent renderable1("simpleTri", triData);
 			MeshComponent renderable2("simpleCube", cubeData);
+			MeshComponent renderable3("terrain", terrainData);
+			TerrainComponent terrainComponent;
 
-			Entity cube = world.CreateEntity(transform0, renderable2, material1);
-			Entity tri	= world.CreateEntity(transform1, renderable1, material2);
+			Entity cube = world.CreateEntity(transformCube, renderable2, material1);
+			//Entity tri	= world.CreateEntity(transformTri, renderable1, material2);
+			Entity terr = world.CreateEntity(transformTerrain, renderable3, material3, terrainComponent);
 
 			CameraComponent camera(70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ 0.0f, 0.0f, -2.0f }, { { 0.0f, 0.0f, 0.0f }, 0.0f }, { 1.0f, 1.0f, 1.0f });
+			TransformComponent cameraTransform({ 0.0f, -14.0f, 0.0f }, { { 0.0f, 0.0f, 0.0f }, 0.0f }, { 1.0f, 1.0f, 1.0f });
 			gpCamera = world.CreateEntity(camera, cameraTransform);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
@@ -189,7 +214,7 @@ namespace Quartz
 					if (deltaAcc > 1.0)
 					{
 						deltaAcc = 0;
-						LogInfo("> FPS: %.1lf", pRuntime->GetCurrentUps());
+						//LogInfo("> FPS: %.1lf", pRuntime->GetCurrentUps());
 					}
 
 					TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
@@ -203,10 +228,10 @@ namespace Quartz
 						transform.position += transform.GetBackward() * speed * delta;
 
 					if (moveLeft)
-						transform.position += transform.GetLeft() * speed * delta;
+						transform.position += -transform.GetLeft() * speed * delta;
 
 					if (moveRight)
-						transform.position += transform.GetRight() * speed * delta;
+						transform.position += -transform.GetRight() * speed * delta;
 				}
 			);
 
@@ -236,7 +261,7 @@ namespace Quartz
 					{
 						TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
 						transform.rotation *= Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, direction.x * upSpeed * runtime.GetUpdateDelta());
-						transform.rotation *= Quatf().SetAxisAngle(transform.GetRight(), direction.y * -rightSpeed * runtime.GetUpdateDelta());
+						transform.rotation *= Quatf().SetAxisAngle(transform.GetRight(), direction.y * rightSpeed * runtime.GetUpdateDelta());
 					}
 				}
 			);

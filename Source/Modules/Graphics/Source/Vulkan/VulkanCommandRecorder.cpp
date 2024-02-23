@@ -30,6 +30,11 @@ namespace Quartz
 		}
 	}
 
+	void VulkanCommandRecorder::Reset()
+	{
+		vkResetCommandBuffer(mpCommandBuffer->vkCommandBuffer, 0);
+	}
+
 	void VulkanCommandRecorder::BeginRenderpass(VulkanRenderpass* pRenderpass, const VulkanRenderpassBeginInfo& beginInfo)
 	{
 		VkRenderPassBeginInfo renderPassInfo = {};
@@ -169,37 +174,54 @@ namespace Quartz
 		vkCmdBindIndexBuffer(mpCommandBuffer->vkCommandBuffer, pIndexBuffer->vkBuffer, offset, indexType);
 	}
 
-	void VulkanCommandRecorder::BindUniforms(VulkanGraphicsPipeline* pPipeline, uInt32 set, VulkanUniformBind* pBindings, uSize bindingCount)
+	void VulkanCommandRecorder::BindUniforms(VulkanGraphicsPipeline* pPipeline, uInt32 set,
+		VulkanUniformBufferBind* pBufferBinds, uSize bufferCount,
+		VulkanUniformImageBind* pImageBinds, uSize imageCount)
 	{
 		constexpr const uSize maxWriteDescriptorSets = 16;
 
-		VkWriteDescriptorSet writeDescriptorSets[maxWriteDescriptorSets] = {};
-		VkDescriptorBufferInfo bufferInfos[maxWriteDescriptorSets] = {};
+		VkWriteDescriptorSet	writeDescriptorSets[maxWriteDescriptorSets] = {};
+		VkDescriptorBufferInfo	bufferInfos[maxWriteDescriptorSets] = {};
+		VkDescriptorImageInfo	imageInfos[maxWriteDescriptorSets] = {};
 
-		if (bindingCount > maxWriteDescriptorSets) // @TODO: should be debug_assert
+		if (bufferCount + imageCount > maxWriteDescriptorSets) // @TODO: should be debug_assert
 		{
 			LogError("BindUniforms failed. bindingCount > maxWriteDescriptorSets");
 		}
 
-		for (uSize i = 0; i < bindingCount; i++)
+		for (uSize i = 0; i < bufferCount; i++)
 		{
-			bufferInfos[i].buffer = pBindings[i].pBuffer->vkBuffer;
-			bufferInfos[i].offset	= pBindings[i].offset;
-			bufferInfos[i].range	= pBindings[i].range;
+			bufferInfos[i].buffer	= pBufferBinds[i].pBuffer->vkBuffer;
+			bufferInfos[i].offset	= pBufferBinds[i].offset;
+			bufferInfos[i].range	= pBufferBinds[i].range;
 
 			writeDescriptorSets[i].sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			writeDescriptorSets[i].dstSet			= 0; // Ignored
-			writeDescriptorSets[i].dstBinding		= pBindings[i].binding;
+			writeDescriptorSets[i].dstBinding		= pBufferBinds[i].binding;
 			writeDescriptorSets[i].descriptorCount	= 1;
 			writeDescriptorSets[i].descriptorType	= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			writeDescriptorSets[i].pBufferInfo		= &bufferInfos[i];
+		}
+
+		for (uSize i = 0; i < imageCount; i++)
+		{
+			imageInfos[i].sampler		= pImageBinds[i].vkSampler;
+			imageInfos[i].imageView		= pImageBinds[i].pImageView->vkImageView;
+			imageInfos[i].imageLayout	= pImageBinds[i].vkLayout;
+
+			writeDescriptorSets[bufferCount + i].sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeDescriptorSets[bufferCount + i].dstSet				= 0; // Ignored
+			writeDescriptorSets[bufferCount + i].dstBinding			= pImageBinds[i].binding;
+			writeDescriptorSets[bufferCount + i].descriptorCount	= 1;
+			writeDescriptorSets[bufferCount + i].descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			writeDescriptorSets[bufferCount + i].pImageInfo			= &imageInfos[i];
 		}
 
 		PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR2 = 
 			(PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(pPipeline->pDevice->vkDevice, "vkCmdPushDescriptorSetKHR");
 
 		vkCmdPushDescriptorSetKHR2(mpCommandBuffer->vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			pPipeline->vkPipelineInfo.layout, set, bindingCount, writeDescriptorSets);
+			pPipeline->vkPipelineInfo.layout, set, bufferCount + imageCount, writeDescriptorSets);
 	}
 
 	void VulkanCommandRecorder::SetViewport(const VkViewport& viewport, const VkRect2D scissor)
@@ -221,6 +243,12 @@ namespace Quartz
 		copyRegion.size			= sizeBytes;
 
 		vkCmdCopyBuffer(mpCommandBuffer->vkCommandBuffer, pSrcBuffer->vkBuffer, pDestBuffer->vkBuffer, 1, &copyRegion);
+	}
+
+	void VulkanCommandRecorder::CopyBufferToImage(VulkanBuffer* pSrcBuffer, VulkanImage* pDestImage,
+		VkImageLayout vkLayout, const Array<VkBufferImageCopy>& regions)
+	{
+		vkCmdCopyBufferToImage(mpCommandBuffer->vkCommandBuffer, pSrcBuffer->vkBuffer, pDestImage->vkImage, vkLayout, regions.Size(), regions.Data());
 	}
 
 	void VulkanCommandRecorder::PipelineBarrier(const VulkanPipelineBarrierInfo& barrierInfo)
