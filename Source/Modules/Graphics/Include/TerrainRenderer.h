@@ -33,6 +33,9 @@ namespace Quartz
 		VulkanMultiBufferEntry	indexEntry;
 		VulkanBuffer*			pVertexBuffer;
 		VulkanBuffer*			pIndexBuffer;
+		VulkanBuffer*			pHeightMapBuffer;
+		VulkanImage*			pHeightMapImage;
+		VulkanImageView*		pHeightMapView;
 	};
 
 	class QUARTZ_GRAPHICS_API VulkanTerrainRenderer
@@ -53,14 +56,14 @@ namespace Quartz
 
 		VulkanGraphicsPipeline* mpTerrainRenderPipeline;
 
-		VulkanImageView*		mpPerlinImageView;
+		
 		VkSampler				mVkSampler;
 
 	private:
 		ModelData CreateChunkMesh(uSize resolution);
 		void CreateLODs(uSize count, uSize closeResolution, VulkanGraphics& graphics);
 
-		Array<float> CreatePerlinNoise(uSize resolution, uInt64 seed, const Array<float>& octaveWeights);
+		Array<float> CreatePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, const Array<float>& octaveWeights);
 		void CreateLodTextures(VulkanGraphics& graphics);
 
 	public:

@@ -142,12 +142,9 @@ namespace Quartz
 				}
 			};
 
-			//VulkanTerrainRenderer terrainRenderer;
-			//ModelData terrainData = terrainRenderer.CreateChunkMesh(250);
-
 			TransformComponent transformCube
 			(
-				{ 1.0f, 1.0f, 1.0f },
+				{ 0.0f, 0.0f, 0.0f },
 				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
 				{ 1.0f, 1.0f, 1.0f }
 			);
@@ -194,7 +191,7 @@ namespace Quartz
 			//Entity terr = world.CreateEntity(transformTerrain, renderable3, material3, terrainComponent);
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ -10.0f, -14.0f, 0.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(180.0f)}, {1.0f, 1.0f, 1.0f});
+			TransformComponent cameraTransform({ 0.0f, -5.0f, 0.0f }, { { 0.0f, 0.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
 			gpCamera = world.CreateEntity(camera, cameraTransform);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
@@ -219,7 +216,7 @@ namespace Quartz
 
 					TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
 
-					float speed = 15.0f;
+					float speed = 1.0f;
 
 					if(moveForward)
 						transform.position += transform.GetForward() * speed * delta;

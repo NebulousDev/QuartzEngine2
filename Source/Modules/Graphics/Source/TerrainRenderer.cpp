@@ -175,115 +175,126 @@ namespace Quartz
 		VulkanDevice& device = *graphics.pPrimaryDevice;
 
 		uSize perlinResolution = 250;
-		Array<float> perlin = CreatePerlinNoise(perlinResolution, 1234, { 1.0f, 0.5f, 0.25f, 0.125f, 0.05f, 0.01f, 0.001f, 0.0001f });
-
-		VulkanImageInfo perlinImageInfo = {};
-		perlinImageInfo.vkImageType		= VK_IMAGE_TYPE_2D;
-		perlinImageInfo.vkFormat		= VK_FORMAT_R32_SFLOAT;
-		perlinImageInfo.vkUsageFlags	= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		perlinImageInfo.width			= perlinResolution;
-		perlinImageInfo.height			= perlinResolution;
-		perlinImageInfo.depth			= 1;
-		perlinImageInfo.layers			= 1;
-		perlinImageInfo.mips			= 1;
-
-		VulkanImage* pPerlinImage = resources.CreateImage(&device, perlinImageInfo);
-
-		VulkanImageViewInfo perlinImageViewInfo = {};
-		perlinImageViewInfo.pImage				= pPerlinImage;
-		perlinImageViewInfo.vkImageViewType		= VK_IMAGE_VIEW_TYPE_2D;
-		perlinImageViewInfo.vkAspectFlags		= VK_IMAGE_ASPECT_COLOR_BIT;
-		perlinImageViewInfo.vkFormat			= VK_FORMAT_R32_SFLOAT;
-		perlinImageViewInfo.mipStart			= 0;
-		perlinImageViewInfo.mipCount			= 1;
-		perlinImageViewInfo.layerStart			= 0;
-		perlinImageViewInfo.layerCount			= 1;
-
-		mpPerlinImageView = resources.CreateImageView(&device, perlinImageViewInfo);
-
-		VulkanBufferInfo perlinImageBufferInfo = {};
-		perlinImageBufferInfo.sizeBytes				= perlinResolution * perlinResolution * sizeof(float);
-		perlinImageBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		perlinImageBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-		VulkanBuffer* pPerlinImageBuffer = resources.CreateBuffer(&device, perlinImageBufferInfo);
-
-		VulkanBufferWriter perlinWriter(pPerlinImageBuffer);
-		float* pPerlinData = perlinWriter.Map<float>();
-
-		memcpy_s(pPerlinData, perlin.Size() * sizeof(float), perlin.Data(), perlin.Size() * sizeof(float));
 
 		mImmediateRecorder.Reset();
 		mImmediateRecorder.BeginRecording();
 
-		VkImageMemoryBarrier vkPerlinMemoryBarrier = {};
-		vkPerlinMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		vkPerlinMemoryBarrier.srcAccessMask						= 0;
-		vkPerlinMemoryBarrier.dstAccessMask						= VK_ACCESS_TRANSFER_WRITE_BIT;
-		vkPerlinMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
-		vkPerlinMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		vkPerlinMemoryBarrier.image								= pPerlinImage->vkImage;
-		vkPerlinMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-		vkPerlinMemoryBarrier.subresourceRange.baseMipLevel		= 0;
-		vkPerlinMemoryBarrier.subresourceRange.levelCount		= 1;
-		vkPerlinMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
-		vkPerlinMemoryBarrier.subresourceRange.layerCount		= 1;
+		for (uSize i = 0; i < mLODs.Size(); i++)
+		{
+			Array<float> perlin = CreatePerlinNoise(perlinResolution, i * -(float)(perlinResolution - 1), 100.0f, 1234, { 1.0f, -0.5f, 0.125f, 0.15f, 0.1f, 0.05f, 0.05f, 0.01f, 0.01f });
+			//Array<float> perlin = CreatePerlinNoise(perlinResolution, i * 1.0f, 0.0f, 1234, { 1.0f });
 
-		VulkanPipelineBarrierInfo perlinBarrierInfo = {};
-		perlinBarrierInfo.srcStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
-		perlinBarrierInfo.dstStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
-		perlinBarrierInfo.dependencyFlags			= 0;
-		perlinBarrierInfo.memoryBarrierCount		= 0;
-		perlinBarrierInfo.pMemoryBarriers			= nullptr;
-		perlinBarrierInfo.bufferMemoryBarrierCount	= 0;
-		perlinBarrierInfo.pBufferMemoryBarriers		= nullptr;
-		perlinBarrierInfo.imageMemoryBarrierCount	= 1;
-		perlinBarrierInfo.pImageMemoryBarriers		= &vkPerlinMemoryBarrier;
+			VulkanImageInfo perlinImageInfo = {};
+			perlinImageInfo.vkImageType		= VK_IMAGE_TYPE_2D;
+			perlinImageInfo.vkFormat		= VK_FORMAT_R32_SFLOAT;
+			perlinImageInfo.vkUsageFlags	= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			perlinImageInfo.width			= perlinResolution;
+			perlinImageInfo.height			= perlinResolution;
+			perlinImageInfo.depth			= 1;
+			perlinImageInfo.layers			= 1;
+			perlinImageInfo.mips			= 1;
 
-		mImmediateRecorder.PipelineBarrier(perlinBarrierInfo);
+			VulkanImage* pPerlinImage = resources.CreateImage(&device, perlinImageInfo);
 
-		VkBufferImageCopy vkPerlinImageCopy = {};
-		vkPerlinImageCopy.bufferOffset						= 0;
-		vkPerlinImageCopy.bufferRowLength					= 0;
-		vkPerlinImageCopy.bufferImageHeight					= 0;
-		vkPerlinImageCopy.imageSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-		vkPerlinImageCopy.imageSubresource.baseArrayLayer	= 0;
-		vkPerlinImageCopy.imageSubresource.layerCount		= 1;
-		vkPerlinImageCopy.imageSubresource.mipLevel			= 0;
-		vkPerlinImageCopy.imageOffset.x						= 0;
-		vkPerlinImageCopy.imageOffset.y						= 0;
-		vkPerlinImageCopy.imageOffset.z						= 0;
-		vkPerlinImageCopy.imageExtent.width					= perlinResolution;
-		vkPerlinImageCopy.imageExtent.height				= perlinResolution;
-		vkPerlinImageCopy.imageExtent.depth					= 1;
+			VulkanImageViewInfo perlinImageViewInfo = {};
+			perlinImageViewInfo.pImage				= pPerlinImage;
+			perlinImageViewInfo.vkImageViewType		= VK_IMAGE_VIEW_TYPE_2D;
+			perlinImageViewInfo.vkAspectFlags		= VK_IMAGE_ASPECT_COLOR_BIT;
+			perlinImageViewInfo.vkFormat			= VK_FORMAT_R32_SFLOAT;
+			perlinImageViewInfo.mipStart			= 0;
+			perlinImageViewInfo.mipCount			= 1;
+			perlinImageViewInfo.layerStart			= 0;
+			perlinImageViewInfo.layerCount			= 1;
 
-		mImmediateRecorder.CopyBufferToImage(pPerlinImageBuffer, pPerlinImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkPerlinImageCopy });
+			VulkanImageView* pPerlinImageView = resources.CreateImageView(&device, perlinImageViewInfo);
 
-		VkImageMemoryBarrier vkPerlinMemoryBarrier2 = {};
-		vkPerlinMemoryBarrier2.sType							= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		vkPerlinMemoryBarrier2.srcAccessMask					= 0;
-		vkPerlinMemoryBarrier2.dstAccessMask					= VK_ACCESS_SHADER_READ_BIT;
-		vkPerlinMemoryBarrier2.oldLayout						= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		vkPerlinMemoryBarrier2.newLayout						= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		vkPerlinMemoryBarrier2.image							= pPerlinImage->vkImage;
-		vkPerlinMemoryBarrier2.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-		vkPerlinMemoryBarrier2.subresourceRange.baseMipLevel	= 0;
-		vkPerlinMemoryBarrier2.subresourceRange.levelCount		= 1;
-		vkPerlinMemoryBarrier2.subresourceRange.baseArrayLayer	= 0;
-		vkPerlinMemoryBarrier2.subresourceRange.layerCount		= 1;
+			VulkanBufferInfo perlinImageBufferInfo = {};
+			perlinImageBufferInfo.sizeBytes				= perlinResolution * perlinResolution * sizeof(float);
+			perlinImageBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			perlinImageBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-		VulkanPipelineBarrierInfo perlinBarrierInfo2 = {};
-		perlinBarrierInfo2.srcStage					= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-		perlinBarrierInfo2.dstStage					= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-		perlinBarrierInfo2.dependencyFlags			= 0;
-		perlinBarrierInfo2.memoryBarrierCount		= 0;
-		perlinBarrierInfo2.pMemoryBarriers			= nullptr;
-		perlinBarrierInfo2.bufferMemoryBarrierCount	= 0;
-		perlinBarrierInfo2.pBufferMemoryBarriers	= nullptr;
-		perlinBarrierInfo2.imageMemoryBarrierCount	= 1;
-		perlinBarrierInfo2.pImageMemoryBarriers		= &vkPerlinMemoryBarrier2;
+			VulkanBuffer* pPerlinImageBuffer = resources.CreateBuffer(&device, perlinImageBufferInfo);
 
-		mImmediateRecorder.PipelineBarrier(perlinBarrierInfo2);
+			VulkanBufferWriter perlinWriter(pPerlinImageBuffer);
+			float* pPerlinData = perlinWriter.Map<float>();
+
+			memcpy_s(pPerlinData, perlin.Size() * sizeof(float), perlin.Data(), perlin.Size() * sizeof(float));
+
+			perlinWriter.Unmap();
+
+			mLODs[i].pHeightMapImage	= pPerlinImage;
+			mLODs[i].pHeightMapBuffer	= pPerlinImageBuffer;
+			mLODs[i].pHeightMapView		= pPerlinImageView;
+
+			VkImageMemoryBarrier vkPerlinMemoryBarrier = {};
+			vkPerlinMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			vkPerlinMemoryBarrier.srcAccessMask						= 0;
+			vkPerlinMemoryBarrier.dstAccessMask						= VK_ACCESS_TRANSFER_WRITE_BIT;
+			vkPerlinMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
+			vkPerlinMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			vkPerlinMemoryBarrier.image								= pPerlinImage->vkImage;
+			vkPerlinMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+			vkPerlinMemoryBarrier.subresourceRange.baseMipLevel		= 0;
+			vkPerlinMemoryBarrier.subresourceRange.levelCount		= 1;
+			vkPerlinMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
+			vkPerlinMemoryBarrier.subresourceRange.layerCount		= 1;
+
+			VulkanPipelineBarrierInfo perlinBarrierInfo = {};
+			perlinBarrierInfo.srcStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
+			perlinBarrierInfo.dstStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
+			perlinBarrierInfo.dependencyFlags			= 0;
+			perlinBarrierInfo.memoryBarrierCount		= 0;
+			perlinBarrierInfo.pMemoryBarriers			= nullptr;
+			perlinBarrierInfo.bufferMemoryBarrierCount	= 0;
+			perlinBarrierInfo.pBufferMemoryBarriers		= nullptr;
+			perlinBarrierInfo.imageMemoryBarrierCount	= 1;
+			perlinBarrierInfo.pImageMemoryBarriers		= &vkPerlinMemoryBarrier;
+
+			mImmediateRecorder.PipelineBarrier(perlinBarrierInfo);
+
+			VkBufferImageCopy vkPerlinImageCopy = {};
+			vkPerlinImageCopy.bufferOffset						= 0;
+			vkPerlinImageCopy.bufferRowLength					= 0;
+			vkPerlinImageCopy.bufferImageHeight					= 0;
+			vkPerlinImageCopy.imageSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+			vkPerlinImageCopy.imageSubresource.baseArrayLayer	= 0;
+			vkPerlinImageCopy.imageSubresource.layerCount		= 1;
+			vkPerlinImageCopy.imageSubresource.mipLevel			= 0;
+			vkPerlinImageCopy.imageOffset.x						= 0;
+			vkPerlinImageCopy.imageOffset.y						= 0;
+			vkPerlinImageCopy.imageOffset.z						= 0;
+			vkPerlinImageCopy.imageExtent.width					= perlinResolution;
+			vkPerlinImageCopy.imageExtent.height				= perlinResolution;
+			vkPerlinImageCopy.imageExtent.depth					= 1;
+
+			mImmediateRecorder.CopyBufferToImage(pPerlinImageBuffer, pPerlinImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkPerlinImageCopy });
+
+			VkImageMemoryBarrier vkPerlinMemoryBarrier2 = {};
+			vkPerlinMemoryBarrier2.sType							= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			vkPerlinMemoryBarrier2.srcAccessMask					= 0;
+			vkPerlinMemoryBarrier2.dstAccessMask					= VK_ACCESS_SHADER_READ_BIT;
+			vkPerlinMemoryBarrier2.oldLayout						= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			vkPerlinMemoryBarrier2.newLayout						= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			vkPerlinMemoryBarrier2.image							= pPerlinImage->vkImage;
+			vkPerlinMemoryBarrier2.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+			vkPerlinMemoryBarrier2.subresourceRange.baseMipLevel	= 0;
+			vkPerlinMemoryBarrier2.subresourceRange.levelCount		= 1;
+			vkPerlinMemoryBarrier2.subresourceRange.baseArrayLayer	= 0;
+			vkPerlinMemoryBarrier2.subresourceRange.layerCount		= 1;
+
+			VulkanPipelineBarrierInfo perlinBarrierInfo2 = {};
+			perlinBarrierInfo2.srcStage					= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+			perlinBarrierInfo2.dstStage					= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+			perlinBarrierInfo2.dependencyFlags			= 0;
+			perlinBarrierInfo2.memoryBarrierCount		= 0;
+			perlinBarrierInfo2.pMemoryBarriers			= nullptr;
+			perlinBarrierInfo2.bufferMemoryBarrierCount	= 0;
+			perlinBarrierInfo2.pBufferMemoryBarriers	= nullptr;
+			perlinBarrierInfo2.imageMemoryBarrierCount	= 1;
+			perlinBarrierInfo2.pImageMemoryBarriers		= &vkPerlinMemoryBarrier2;
+
+			mImmediateRecorder.PipelineBarrier(perlinBarrierInfo2);
+		}
 
 		mImmediateRecorder.EndRecording();
 
@@ -334,7 +345,7 @@ namespace Quartz
 
 		/* Create LOD Data */
 
-		CreateLODs(25, 250, graphics);
+		CreateLODs(4, 200, graphics);
 		CreateLodTextures(graphics);
 
 		/* Create Pipelines */
@@ -415,7 +426,7 @@ namespace Quartz
 			VulkanUniformImageBind imageBinding = {};
 			imageBinding.binding	= 1;
 			imageBinding.vkSampler	= mVkSampler;
-			imageBinding.pImageView = mpPerlinImageView;
+			imageBinding.pImageView = mLODs[i].pHeightMapView;
 			imageBinding.vkLayout	= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			VulkanUniformBufferBind pBufferBinds[] = { binding };
@@ -429,7 +440,7 @@ namespace Quartz
 		}
 	}
 
-	Array<float> VulkanTerrainRenderer::CreatePerlinNoise(uSize resolution, uInt64 seed, const Array<float>& octaveWeights)
+	Array<float> VulkanTerrainRenderer::CreatePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, const Array<float>& octaveWeights)
 	{
 		Array<float> finalNoise(resolution * resolution);
 
@@ -440,21 +451,25 @@ namespace Quartz
 				float freq		= 1.0f;
 				float maxAmp	= 0.0f;
 				float value		= 0.0f;
+				float shiftX	= 112.233f;
+				float shiftY	= 121.323f;
 
 				for (float amplitude : octaveWeights)
 				{
-					constexpr float gridSize = 500.0f;
+					constexpr float gridSize = 250.0f;
 
-					float seedX = (x * freq / gridSize) + seed;
-					float seedY = (y * freq / gridSize) + seed;
+					float seedX = shiftX + (offsetX + x) * (freq / gridSize);
+					float seedY = shiftY + (offsetY + y) * (freq / gridSize);
 
 					value += PerlinNoise2D(seedX, seedY) * amplitude;
 
-					freq *= 2.0f;
+					freq *= 1.5f;
 					maxAmp += amplitude;
+					shiftX += 112.233f;
+					shiftY += 121.323f;
 				}
 
-				finalNoise[x + y * resolution] = (value / maxAmp) + 0.5f;
+				finalNoise[x + y * resolution] = (0.5f + value / 2.0f) / 2.0f;
 			}
 		}
 
