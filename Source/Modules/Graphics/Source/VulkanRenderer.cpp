@@ -218,7 +218,7 @@ namespace Quartz
 			mRenderables.PushBack(renderable);
 		}
 
-		mTerrainRenderer.Update(*mpCameraComponent, *mpCameraTransformComponent);
+		mTerrainRenderer.Update(mpCameraTransformComponent->position, *mpCameraComponent, *mpCameraTransformComponent);
 	}
 
 	void VulkanRenderer::WriteCommandBuffer(VulkanCommandRecorder* pRecorder)
@@ -323,7 +323,8 @@ namespace Quartz
 		swapchainRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		swapchainRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
 		swapchainRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
-		swapchainRenderingAttachmentInfo.clearValue		= { 0.02f, 0.05f, 0.05f, 1.0f };
+		//swapchainRenderingAttachmentInfo.clearValue		= { 0.02f, 0.05f, 0.05f, 1.0f };
+		swapchainRenderingAttachmentInfo.clearValue		= { 0.7f, 0.8f, 1.0f, 1.0f };
 
 		VulkanRenderingAttachmentInfo depthRenderingAttachmentInfo = {};
 		depthRenderingAttachmentInfo.pImageView		= mDepthImageViews[resourceIdx];

@@ -33,6 +33,8 @@ namespace Quartz
 		uInt32				depth;
 		uInt32				layers;
 		uInt32				mips;
+
+		inline bool operator==(const VulkanImage& value) { return vkImage == value.vkImage; }
 	};
 
 	struct VulkanImageViewInfo
@@ -58,5 +60,7 @@ namespace Quartz
 		uInt32				layerCount;
 		uInt32				mipStart;
 		uInt32				mipCount;
+
+		inline bool operator==(const VulkanImageView& value) { return vkImageView == value.vkImageView; }
 	};
 }

@@ -75,5 +75,7 @@ namespace Quartz
 		VulkanDescriptorSetLayout*	CreateDescriptorSetLayout(VulkanDevice* pDevice, const VulkanDesctiptorSetLayoutInfo& info);
 
 		void DestroyBuffer(VulkanBuffer* pBuffer);
+		void DestroyImage(VulkanImage* pImage);
+		void DestroyImageView(VulkanImageView* pImageView);
 	};
 }

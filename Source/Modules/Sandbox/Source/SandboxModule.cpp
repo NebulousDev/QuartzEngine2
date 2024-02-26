@@ -21,7 +21,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Input/Input.h"
-#include "TerrainRenderer.h"
+//#include "Types/FractalGrid.h"
 
 namespace Quartz
 {
@@ -76,6 +76,14 @@ namespace Quartz
 
 			//// TESTING ////
 
+			//FractalGrid<uSize> fg;
+			//
+			//uSize val = 300;
+			//
+			//fg.Place(0, 20, 22, val);
+			//
+			//fg.Remove(0, 20, 22);
+			//fg.Remove(6, 0, 0);
 
 			/////////////////
 

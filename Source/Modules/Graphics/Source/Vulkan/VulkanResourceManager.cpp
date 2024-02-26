@@ -1511,12 +1511,55 @@ namespace Quartz
 			uSize index = mBuffers.IndexOf(it);
 
 			// @TODO: properly remove, requires better storage
+			//mBuffers.Remove(pBuffer);
 
 			LogTrace("Destroyed VulkanBuffer [ID=%06.6d].", index);
 		}
 		else
 		{
 			LogTrace("Failed to destroy VulkanBuffer [ID=???]: Buffer not found.");
+		}
+	}
+
+	void VulkanResourceManager::DestroyImage(VulkanImage* pImage)
+	{
+		auto& it = mImages.Find(*pImage);
+
+		if (it != mImages.End())
+		{
+			vkDestroyImage(pImage->pDevice->vkDevice, pImage->vkImage, VK_NULL_HANDLE);
+			
+			uSize index = mImages.IndexOf(it);
+
+			// @TODO: properly remove, requires better storage
+			//mImages.Remove(index);
+
+			LogTrace("Destroyed VulkanImage [ID=%06.6d].", index);
+		}
+		else
+		{
+			LogTrace("Failed to destroy VulkanImage [ID=???]: Image not found.");
+		}
+	}
+
+	void VulkanResourceManager::DestroyImageView(VulkanImageView* pImageView)
+	{
+		auto& it = mImageViews.Find(*pImageView);
+
+		if (it != mImageViews.End())
+		{
+			vkDestroyImageView(pImageView->pDevice->vkDevice, pImageView->vkImageView, VK_NULL_HANDLE);
+			
+			uSize index = mImageViews.IndexOf(it);
+
+			// @TODO: properly remove, requires better storage
+			//mImageViews.Remove(index);
+
+			LogTrace("Destroyed VulkanImageView [ID=%06.6d].", index);
+		}
+		else
+		{
+			LogTrace("Failed to destroy VulkanImageView [ID=???]: ImageView not found.");
 		}
 	}
 }

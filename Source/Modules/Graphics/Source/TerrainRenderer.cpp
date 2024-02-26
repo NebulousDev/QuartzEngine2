@@ -5,7 +5,7 @@
 
 namespace Quartz
 {
-	ModelData VulkanTerrainRenderer::CreateChunkMesh(uSize resolution)
+	ModelData VulkanTerrainRenderer::CreateTileMesh(uSize resolution)
 	{
 		ModelData data;
 
@@ -77,14 +77,15 @@ namespace Quartz
 
 		constexpr uSize MAX_LOADED_CHUNKS = 128;
 
-		VulkanBufferInfo perChunkStagingBufferInfo = {};
-		perChunkStagingBufferInfo.sizeBytes				= sizeof(TerrainPerChunkData) * MAX_LOADED_CHUNKS;
-		perChunkStagingBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		perChunkStagingBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		// TODO Move out of LODs
+		VulkanBufferInfo perTileStagingBufferInfo = {};
+		perTileStagingBufferInfo.sizeBytes			= sizeof(TerrainPerTileData) * MAX_LOADED_CHUNKS;
+		perTileStagingBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		perTileStagingBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-		mpPerChunkStagingBuffer = resources.CreateBuffer(&device, perChunkStagingBufferInfo);
-		mpPerChunkWriter = VulkanBufferWriter(mpPerChunkStagingBuffer);
-		mpPerChunkDatas = mpPerChunkWriter.Map<TerrainPerChunkData>();
+		mpPerTileStagingBuffer = resources.CreateBuffer(&device, perTileStagingBufferInfo);
+		mpPerTileWriter = VulkanBufferWriter(mpPerTileStagingBuffer);
+		mpPerTileDatas = mpPerTileWriter.Map<TerrainPerTileData>();
 		
 		/* Terrain Buffers */
 
@@ -101,12 +102,12 @@ namespace Quartz
 		mpLODVertexBuffer = resources.CreateBuffer(&device, meshLODVertexBufferInfo);
 		mpLODIndexBuffer = resources.CreateBuffer(&device, meshLODIndexBufferInfo);
 
-		VulkanBufferInfo perChunkBufferInfo = {};
-		perChunkBufferInfo.sizeBytes				= perChunkStagingBufferInfo.sizeBytes;
-		perChunkBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-		perChunkBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		VulkanBufferInfo perTileBufferInfo = {};
+		perTileBufferInfo.sizeBytes				= perTileStagingBufferInfo.sizeBytes;
+		perTileBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		perTileBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-		mpPerChunkBuffer = resources.CreateBuffer(&device, perChunkBufferInfo);
+		mpPerTileBuffer = resources.CreateBuffer(&device, perTileBufferInfo);
 
 		/* Copy Data to Staging Buffers */
 
@@ -128,7 +129,7 @@ namespace Quartz
 			uSize lodIndexSizeBytes		= (lodIndexResolution * lodIndexResolution) * sizeof(uInt16) * 6;
 			meshLODStagingIndexBuffer.Allocate(lodIndexSizeBytes / sizeof(uInt16), LODIndexEntry, &pLODIndexData);
 
-			ModelData lodTerrainMesh = CreateChunkMesh(lodIndexResolution);
+			ModelData lodTerrainMesh = CreateTileMesh(lodIndexResolution);
 
 			memcpy_s(pLODVertexData, lodVertexSizeBytes, lodTerrainMesh.vertices.Data(), lodVertexSizeBytes);
 			memcpy_s(pLODIndexData, lodIndexSizeBytes, lodTerrainMesh.indices.Data(), lodIndexSizeBytes);
@@ -169,142 +170,77 @@ namespace Quartz
 		resources.DestroyBuffer(pMeshLODStagingIndexBuffer);
 	}
 
-	void VulkanTerrainRenderer::CreateLodTextures(VulkanGraphics& graphics)
+	TerrainTile VulkanTerrainRenderer::CreateTile(VulkanGraphics& graphics, uInt32 lodIndex, Vec2f position, float scale, uInt64 seed)
+	{
+		TerrainTileTextures textures = GenerateTileTextures(graphics, lodIndex, position, scale, seed);
+
+		TerrainTile tile = {};
+		tile.position	= position;
+		tile.scale		= scale;
+		tile.lodIndex	= lodIndex;
+		tile.textures	= textures;
+
+		return tile;
+	}
+
+	void VulkanTerrainRenderer::DestroyTile(VulkanGraphics& graphics, const TerrainTile& tile)
+	{
+		graphics.pResourceManager->DestroyBuffer(tile.textures.pHeightMapBuffer);
+		graphics.pResourceManager->DestroyImage(tile.textures.pHeightMapImage);
+		graphics.pResourceManager->DestroyImageView(tile.textures.pHeightMapView);
+	}
+
+	TerrainTileTextures VulkanTerrainRenderer::GenerateTileTextures(VulkanGraphics& graphics, uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed)
 	{
 		VulkanResourceManager& resources = *graphics.pResourceManager;
 		VulkanDevice& device = *graphics.pPrimaryDevice;
 
+		/* Generate Heightmap Images */
+
 		uSize perlinResolution = 250;
 
-		mImmediateRecorder.Reset();
-		mImmediateRecorder.BeginRecording();
+		Array<float> perlin = GeneratePerlinNoise(
+			perlinResolution, position.x * (float)perlinResolution, position.y * (float)perlinResolution, seed,
+			{ 1.0f, -0.5f, 0.125f, 0.15f, 0.1f, 0.05f, 0.05f, 0.01f, 0.01f }
+		);
 
-		for (uSize i = 0; i < mLODs.Size(); i++)
-		{
-			Array<float> perlin = CreatePerlinNoise(perlinResolution, i * -(float)(perlinResolution - 1), 100.0f, 1234, { 1.0f, -0.5f, 0.125f, 0.15f, 0.1f, 0.05f, 0.05f, 0.01f, 0.01f });
-			//Array<float> perlin = CreatePerlinNoise(perlinResolution, i * 1.0f, 0.0f, 1234, { 1.0f });
+		VulkanImageInfo perlinImageInfo = {};
+		perlinImageInfo.vkImageType		= VK_IMAGE_TYPE_2D;
+		perlinImageInfo.vkFormat		= VK_FORMAT_R32_SFLOAT;
+		perlinImageInfo.vkUsageFlags	= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		perlinImageInfo.width			= perlinResolution;
+		perlinImageInfo.height			= perlinResolution;
+		perlinImageInfo.depth			= 1;
+		perlinImageInfo.layers			= 1;
+		perlinImageInfo.mips			= 1;
 
-			VulkanImageInfo perlinImageInfo = {};
-			perlinImageInfo.vkImageType		= VK_IMAGE_TYPE_2D;
-			perlinImageInfo.vkFormat		= VK_FORMAT_R32_SFLOAT;
-			perlinImageInfo.vkUsageFlags	= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-			perlinImageInfo.width			= perlinResolution;
-			perlinImageInfo.height			= perlinResolution;
-			perlinImageInfo.depth			= 1;
-			perlinImageInfo.layers			= 1;
-			perlinImageInfo.mips			= 1;
+		VulkanImage* pPerlinImage = resources.CreateImage(&device, perlinImageInfo);
 
-			VulkanImage* pPerlinImage = resources.CreateImage(&device, perlinImageInfo);
+		VulkanImageViewInfo perlinImageViewInfo = {};
+		perlinImageViewInfo.pImage				= pPerlinImage;
+		perlinImageViewInfo.vkImageViewType		= VK_IMAGE_VIEW_TYPE_2D;
+		perlinImageViewInfo.vkAspectFlags		= VK_IMAGE_ASPECT_COLOR_BIT;
+		perlinImageViewInfo.vkFormat			= VK_FORMAT_R32_SFLOAT;
+		perlinImageViewInfo.mipStart			= 0;
+		perlinImageViewInfo.mipCount			= 1;
+		perlinImageViewInfo.layerStart			= 0;
+		perlinImageViewInfo.layerCount			= 1;
 
-			VulkanImageViewInfo perlinImageViewInfo = {};
-			perlinImageViewInfo.pImage				= pPerlinImage;
-			perlinImageViewInfo.vkImageViewType		= VK_IMAGE_VIEW_TYPE_2D;
-			perlinImageViewInfo.vkAspectFlags		= VK_IMAGE_ASPECT_COLOR_BIT;
-			perlinImageViewInfo.vkFormat			= VK_FORMAT_R32_SFLOAT;
-			perlinImageViewInfo.mipStart			= 0;
-			perlinImageViewInfo.mipCount			= 1;
-			perlinImageViewInfo.layerStart			= 0;
-			perlinImageViewInfo.layerCount			= 1;
+		VulkanImageView* pPerlinImageView = resources.CreateImageView(&device, perlinImageViewInfo);
 
-			VulkanImageView* pPerlinImageView = resources.CreateImageView(&device, perlinImageViewInfo);
+		VulkanBufferInfo perlinImageBufferInfo = {};
+		perlinImageBufferInfo.sizeBytes				= perlinResolution * perlinResolution * sizeof(float);
+		perlinImageBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		perlinImageBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-			VulkanBufferInfo perlinImageBufferInfo = {};
-			perlinImageBufferInfo.sizeBytes				= perlinResolution * perlinResolution * sizeof(float);
-			perlinImageBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-			perlinImageBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		VulkanBuffer* pPerlinImageBuffer = resources.CreateBuffer(&device, perlinImageBufferInfo);
 
-			VulkanBuffer* pPerlinImageBuffer = resources.CreateBuffer(&device, perlinImageBufferInfo);
+		VulkanBufferWriter perlinWriter(pPerlinImageBuffer);
+		float* pPerlinData = perlinWriter.Map<float>();
 
-			VulkanBufferWriter perlinWriter(pPerlinImageBuffer);
-			float* pPerlinData = perlinWriter.Map<float>();
+		memcpy_s(pPerlinData, perlin.Size() * sizeof(float), perlin.Data(), perlin.Size() * sizeof(float));
 
-			memcpy_s(pPerlinData, perlin.Size() * sizeof(float), perlin.Data(), perlin.Size() * sizeof(float));
-
-			perlinWriter.Unmap();
-
-			mLODs[i].pHeightMapImage	= pPerlinImage;
-			mLODs[i].pHeightMapBuffer	= pPerlinImageBuffer;
-			mLODs[i].pHeightMapView		= pPerlinImageView;
-
-			VkImageMemoryBarrier vkPerlinMemoryBarrier = {};
-			vkPerlinMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			vkPerlinMemoryBarrier.srcAccessMask						= 0;
-			vkPerlinMemoryBarrier.dstAccessMask						= VK_ACCESS_TRANSFER_WRITE_BIT;
-			vkPerlinMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
-			vkPerlinMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			vkPerlinMemoryBarrier.image								= pPerlinImage->vkImage;
-			vkPerlinMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-			vkPerlinMemoryBarrier.subresourceRange.baseMipLevel		= 0;
-			vkPerlinMemoryBarrier.subresourceRange.levelCount		= 1;
-			vkPerlinMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
-			vkPerlinMemoryBarrier.subresourceRange.layerCount		= 1;
-
-			VulkanPipelineBarrierInfo perlinBarrierInfo = {};
-			perlinBarrierInfo.srcStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
-			perlinBarrierInfo.dstStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
-			perlinBarrierInfo.dependencyFlags			= 0;
-			perlinBarrierInfo.memoryBarrierCount		= 0;
-			perlinBarrierInfo.pMemoryBarriers			= nullptr;
-			perlinBarrierInfo.bufferMemoryBarrierCount	= 0;
-			perlinBarrierInfo.pBufferMemoryBarriers		= nullptr;
-			perlinBarrierInfo.imageMemoryBarrierCount	= 1;
-			perlinBarrierInfo.pImageMemoryBarriers		= &vkPerlinMemoryBarrier;
-
-			mImmediateRecorder.PipelineBarrier(perlinBarrierInfo);
-
-			VkBufferImageCopy vkPerlinImageCopy = {};
-			vkPerlinImageCopy.bufferOffset						= 0;
-			vkPerlinImageCopy.bufferRowLength					= 0;
-			vkPerlinImageCopy.bufferImageHeight					= 0;
-			vkPerlinImageCopy.imageSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-			vkPerlinImageCopy.imageSubresource.baseArrayLayer	= 0;
-			vkPerlinImageCopy.imageSubresource.layerCount		= 1;
-			vkPerlinImageCopy.imageSubresource.mipLevel			= 0;
-			vkPerlinImageCopy.imageOffset.x						= 0;
-			vkPerlinImageCopy.imageOffset.y						= 0;
-			vkPerlinImageCopy.imageOffset.z						= 0;
-			vkPerlinImageCopy.imageExtent.width					= perlinResolution;
-			vkPerlinImageCopy.imageExtent.height				= perlinResolution;
-			vkPerlinImageCopy.imageExtent.depth					= 1;
-
-			mImmediateRecorder.CopyBufferToImage(pPerlinImageBuffer, pPerlinImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkPerlinImageCopy });
-
-			VkImageMemoryBarrier vkPerlinMemoryBarrier2 = {};
-			vkPerlinMemoryBarrier2.sType							= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			vkPerlinMemoryBarrier2.srcAccessMask					= 0;
-			vkPerlinMemoryBarrier2.dstAccessMask					= VK_ACCESS_SHADER_READ_BIT;
-			vkPerlinMemoryBarrier2.oldLayout						= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			vkPerlinMemoryBarrier2.newLayout						= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			vkPerlinMemoryBarrier2.image							= pPerlinImage->vkImage;
-			vkPerlinMemoryBarrier2.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-			vkPerlinMemoryBarrier2.subresourceRange.baseMipLevel	= 0;
-			vkPerlinMemoryBarrier2.subresourceRange.levelCount		= 1;
-			vkPerlinMemoryBarrier2.subresourceRange.baseArrayLayer	= 0;
-			vkPerlinMemoryBarrier2.subresourceRange.layerCount		= 1;
-
-			VulkanPipelineBarrierInfo perlinBarrierInfo2 = {};
-			perlinBarrierInfo2.srcStage					= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-			perlinBarrierInfo2.dstStage					= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-			perlinBarrierInfo2.dependencyFlags			= 0;
-			perlinBarrierInfo2.memoryBarrierCount		= 0;
-			perlinBarrierInfo2.pMemoryBarriers			= nullptr;
-			perlinBarrierInfo2.bufferMemoryBarrierCount	= 0;
-			perlinBarrierInfo2.pBufferMemoryBarriers	= nullptr;
-			perlinBarrierInfo2.imageMemoryBarrierCount	= 1;
-			perlinBarrierInfo2.pImageMemoryBarriers		= &vkPerlinMemoryBarrier2;
-
-			mImmediateRecorder.PipelineBarrier(perlinBarrierInfo2);
-		}
-
-		mImmediateRecorder.EndRecording();
-
-		VulkanSubmission renderSubmition	= {};
-		renderSubmition.commandBuffers		= { mpTerrainCommandBuffer };
-		renderSubmition.waitSemaphores		= {};
-		renderSubmition.waitStages			= {};
-		renderSubmition.signalSemaphores	= {};
-
-		graphics.Submit(renderSubmition, device.queues.graphics, VK_NULL_HANDLE);
+		perlinWriter.Unmap();
 
 		VkSamplerCreateInfo perlinSamplerInfo{};
 		perlinSamplerInfo.sType				= VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -326,6 +262,97 @@ namespace Quartz
 
 		// @TODO
 		vkCreateSampler(device.vkDevice, &perlinSamplerInfo, VK_NULL_HANDLE, &mVkSampler);
+
+		/* Generate Command Buffers */
+
+		mImmediateRecorder.Reset();
+		mImmediateRecorder.BeginRecording();
+
+		VkImageMemoryBarrier vkPerlinMemoryBarrier = {};
+		vkPerlinMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		vkPerlinMemoryBarrier.srcAccessMask						= 0;
+		vkPerlinMemoryBarrier.dstAccessMask						= VK_ACCESS_TRANSFER_WRITE_BIT;
+		vkPerlinMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
+		vkPerlinMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		vkPerlinMemoryBarrier.image								= pPerlinImage->vkImage;
+		vkPerlinMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		vkPerlinMemoryBarrier.subresourceRange.baseMipLevel		= 0;
+		vkPerlinMemoryBarrier.subresourceRange.levelCount		= 1;
+		vkPerlinMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
+		vkPerlinMemoryBarrier.subresourceRange.layerCount		= 1;
+
+		VulkanPipelineBarrierInfo perlinBarrierInfo = {};
+		perlinBarrierInfo.srcStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
+		perlinBarrierInfo.dstStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
+		perlinBarrierInfo.dependencyFlags			= 0;
+		perlinBarrierInfo.memoryBarrierCount		= 0;
+		perlinBarrierInfo.pMemoryBarriers			= nullptr;
+		perlinBarrierInfo.bufferMemoryBarrierCount	= 0;
+		perlinBarrierInfo.pBufferMemoryBarriers		= nullptr;
+		perlinBarrierInfo.imageMemoryBarrierCount	= 1;
+		perlinBarrierInfo.pImageMemoryBarriers		= &vkPerlinMemoryBarrier;
+
+		mImmediateRecorder.PipelineBarrier(perlinBarrierInfo);
+
+		VkBufferImageCopy vkPerlinImageCopy = {};
+		vkPerlinImageCopy.bufferOffset						= 0;
+		vkPerlinImageCopy.bufferRowLength					= 0;
+		vkPerlinImageCopy.bufferImageHeight					= 0;
+		vkPerlinImageCopy.imageSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		vkPerlinImageCopy.imageSubresource.baseArrayLayer	= 0;
+		vkPerlinImageCopy.imageSubresource.layerCount		= 1;
+		vkPerlinImageCopy.imageSubresource.mipLevel			= 0;
+		vkPerlinImageCopy.imageOffset.x						= 0;
+		vkPerlinImageCopy.imageOffset.y						= 0;
+		vkPerlinImageCopy.imageOffset.z						= 0;
+		vkPerlinImageCopy.imageExtent.width					= perlinResolution;
+		vkPerlinImageCopy.imageExtent.height				= perlinResolution;
+		vkPerlinImageCopy.imageExtent.depth					= 1;
+
+		mImmediateRecorder.CopyBufferToImage(pPerlinImageBuffer, pPerlinImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkPerlinImageCopy });
+
+		VkImageMemoryBarrier vkPerlinMemoryBarrier2 = {};
+		vkPerlinMemoryBarrier2.sType							= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		vkPerlinMemoryBarrier2.srcAccessMask					= 0;
+		vkPerlinMemoryBarrier2.dstAccessMask					= VK_ACCESS_SHADER_READ_BIT;
+		vkPerlinMemoryBarrier2.oldLayout						= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		vkPerlinMemoryBarrier2.newLayout						= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		vkPerlinMemoryBarrier2.image							= pPerlinImage->vkImage;
+		vkPerlinMemoryBarrier2.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		vkPerlinMemoryBarrier2.subresourceRange.baseMipLevel	= 0;
+		vkPerlinMemoryBarrier2.subresourceRange.levelCount		= 1;
+		vkPerlinMemoryBarrier2.subresourceRange.baseArrayLayer	= 0;
+		vkPerlinMemoryBarrier2.subresourceRange.layerCount		= 1;
+
+		VulkanPipelineBarrierInfo perlinBarrierInfo2 = {};
+		perlinBarrierInfo2.srcStage					= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		perlinBarrierInfo2.dstStage					= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		perlinBarrierInfo2.dependencyFlags			= 0;
+		perlinBarrierInfo2.memoryBarrierCount		= 0;
+		perlinBarrierInfo2.pMemoryBarriers			= nullptr;
+		perlinBarrierInfo2.bufferMemoryBarrierCount	= 0;
+		perlinBarrierInfo2.pBufferMemoryBarriers	= nullptr;
+		perlinBarrierInfo2.imageMemoryBarrierCount	= 1;
+		perlinBarrierInfo2.pImageMemoryBarriers		= &vkPerlinMemoryBarrier2;
+
+		mImmediateRecorder.PipelineBarrier(perlinBarrierInfo2);
+
+		mImmediateRecorder.EndRecording();
+
+		VulkanSubmission renderSubmition	= {};
+		renderSubmition.commandBuffers		= { mpTerrainCommandBuffer };
+		renderSubmition.waitSemaphores		= {};
+		renderSubmition.waitStages			= {};
+		renderSubmition.signalSemaphores	= {};
+
+		graphics.Submit(renderSubmition, device.queues.graphics, VK_NULL_HANDLE);
+
+		TerrainTileTextures textures = {};
+		textures.pHeightMapBuffer	= pPerlinImageBuffer;
+		textures.pHeightMapImage	= pPerlinImage;
+		textures.pHeightMapView		= pPerlinImageView;
+
+		return textures;
 	}
 
 	VulkanTerrainRenderer::VulkanTerrainRenderer() :
@@ -346,7 +373,17 @@ namespace Quartz
 		/* Create LOD Data */
 
 		CreateLODs(4, 200, graphics);
-		CreateLodTextures(graphics);
+
+		/* Create Terrain Tiles */ //TEMP
+
+		for (sSize y = -2; y < 2; y++)
+		{
+			for (sSize x = -2; x < 2; x++)
+			{
+				TerrainTile tile = CreateTile(graphics, 0, { (float)x, (float)y }, 10.0f, 1234);
+				mActiveTiles.PushBack(tile);
+			}
+		}
 
 		/* Create Pipelines */
 
@@ -383,21 +420,24 @@ namespace Quartz
 		);
 	}
 
-	void VulkanTerrainRenderer::Update(CameraComponent& camera, TransformComponent& cameraTransform)
+	void VulkanTerrainRenderer::Update(const Vec3f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform)
 	{
-		for (uSize i = 0; i < mLODs.Size(); i++)
+		for (uSize i = 0; i < mActiveTiles.Size(); i++)
 		{
-			TransformComponent chunkTransform({ -(float)i * 10.0f, 0.0f, 0.0f }, { {0.0f, 0.0f, 0.0f}, 0.0f }, { 10.0f, 10.0f, 10.0f });
+			float scale		= mActiveTiles[i].scale;
+			Vec2f tilePos	= mActiveTiles[i].position * scale;
 
-			mpPerChunkDatas[i].model	= chunkTransform.GetMatrix();
-			mpPerChunkDatas[i].view		= cameraTransform.GetViewMatrix();
-			mpPerChunkDatas[i].proj		= camera.GetProjectionMatrix();
+			TransformComponent tileTransform({ tilePos.x, 0.0f, tilePos.y }, { {0.0f, 0.0f, 0.0f}, 0.0f }, { scale, scale, scale });
+
+			mpPerTileDatas[i].model	= tileTransform.GetMatrix();
+			mpPerTileDatas[i].view	= cameraTransform.GetViewMatrix();
+			mpPerTileDatas[i].proj	= camera.GetProjectionMatrix();
 		}
 	}
 
 	void VulkanTerrainRenderer::RecordTransfers(VulkanCommandRecorder& transferRecorder)
 	{
-		transferRecorder.CopyBuffer(mpPerChunkStagingBuffer, mpPerChunkBuffer, mpPerChunkBuffer->sizeBytes, 0, 0);
+		transferRecorder.CopyBuffer(mpPerTileStagingBuffer, mpPerTileBuffer, mpPerTileBuffer->sizeBytes, 0, 0);
 	}
 
 	void VulkanTerrainRenderer::RecordDraws(VulkanCommandRecorder& renderRecorder)
@@ -415,18 +455,21 @@ namespace Quartz
 		renderRecorder.SetVertexBuffers(&terrainVertexBind, 1);
 		renderRecorder.SetIndexBuffer(mpLODIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-		for (uSize i = 0; i < mLODs.Size(); i++)
+		for (uSize i = 0; i < mActiveTiles.Size(); i++)
 		{
+			uInt32 lodIndex = mActiveTiles[i].lodIndex;
+			TerrainLOD& lod = mLODs[lodIndex];
+
 			VulkanUniformBufferBind binding = {};
 			binding.binding = 0;
-			binding.pBuffer = mpPerChunkBuffer;
-			binding.offset	= i * sizeof(TerrainPerChunkData);
-			binding.range	= sizeof(TerrainPerChunkData);
+			binding.pBuffer = mpPerTileBuffer;
+			binding.offset	= i * sizeof(TerrainPerTileData);
+			binding.range	= sizeof(TerrainPerTileData);
 
 			VulkanUniformImageBind imageBinding = {};
 			imageBinding.binding	= 1;
 			imageBinding.vkSampler	= mVkSampler;
-			imageBinding.pImageView = mLODs[i].pHeightMapView;
+			imageBinding.pImageView = mActiveTiles[i].textures.pHeightMapView;
 			imageBinding.vkLayout	= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			VulkanUniformBufferBind pBufferBinds[] = { binding };
@@ -434,13 +477,13 @@ namespace Quartz
 
 			renderRecorder.BindUniforms(mpTerrainRenderPipeline, 0, pBufferBinds, 1, pImageBinds, 1);
 
-			uSize indexCount = mLODs[i].indexEntry.sizeBytes / sizeof(uInt16);
-			uSize indexStart = mLODs[i].indexEntry.offset / sizeof(uInt16);
-			renderRecorder.DrawIndexed(1, indexCount, indexStart, mLODs[i].vertexEntry.offset / sizeof(TerrainMeshVertex));
+			uSize indexCount = lod.indexEntry.sizeBytes / sizeof(uInt16);
+			uSize indexStart = lod.indexEntry.offset / sizeof(uInt16);
+			renderRecorder.DrawIndexed(1, indexCount, indexStart, lod.vertexEntry.offset / sizeof(TerrainMeshVertex));
 		}
 	}
 
-	Array<float> VulkanTerrainRenderer::CreatePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, const Array<float>& octaveWeights)
+	Array<float> VulkanTerrainRenderer::GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, const Array<float>& octaveWeights)
 	{
 		Array<float> finalNoise(resolution * resolution);
 

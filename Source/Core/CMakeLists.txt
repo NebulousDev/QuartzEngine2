@@ -4,7 +4,7 @@ project(QuartzCore)
 
 include(GNUInstallDirs)
 
-add_library(${PROJECT_NAME} SHARED "Core.cpp" "Math/Include/Math/Noise.h")
+add_library(${PROJECT_NAME} SHARED "Core.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

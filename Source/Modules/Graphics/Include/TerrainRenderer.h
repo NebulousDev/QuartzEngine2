@@ -13,6 +13,8 @@
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
 
+//#include "Types/FractalGrid.h"
+
 namespace Quartz
 {
 	struct TerrainMeshVertex
@@ -20,7 +22,7 @@ namespace Quartz
 		Vec3f position;
 	};
 
-	struct TerrainPerChunkData
+	struct TerrainPerTileData
 	{
 		Mat4f model;
 		Mat4f view;
@@ -33,45 +35,61 @@ namespace Quartz
 		VulkanMultiBufferEntry	indexEntry;
 		VulkanBuffer*			pVertexBuffer;
 		VulkanBuffer*			pIndexBuffer;
-		VulkanBuffer*			pHeightMapBuffer;
-		VulkanImage*			pHeightMapImage;
-		VulkanImageView*		pHeightMapView;
+	};
+
+	struct TerrainTileTextures
+	{
+		VulkanBuffer*		pHeightMapBuffer;
+		VulkanImage*		pHeightMapImage;
+		VulkanImageView*	pHeightMapView;
+	};
+
+	struct TerrainTile
+	{
+		Vec2f				position;
+		float				scale;
+		uInt32				lodIndex;
+		TerrainTileTextures	textures;
 	};
 
 	class QUARTZ_GRAPHICS_API VulkanTerrainRenderer
 	{
 	private:
-		VulkanBuffer*			mpLODVertexBuffer;
-		VulkanBuffer*			mpLODIndexBuffer;
-		Array<TerrainLOD>		mLODs;
+		VulkanBuffer*				mpLODVertexBuffer;
+		VulkanBuffer*				mpLODIndexBuffer;
+		Array<TerrainLOD>			mLODs;
+		//FractalGrid<TerrainTile>	mTileGrid;
+		Array<TerrainTile>			mActiveTiles;
 
-		VulkanBuffer*			mpPerChunkStagingBuffer;
-		VulkanBuffer*			mpPerChunkBuffer;
-		VulkanBufferWriter		mpPerChunkWriter;
-		TerrainPerChunkData*	mpPerChunkDatas;
+		VulkanBuffer*				mpPerTileStagingBuffer;
+		VulkanBuffer*				mpPerTileBuffer;
+		VulkanBufferWriter			mpPerTileWriter;
+		TerrainPerTileData*			mpPerTileDatas;
 
-		VulkanCommandPool*		mpTerrainCommandPool;
-		VulkanCommandBuffer*	mpTerrainCommandBuffer;
-		VulkanCommandRecorder	mImmediateRecorder;
+		VulkanCommandPool*			mpTerrainCommandPool;
+		VulkanCommandBuffer*		mpTerrainCommandBuffer;
+		VulkanCommandRecorder		mImmediateRecorder;
 
-		VulkanGraphicsPipeline* mpTerrainRenderPipeline;
+		VulkanGraphicsPipeline*		mpTerrainRenderPipeline;
 
-		
-		VkSampler				mVkSampler;
+		VkSampler					mVkSampler;
 
 	private:
-		ModelData CreateChunkMesh(uSize resolution);
-		void CreateLODs(uSize count, uSize closeResolution, VulkanGraphics& graphics);
+		ModelData	CreateTileMesh(uSize resolution);
+		void		CreateLODs(uSize count, uSize closeResolution, VulkanGraphics& graphics);
 
-		Array<float> CreatePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, const Array<float>& octaveWeights);
-		void CreateLodTextures(VulkanGraphics& graphics);
+		TerrainTile	CreateTile(VulkanGraphics& graphics, uInt32 lodIndex, Vec2f position, float scale, uInt64 seed);
+		void		DestroyTile(VulkanGraphics& graphics, const TerrainTile& tile);
+
+		Array<float>		GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, const Array<float>& octaveWeights);
+		TerrainTileTextures	GenerateTileTextures(VulkanGraphics& graphics, uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed);
 
 	public:
 		VulkanTerrainRenderer();
 
 		void Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache);
 
-		void Update(CameraComponent& camera, TransformComponent& cameraTransform);
+		void Update(const Vec3f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform);
 
 		void RecordTransfers(VulkanCommandRecorder& transferRecorder);
 		void RecordDraws(VulkanCommandRecorder& renderRecorder);
