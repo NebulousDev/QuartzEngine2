@@ -5,6 +5,12 @@
 
 namespace Quartz
 {
+	template<>
+	uSize Hash<Vec2i>(const Vec2i& value)
+	{
+		return Hash<uInt64>((uInt64)value.x + ((uInt64)value.y << 32));
+	}
+
 	ModelData VulkanTerrainRenderer::CreateTileMesh(uSize resolution)
 	{
 		ModelData data;
@@ -45,10 +51,10 @@ namespace Quartz
 		return data;
 	}
 
-	void VulkanTerrainRenderer::CreateLODs(uSize count, uSize closeResolution, VulkanGraphics& graphics)
+	void VulkanTerrainRenderer::CreateLODs(uSize count, uSize closeResolution)
 	{
-		VulkanResourceManager& resources = *graphics.pResourceManager;
-		VulkanDevice& device = *graphics.pPrimaryDevice;
+		VulkanResourceManager& resources = *mpGraphics->pResourceManager;
+		VulkanDevice& device = *mpGraphics->pPrimaryDevice;
 
 		/* Terrain Staging Buffers */
 
@@ -162,7 +168,7 @@ namespace Quartz
 		submission.waitSemaphores	= {};
 		submission.waitStages		= {};
 
-		graphics.Submit(submission, device.queues.graphics, VK_NULL_HANDLE);
+		mpGraphics->Submit(submission, device.queues.graphics, VK_NULL_HANDLE);
 
 		/* Destroy Staging Buffers */
 
@@ -170,9 +176,9 @@ namespace Quartz
 		resources.DestroyBuffer(pMeshLODStagingIndexBuffer);
 	}
 
-	TerrainTile VulkanTerrainRenderer::CreateTile(VulkanGraphics& graphics, uInt32 lodIndex, Vec2f position, float scale, uInt64 seed)
+	TerrainTile VulkanTerrainRenderer::CreateTile(uInt32 lodIndex, Vec2i position, float scale, uInt64 seed)
 	{
-		TerrainTileTextures textures = GenerateTileTextures(graphics, lodIndex, position, scale, seed);
+		TerrainTileTextures textures = GenerateTileTextures(lodIndex, { (float)position.x, (float)position.y }, scale, seed);
 
 		TerrainTile tile = {};
 		tile.position	= position;
@@ -183,21 +189,72 @@ namespace Quartz
 		return tile;
 	}
 
-	void VulkanTerrainRenderer::DestroyTile(VulkanGraphics& graphics, const TerrainTile& tile)
+	void VulkanTerrainRenderer::DestroyTile(const TerrainTile& tile)
 	{
-		graphics.pResourceManager->DestroyBuffer(tile.textures.pHeightMapBuffer);
-		graphics.pResourceManager->DestroyImage(tile.textures.pHeightMapImage);
-		graphics.pResourceManager->DestroyImageView(tile.textures.pHeightMapView);
+		// @TODO: use a pool system
+		mpGraphics->pResourceManager->DestroyBuffer(tile.textures.pHeightMapBuffer);
+		mpGraphics->pResourceManager->DestroyImage(tile.textures.pHeightMapImage);
+		mpGraphics->pResourceManager->DestroyImageView(tile.textures.pHeightMapView);
 	}
 
-	TerrainTileTextures VulkanTerrainRenderer::GenerateTileTextures(VulkanGraphics& graphics, uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed)
+	void VulkanTerrainRenderer::UpdateGrid(const Vec2f& centerPos)
 	{
-		VulkanResourceManager& resources = *graphics.pResourceManager;
-		VulkanDevice& device = *graphics.pPrimaryDevice;
+		constexpr const sSize maxChunkDist = 3;
+
+		sSize tileX = (sSize)centerPos.x;
+		sSize tileY = (sSize)centerPos.y;
+
+		Vec2i tileCenterPos(tileX, tileY);
+
+		// Destroy tiles outside of range
+		for (TerrainTile& tile : mActiveTiles)
+		{
+			Vec2i dist = tile.position - tileCenterPos;
+			if (abs(dist.Magnitude()) > maxChunkDist)
+			{
+				DestroyTile(tile);
+				mActiveTileMap.Remove(tile.position);
+			}
+		}
+
+		mActiveTiles.Clear();
+
+		for (sSize y = tileY - maxChunkDist; y <= tileY + maxChunkDist; y++)
+		{
+			for (sSize x = tileX - maxChunkDist; x <= tileX + maxChunkDist; x++)
+			{
+				Vec2i tilePosition(x, y);
+				Vec2i dist = tilePosition - tileCenterPos;
+
+				if (abs(dist.Magnitude()) <= (float)maxChunkDist)
+				{
+					TerrainTile tile;
+
+					auto& tileIt = mActiveTileMap.Find(Vec2i{x, y});
+					if (tileIt != mActiveTileMap.End())
+					{
+						tile = tileIt->value;
+					}
+					else
+					{
+						tile = CreateTile(0, { x, y }, 1.0f, 1234);
+						mActiveTileMap.Put(tile.position, tile);
+					}
+
+					mActiveTiles.PushBack(tile);
+				}
+			}
+		}
+	}
+
+	TerrainTileTextures VulkanTerrainRenderer::GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed)
+	{
+		VulkanResourceManager& resources = *mpGraphics->pResourceManager;
+		VulkanDevice& device = *mpGraphics->pPrimaryDevice;
 
 		/* Generate Heightmap Images */
 
-		uSize perlinResolution = 250;
+		uSize perlinResolution = 25;//250;
 
 		Array<float> perlin = GeneratePerlinNoise(
 			perlinResolution, position.x * (float)perlinResolution, position.y * (float)perlinResolution, seed,
@@ -345,7 +402,7 @@ namespace Quartz
 		renderSubmition.waitStages			= {};
 		renderSubmition.signalSemaphores	= {};
 
-		graphics.Submit(renderSubmition, device.queues.graphics, VK_NULL_HANDLE);
+		mpGraphics->Submit(renderSubmition, device.queues.graphics, VK_NULL_HANDLE);
 
 		TerrainTileTextures textures = {};
 		textures.pHeightMapBuffer	= pPerlinImageBuffer;
@@ -360,6 +417,8 @@ namespace Quartz
 
 	void VulkanTerrainRenderer::Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache)
 	{
+		mpGraphics = &graphics;
+
 		/* Create Command Buffers */
 
 		VulkanCommandPoolInfo terrainCommandPoolInfo = {};
@@ -372,18 +431,7 @@ namespace Quartz
 
 		/* Create LOD Data */
 
-		CreateLODs(4, 200, graphics);
-
-		/* Create Terrain Tiles */ //TEMP
-
-		for (sSize y = -2; y < 2; y++)
-		{
-			for (sSize x = -2; x < 2; x++)
-			{
-				TerrainTile tile = CreateTile(graphics, 0, { (float)x, (float)y }, 10.0f, 1234);
-				mActiveTiles.PushBack(tile);
-			}
-		}
+		CreateLODs(4, 200);
 
 		/* Create Pipelines */
 
@@ -420,14 +468,20 @@ namespace Quartz
 		);
 	}
 
-	void VulkanTerrainRenderer::Update(const Vec3f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform)
+	void VulkanTerrainRenderer::Update(const Vec2f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform)
 	{
+		constexpr const float globalTerrainScale = 5.0f;
+
+		UpdateGrid(gridPos / globalTerrainScale);
+
 		for (uSize i = 0; i < mActiveTiles.Size(); i++)
 		{
-			float scale		= mActiveTiles[i].scale;
-			Vec2f tilePos	= mActiveTiles[i].position * scale;
+			float tileScale		= mActiveTiles[i].scale;
+			Vec2i tilePos		= mActiveTiles[i].position * tileScale;
+			Vec3f worldPos		= Vec3f{ (float)tilePos.x, 0.0f, (float)tilePos.y } *globalTerrainScale;
+			Vec3f worldScale	= Vec3f{ tileScale, tileScale, tileScale } * globalTerrainScale;
 
-			TransformComponent tileTransform({ tilePos.x, 0.0f, tilePos.y }, { {0.0f, 0.0f, 0.0f}, 0.0f }, { scale, scale, scale });
+			TransformComponent tileTransform(worldPos, { {0.0f, 0.0f, 0.0f}, 0.0f }, worldScale);
 
 			mpPerTileDatas[i].model	= tileTransform.GetMatrix();
 			mpPerTileDatas[i].view	= cameraTransform.GetViewMatrix();

@@ -4,7 +4,7 @@
 
 #include "Types/Array.h"
 #include "Types/Map.h"
-#include "Types/BlockSet.h"
+#include "Types/Special/BlockSet.h"
 #include "Utility/TypeId.h"
 #include "Utility/Move.h"
 

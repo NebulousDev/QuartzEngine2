@@ -218,7 +218,8 @@ namespace Quartz
 			mRenderables.PushBack(renderable);
 		}
 
-		mTerrainRenderer.Update(mpCameraTransformComponent->position, *mpCameraComponent, *mpCameraTransformComponent);
+		Vec2f centerPos = { -mpCameraTransformComponent->position.x, -mpCameraTransformComponent->position.z };
+		mTerrainRenderer.Update(centerPos, *mpCameraComponent, *mpCameraTransformComponent);
 	}
 
 	void VulkanRenderer::WriteCommandBuffer(VulkanCommandRecorder* pRecorder)

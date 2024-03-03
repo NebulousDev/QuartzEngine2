@@ -13,8 +13,6 @@
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
 
-//#include "Types/FractalGrid.h"
-
 namespace Quartz
 {
 	struct TerrainMeshVertex
@@ -46,7 +44,7 @@ namespace Quartz
 
 	struct TerrainTile
 	{
-		Vec2f				position;
+		Vec2i				position;
 		float				scale;
 		uInt32				lodIndex;
 		TerrainTileTextures	textures;
@@ -55,11 +53,12 @@ namespace Quartz
 	class QUARTZ_GRAPHICS_API VulkanTerrainRenderer
 	{
 	private:
+		VulkanGraphics*				mpGraphics;
 		VulkanBuffer*				mpLODVertexBuffer;
 		VulkanBuffer*				mpLODIndexBuffer;
 		Array<TerrainLOD>			mLODs;
-		//FractalGrid<TerrainTile>	mTileGrid;
 		Array<TerrainTile>			mActiveTiles;
+		Map<Vec2i, TerrainTile>		mActiveTileMap;
 
 		VulkanBuffer*				mpPerTileStagingBuffer;
 		VulkanBuffer*				mpPerTileBuffer;
@@ -76,20 +75,22 @@ namespace Quartz
 
 	private:
 		ModelData	CreateTileMesh(uSize resolution);
-		void		CreateLODs(uSize count, uSize closeResolution, VulkanGraphics& graphics);
+		void		CreateLODs(uSize count, uSize closeResolution);
 
-		TerrainTile	CreateTile(VulkanGraphics& graphics, uInt32 lodIndex, Vec2f position, float scale, uInt64 seed);
-		void		DestroyTile(VulkanGraphics& graphics, const TerrainTile& tile);
+		TerrainTile	CreateTile(uInt32 lodIndex, Vec2i position, float scale, uInt64 seed);
+		void		DestroyTile(const TerrainTile& tile);
+
+		void		UpdateGrid(const Vec2f& centerPos);
 
 		Array<float>		GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, const Array<float>& octaveWeights);
-		TerrainTileTextures	GenerateTileTextures(VulkanGraphics& graphics, uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed);
+		TerrainTileTextures	GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed);
 
 	public:
 		VulkanTerrainRenderer();
 
 		void Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache);
 
-		void Update(const Vec3f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform);
+		void Update(const Vec2f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform);
 
 		void RecordTransfers(VulkanCommandRecorder& transferRecorder);
 		void RecordDraws(VulkanCommandRecorder& renderRecorder);

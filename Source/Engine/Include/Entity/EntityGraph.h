@@ -3,7 +3,7 @@
 #include "EngineAPI.h"
 
 #include "Entity.h"
-#include "Types/BlockSet.h"
+#include "Types/Special/BlockSet.h"
 #include "Types/Array.h"
 
 #include "Math/Math.h"

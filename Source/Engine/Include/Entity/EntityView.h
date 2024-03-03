@@ -2,7 +2,7 @@
 
 #include "Entity.h"
 #include "Types/Tuple.h"
-#include "Types/BlockSet.h"
+#include "Types/Special/BlockSet.h"
 #include "Utility/Fold.h"
 
 namespace Quartz
