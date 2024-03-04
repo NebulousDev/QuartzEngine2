@@ -82,8 +82,9 @@ namespace Quartz
 
 		void		UpdateGrid(const Vec2f& centerPos);
 
-		Array<float>		GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, const Array<float>& octaveWeights);
-		TerrainTileTextures	GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed);
+		Array<float>		GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed,
+								float scale, float lacunarity, const Array<float>& octaveWeights);
+		TerrainTileTextures	GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed, uSize resolution);
 
 	public:
 		VulkanTerrainRenderer();

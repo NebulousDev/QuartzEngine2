@@ -178,7 +178,9 @@ namespace Quartz
 
 	TerrainTile VulkanTerrainRenderer::CreateTile(uInt32 lodIndex, Vec2i position, float scale, uInt64 seed)
 	{
-		TerrainTileTextures textures = GenerateTileTextures(lodIndex, { (float)position.x, (float)position.y }, scale, seed);
+		constexpr float resoultion = 200.0f;
+
+		TerrainTileTextures textures = GenerateTileTextures(lodIndex, { (float)position.x, (float)position.y }, scale, seed, resoultion);
 
 		TerrainTile tile = {};
 		tile.position	= position;
@@ -247,26 +249,26 @@ namespace Quartz
 		}
 	}
 
-	TerrainTileTextures VulkanTerrainRenderer::GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed)
+	TerrainTileTextures VulkanTerrainRenderer::GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed, uSize resolution)
 	{
 		VulkanResourceManager& resources = *mpGraphics->pResourceManager;
 		VulkanDevice& device = *mpGraphics->pPrimaryDevice;
 
 		/* Generate Heightmap Images */
 
-		uSize perlinResolution = 25;//250;
+		float sampleX = position.x * (float)(resolution - 1);
+		float sampleY = position.y * (float)(resolution - 1);
 
 		Array<float> perlin = GeneratePerlinNoise(
-			perlinResolution, position.x * (float)perlinResolution, position.y * (float)perlinResolution, seed,
-			{ 1.0f, -0.5f, 0.125f, 0.15f, 0.1f, 0.05f, 0.05f, 0.01f, 0.01f }
+			resolution, sampleX, sampleY, seed, 450.0f, 2.0f, {1.0f, 0.5f, 0.25f, 0.125, 0.125 / 2 }
 		);
 
 		VulkanImageInfo perlinImageInfo = {};
 		perlinImageInfo.vkImageType		= VK_IMAGE_TYPE_2D;
 		perlinImageInfo.vkFormat		= VK_FORMAT_R32_SFLOAT;
 		perlinImageInfo.vkUsageFlags	= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		perlinImageInfo.width			= perlinResolution;
-		perlinImageInfo.height			= perlinResolution;
+		perlinImageInfo.width			= resolution;
+		perlinImageInfo.height			= resolution;
 		perlinImageInfo.depth			= 1;
 		perlinImageInfo.layers			= 1;
 		perlinImageInfo.mips			= 1;
@@ -286,7 +288,7 @@ namespace Quartz
 		VulkanImageView* pPerlinImageView = resources.CreateImageView(&device, perlinImageViewInfo);
 
 		VulkanBufferInfo perlinImageBufferInfo = {};
-		perlinImageBufferInfo.sizeBytes				= perlinResolution * perlinResolution * sizeof(float);
+		perlinImageBufferInfo.sizeBytes				= resolution * resolution * sizeof(float);
 		perlinImageBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		perlinImageBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -303,9 +305,9 @@ namespace Quartz
 		perlinSamplerInfo.sType				= VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 		perlinSamplerInfo.magFilter			= VK_FILTER_LINEAR;
 		perlinSamplerInfo.minFilter			= VK_FILTER_LINEAR;
-		perlinSamplerInfo.addressModeU		= VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-		perlinSamplerInfo.addressModeV		= VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-		perlinSamplerInfo.addressModeW		= VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+		perlinSamplerInfo.addressModeU		= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		perlinSamplerInfo.addressModeV		= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		perlinSamplerInfo.addressModeW		= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		perlinSamplerInfo.anisotropyEnable	= VK_FALSE;
 		perlinSamplerInfo.maxAnisotropy		= 1;
 		perlinSamplerInfo.borderColor		= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -362,8 +364,8 @@ namespace Quartz
 		vkPerlinImageCopy.imageOffset.x						= 0;
 		vkPerlinImageCopy.imageOffset.y						= 0;
 		vkPerlinImageCopy.imageOffset.z						= 0;
-		vkPerlinImageCopy.imageExtent.width					= perlinResolution;
-		vkPerlinImageCopy.imageExtent.height				= perlinResolution;
+		vkPerlinImageCopy.imageExtent.width					= resolution;
+		vkPerlinImageCopy.imageExtent.height				= resolution;
 		vkPerlinImageCopy.imageExtent.depth					= 1;
 
 		mImmediateRecorder.CopyBufferToImage(pPerlinImageBuffer, pPerlinImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkPerlinImageCopy });
@@ -537,37 +539,39 @@ namespace Quartz
 		}
 	}
 
-	Array<float> VulkanTerrainRenderer::GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, const Array<float>& octaveWeights)
+	Array<float> VulkanTerrainRenderer::GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, 
+		float scale, float lacunarity, const Array<float>& octaveWeights)
 	{
 		Array<float> finalNoise(resolution * resolution);
+
+		float halfWidth = (float)resolution / 2.0f;
 
 		for (float y = 0; y < resolution; y++)
 		{
 			for (float x = 0; x < resolution; x++)
 			{
-				float freq		= 1.0f;
-				float maxAmp	= 0.0f;
 				float value		= 0.0f;
-				float shiftX	= 112.233f;
-				float shiftY	= 121.323f;
+				float freq		= 1.0f;
+				float maxAmp	= 1.0f;
 
 				for (float amplitude : octaveWeights)
 				{
-					constexpr float gridSize = 250.0f;
+					float perlinX = (offsetX + (x - halfWidth)) / scale * freq;
+					float perlinY = (offsetY + (y - halfWidth)) / scale * freq;
 
-					float seedX = shiftX + (offsetX + x) * (freq / gridSize);
-					float seedY = shiftY + (offsetY + y) * (freq / gridSize);
+					value += PerlinNoise2D(seed, perlinX, perlinY) * amplitude;
 
-					value += PerlinNoise2D(seedX, seedY) * amplitude;
-
-					freq *= 1.5f;
+					freq *= lacunarity;
 					maxAmp += amplitude;
-					shiftX += 112.233f;
-					shiftY += 121.323f;
 				}
 
-				finalNoise[x + y * resolution] = (0.5f + value / 2.0f) / 2.0f;
+				finalNoise[x + y * resolution] = (value * 2.0f + 1.0f) / maxAmp;
 			}
+		}
+
+		for (uSize i = 0; i < finalNoise.Size(); i++)
+		{
+			finalNoise[i] = Parabola(1.0f, 0.0f, 0.0f, finalNoise[i]);//pow(5, finalNoise[i]);
 		}
 
 		return finalNoise;
