@@ -16,7 +16,7 @@ namespace Quartz
 		pipelineInfo.shaders				= shaders;
 		pipelineInfo.attachments			= attachments;
 		pipelineInfo.vkTopology				= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		pipelineInfo.vkPolygonMode			= VK_POLYGON_MODE_FILL;
+		pipelineInfo.vkPolygonMode			= VK_POLYGON_MODE_LINE;
 		pipelineInfo.vkCullMode				= VK_CULL_MODE_NONE;
 		pipelineInfo.vkFrontFace			= VK_FRONT_FACE_CLOCKWISE;
 		pipelineInfo.lineWidth				= 1.0f;

@@ -206,17 +206,19 @@ namespace Quartz
 
 	void VulkanTerrainRenderer::UpdateGrid(const Vec2f& centerPos)
 	{
-		constexpr const sSize maxChunkDist = 4;
+		constexpr const sSize maxChunkDist = 3;
 
 		sSize tileX = (sSize)centerPos.x;
 		sSize tileY = (sSize)centerPos.y;
 
-		Vec2i tileCenterPos(tileX, tileY);
-
 		// Destroy tiles outside of range
 		for (TerrainTile& tile : mActiveTiles)
 		{
-			Vec2i dist = tile.position - tileCenterPos;
+			float tileCenterX = tile.position.x + 0.5 * tile.scale;
+			float tileCenterY = tile.position.y + 0.5 * tile.scale;
+			Vec2f tileCenterPos(tileCenterX, tileCenterY);
+
+			Vec2f dist = tileCenterPos - centerPos;
 			if (abs(dist.MagnitudeF()) > maxChunkDist)
 			{
 				DestroyTile(tile);
@@ -230,22 +232,35 @@ namespace Quartz
 		{
 			for (sSize x = tileX - maxChunkDist; x <= tileX + maxChunkDist; x++)
 			{
-				Vec2i tilePosition(x, y);
-				Vec2i dist = tilePosition - tileCenterPos;
+				TerrainTile tile;
 
-				if (abs(dist.MagnitudeF()) <= (float)maxChunkDist)
+				auto& tileIt = mActiveTileMap.Find(Vec2i{x, y});
+				if (tileIt != mActiveTileMap.End())
 				{
-					TerrainTile tile;
+					tile = tileIt->value;
+				}
+				else
+				{
+					tile = CreateTile(0, { x, y }, 1.0f, 1234);
+					mActiveTileMap.Put(tile.position, tile);
+				}
 
-					auto& tileIt = mActiveTileMap.Find(Vec2i{x, y});
-					if (tileIt != mActiveTileMap.End())
+				float tileCenterX = tile.position.x + 0.5 * tile.scale;
+				float tileCenterY = tile.position.y + 0.5 * tile.scale;
+				Vec2f tileCenterPos(tileCenterX, tileCenterY);
+
+				Vec2f dist = tileCenterPos - centerPos;
+				float mag = abs(dist.MagnitudeF());
+
+				if (mag <= (float)maxChunkDist)
+				{
+					if (mag > ((float)maxChunkDist / 3.0f) * 2)
 					{
-						tile = tileIt->value;
+						tile.lodIndex = 3;
 					}
-					else
+					else if (mag > (float)maxChunkDist / 3.0f)
 					{
-						tile = CreateTile(0, { x, y }, 1.0f, 1234);
-						mActiveTileMap.Put(tile.position, tile);
+						tile.lodIndex = 2;
 					}
 
 					mActiveTiles.PushBack(tile);
@@ -409,6 +424,8 @@ namespace Quartz
 		immediateRecorder.PipelineBarrier(perlinBarrierInfo2);
 
 		immediateRecorder.EndRecording();
+
+		/* Submit Command Buffers */
 
 		VulkanSubmission renderSubmition	= {};
 		renderSubmition.commandBuffers		= { pImmediateCommandBuffer };
