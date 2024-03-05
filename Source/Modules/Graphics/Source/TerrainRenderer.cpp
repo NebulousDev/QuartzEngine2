@@ -3,6 +3,8 @@
 #include "Math/Math.h"
 #include "Engine.h"
 
+#include <thread>
+
 namespace Quartz
 {
 	template<>
@@ -206,7 +208,7 @@ namespace Quartz
 
 	void VulkanTerrainRenderer::UpdateGrid(const Vec2f& centerPos)
 	{
-		constexpr const sSize maxChunkDist = 3;
+		constexpr const sSize maxChunkDist = 4;
 
 		sSize tileX = (sSize)centerPos.x;
 		sSize tileY = (sSize)centerPos.y;
@@ -254,13 +256,17 @@ namespace Quartz
 
 				if (mag <= (float)maxChunkDist)
 				{
-					if (mag > ((float)maxChunkDist / 3.0f) * 2)
+					if (mag > ((float)maxChunkDist / 4.0f) * 3)
 					{
 						tile.lodIndex = 3;
 					}
-					else if (mag > (float)maxChunkDist / 3.0f)
+					else if (mag > ((float)maxChunkDist / 4.0f) * 2)
 					{
 						tile.lodIndex = 2;
+					}
+					else if (mag > (float)maxChunkDist / 4.0f)
+					{
+						tile.lodIndex = 1;
 					}
 
 					mActiveTiles.PushBack(tile);
@@ -279,7 +285,7 @@ namespace Quartz
 		float sampleX = position.x * (float)(resolution - 1);
 		float sampleY = position.y * (float)(resolution - 1);
 
-		Array<float> perlin = GeneratePerlinNoise(
+		Array<float> perlin = GeneratePerlinNoiseMT(
 			resolution, sampleX, sampleY, seed, 450.0f, 2.0f, {1.0f, 0.5f, 0.25f, 0.125, 0.125 / 2 }
 		);
 
@@ -577,6 +583,62 @@ namespace Quartz
 			uSize indexStart = lod.indexEntry.offset / sizeof(uInt16);
 			renderRecorder.DrawIndexed(1, indexCount, indexStart, lod.vertexEntry.offset / sizeof(TerrainMeshVertex));
 		}
+	}
+
+	void GeneratePerlinNoiseMTThread(Array<float>& finalNoise, uSize resolution, uSize yStart, uSize yEnd, 
+		float offsetX, float offsetY, uInt64 seed, float scale, float lacunarity, const Array<float>& octaveWeights)
+	{
+		float halfWidth = (float)resolution / 2.0f;
+
+		for (float y = yStart; y < yEnd; y++)
+		{
+			for (float x = 0; x < resolution; x++)
+			{
+				float value		= 0.0f;
+				float freq		= 1.0f;
+				float maxAmp	= 1.0f;
+
+				for (float amplitude : octaveWeights)
+				{
+					float perlinX = (offsetX + (x - halfWidth)) / scale * freq;
+					float perlinY = (offsetY + (y - halfWidth)) / scale * freq;
+
+					value += PerlinNoise2D(seed, perlinX, perlinY) * amplitude;
+
+					freq *= lacunarity;
+					maxAmp += amplitude;
+				}
+
+				finalNoise[x + y * resolution] = (value * 2.0f + 1.0f) / maxAmp;
+			}
+		}
+	}
+
+	Array<float> VulkanTerrainRenderer::GeneratePerlinNoiseMT(uSize resolution, float offsetX, float offsetY, uInt64 seed,
+		float scale, float lacunarity, const Array<float>& octaveWeights)
+	{
+		constexpr uSize threadCount = 6;
+		std::thread threads[threadCount];
+
+		Array<float> finalNoise(resolution * resolution);
+
+		for (uSize i = 0; i < threadCount; i++)
+		{
+			uSize start = (resolution / threadCount) * i;
+			uSize end	= (resolution / threadCount) * (i + 1);
+
+			if (i == threadCount - 1) end = resolution;
+
+			threads[i] = std::thread(GeneratePerlinNoiseMTThread, 
+				std::ref(finalNoise), resolution, start, end, offsetX, offsetY, seed, scale, lacunarity, std::ref(octaveWeights));
+		}
+
+		for (uSize i = 0; i < threadCount; i++)
+		{
+			threads[i].join();
+		}
+
+		return finalNoise;
 	}
 
 	Array<float> VulkanTerrainRenderer::GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, 
