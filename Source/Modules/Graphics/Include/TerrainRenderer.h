@@ -65,9 +65,11 @@ namespace Quartz
 		VulkanBufferWriter			mpPerTileWriter;
 		TerrainPerTileData*			mpPerTileDatas;
 
-		VulkanCommandPool*			mpTerrainCommandPool;
-		VulkanCommandBuffer*		mpTerrainCommandBuffer;
-		VulkanCommandRecorder		mImmediateRecorder;
+		VulkanCommandPool*			mpImmediateCommandPool;
+		VulkanCommandBuffer*		mImmediateCommandBuffers[3];
+		VulkanCommandRecorder		mImmediateRecorders[3];
+		VkFence						mImmediateFences[3];
+		uSize						mImmediateIdx;
 
 		VulkanGraphicsPipeline*		mpTerrainRenderPipeline;
 
@@ -87,8 +89,6 @@ namespace Quartz
 		TerrainTileTextures	GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed, uSize resolution);
 
 	public:
-		VulkanTerrainRenderer();
-
 		void Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache);
 
 		void Update(const Vec2f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform);

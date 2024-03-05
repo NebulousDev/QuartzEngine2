@@ -508,13 +508,13 @@ namespace Quartz
 		renderable.perModelLocation = perModelBufferLocation;
 	}
 
-	void VulkanBufferCache::RecordTransfers(VulkanCommandRecorder* pRecorder)
+	void VulkanBufferCache::RecordTransfers(VulkanCommandRecorder& recorder)
 	{
 		while (!mReadyTransfers.IsEmpty())
 		{
 			TransferCommand transfer = mReadyTransfers.PopFront();
 
-			pRecorder->CopyBuffer(
+			recorder.CopyBuffer(
 				transfer.pSrcBuffer->GetVulkanBuffer(), transfer.pDestBuffer->GetVulkanBuffer(), 
 				transfer.srcEntry.sizeBytes, transfer.srcEntry.offset, transfer.destEntry.offset);
 		}

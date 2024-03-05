@@ -282,6 +282,7 @@ namespace Quartz
 		LogTrace("Created VulkanImage [ID=%06.6d].", mImages.Size() + 1);
 
 		VulkanImage vulkanImage		= {};
+		vulkanImage.pDevice			= pDevice;
 		vulkanImage.vkImage			= vkImage;
 		vulkanImage.vkMemory		= vkDeviceMemory;
 		vulkanImage.vkImageType		= info.vkImageType;

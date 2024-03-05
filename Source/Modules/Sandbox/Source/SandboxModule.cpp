@@ -199,7 +199,7 @@ namespace Quartz
 			//Entity terr = world.CreateEntity(transformTerrain, renderable3, material3, terrainComponent);
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ 0.0f, -5.0f, 0.0f }, { { 0.0f, 0.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
+			TransformComponent cameraTransform({ 0.0f, -2.0f, 0.0f }, { { 0.0f, 0.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
 			gpCamera = world.CreateEntity(camera, cameraTransform);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();

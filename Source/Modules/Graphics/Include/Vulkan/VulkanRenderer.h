@@ -48,7 +48,8 @@ namespace Quartz
 		void SetCamera(Entity cameraEntity);
 
 		void UpdateAll(EntityWorld* pWorld);
-		void WriteCommandBuffer(VulkanCommandRecorder* pRecorder);
+		void RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx);
+		void RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
 		void RenderScene(EntityWorld* pWorld);
 
 		void RenderUpdate(Runtime* pRuntime, double delta);

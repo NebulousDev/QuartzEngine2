@@ -222,13 +222,21 @@ namespace Quartz
 		mTerrainRenderer.Update(centerPos, *mpCameraComponent, *mpCameraTransformComponent);
 	}
 
-	void VulkanRenderer::WriteCommandBuffer(VulkanCommandRecorder* pRecorder)
+	void VulkanRenderer::RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx)
 	{
+		mBufferCache.RecordTransfers(recorder);
+		mTerrainRenderer.RecordTransfers(recorder);
+	}
+
+	void VulkanRenderer::RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
+	{
+		mTerrainRenderer.RecordDraws(recorder);
+
 		for (VulkanRenderable& renderable : mRenderables)
 		{
-			pRecorder->SetGraphicsPipeline(renderable.pPipeline);
+			recorder.SetGraphicsPipeline(renderable.pPipeline);
 
-			pRecorder->SetIndexBuffer(renderable.meshLocation.pIndexBuffer->GetVulkanBuffer(),
+			recorder.SetIndexBuffer(renderable.meshLocation.pIndexBuffer->GetVulkanBuffer(),
 				renderable.meshLocation.indexEntry.offset, VK_INDEX_TYPE_UINT16);
 
 			VulkanBufferBind pVertexBufferBinds[] = 
@@ -236,7 +244,7 @@ namespace Quartz
 				{renderable.meshLocation.pVertexBuffer->GetVulkanBuffer(), renderable.meshLocation.vertexEntry.offset} 
 			};
 
-			pRecorder->SetVertexBuffers(pVertexBufferBinds, 1);
+			recorder.SetVertexBuffers(pVertexBufferBinds, 1);
 
 			VulkanUniformBufferBind binding = {};
 			binding.binding = 0;
@@ -246,9 +254,9 @@ namespace Quartz
 
 			VulkanUniformBufferBind pBufferBinds[] = { binding };
 
-			pRecorder->BindUniforms(renderable.pPipeline, 0, pBufferBinds, 1, nullptr, 0);
+			recorder.BindUniforms(renderable.pPipeline, 0, pBufferBinds, 1, nullptr, 0);
 
-			pRecorder->DrawIndexed(1, renderable.indexCount, 0, 0); //renderable.meshLocation.indexEntry.offset / sizeof(uInt16)
+			recorder.DrawIndexed(1, renderable.indexCount, 0, 0); //renderable.meshLocation.indexEntry.offset / sizeof(uInt16)
 		}
 	}
 
@@ -256,21 +264,22 @@ namespace Quartz
 	{
 		mSwapTimer.AdvanceFrame();
 
-		uInt32 resourceIdx = mSwapTimer.GetFrameIndex();
-		VulkanCommandBuffer* pCommandBuffer = mCommandBuffers[resourceIdx];
+		uInt32 frameIdx = mSwapTimer.GetFrameIndex();
+
+		VulkanCommandBuffer* pCommandBuffer = mCommandBuffers[frameIdx];
 		VulkanCommandRecorder recorder(pCommandBuffer);
 
 		VulkanSubmission renderSubmition	= {};
-		renderSubmition.commandBuffers		= { mCommandBuffers[resourceIdx] };
+		renderSubmition.commandBuffers		= { mCommandBuffers[frameIdx] };
 		renderSubmition.waitSemaphores		= { mSwapTimer.GetCurrentAcquiredSemaphore() };
 		renderSubmition.waitStages			= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		renderSubmition.signalSemaphores	= { mSwapTimer.GetCurrentCompleteSemaphore() };
 
-		UpdateAll(pWorld);
-
 		recorder.Reset();
 		
 		recorder.BeginRecording();
+
+		RecordTransfers(recorder, frameIdx);
 
 		VkViewport vkViewport = {};
 		vkViewport.x		= 0;
@@ -288,10 +297,7 @@ namespace Quartz
 
 		recorder.SetViewport(vkViewport, vkScissor);
 
-		mBufferCache.RecordTransfers(&recorder);
-		mTerrainRenderer.RecordTransfers(recorder);
-
-		recorder.PipelineBarrierSwapchainImageBegin(mpSwapchain->images[resourceIdx]);
+		recorder.PipelineBarrierSwapchainImageBegin(mpSwapchain->images[frameIdx]);
 
 		VkImageMemoryBarrier vkDepthImageMemoryBarrier = {};
 		vkDepthImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -299,7 +305,7 @@ namespace Quartz
 		vkDepthImageMemoryBarrier.dstAccessMask						= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		vkDepthImageMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
 		vkDepthImageMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		vkDepthImageMemoryBarrier.image								= mDepthImages[resourceIdx]->vkImage;
+		vkDepthImageMemoryBarrier.image								= mDepthImages[frameIdx]->vkImage;
 		vkDepthImageMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 		vkDepthImageMemoryBarrier.subresourceRange.baseMipLevel		= 0;
 		vkDepthImageMemoryBarrier.subresourceRange.levelCount		= 1;
@@ -320,7 +326,7 @@ namespace Quartz
 		recorder.PipelineBarrier(barrierInfo);
 
 		VulkanRenderingAttachmentInfo swapchainRenderingAttachmentInfo = {};
-		swapchainRenderingAttachmentInfo.pImageView		= mpSwapchain->imageViews[resourceIdx];
+		swapchainRenderingAttachmentInfo.pImageView		= mpSwapchain->imageViews[frameIdx];
 		swapchainRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		swapchainRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
 		swapchainRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
@@ -328,7 +334,7 @@ namespace Quartz
 		swapchainRenderingAttachmentInfo.clearValue		= { 0.7f, 0.8f, 1.0f, 1.0f };
 
 		VulkanRenderingAttachmentInfo depthRenderingAttachmentInfo = {};
-		depthRenderingAttachmentInfo.pImageView		= mDepthImageViews[resourceIdx];
+		depthRenderingAttachmentInfo.pImageView		= mDepthImageViews[frameIdx];
 		depthRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		depthRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
 		depthRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
@@ -345,12 +351,11 @@ namespace Quartz
 
 		recorder.BeginRendering(renderingBeginInfo);
 
-		WriteCommandBuffer(&recorder);
-		mTerrainRenderer.RecordDraws(recorder);
+		RecordDraws(recorder, frameIdx);
 
 		recorder.EndRendering();
 
-		recorder.PipelineBarrierSwapchainImageEnd(mpSwapchain->images[resourceIdx]);
+		recorder.PipelineBarrierSwapchainImageEnd(mpSwapchain->images[frameIdx]);
 
 		recorder.EndRecording();
 
@@ -361,7 +366,10 @@ namespace Quartz
 
 	void VulkanRenderer::RenderUpdate(Runtime* pRuntime, double delta)
 	{
-		RenderScene(&Engine::GetWorld());
+		EntityWorld& world = Engine::GetWorld();
+
+		UpdateAll(&world);
+		RenderScene(&world);
 	}
 
 	void VulkanRenderer::Register(Runtime* pRuntime)

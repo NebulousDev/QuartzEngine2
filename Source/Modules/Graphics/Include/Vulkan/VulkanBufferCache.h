@@ -92,6 +92,6 @@ namespace Quartz
 		void					FillRenderableVertexData(VulkanRenderable& renderable, uInt64 meshHash, const ModelData* pModelData, bool& outFound);
 		void					FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes);
 
-		void					RecordTransfers(VulkanCommandRecorder* pRecorder);
+		void					RecordTransfers(VulkanCommandRecorder& recorder);
 	};
 }

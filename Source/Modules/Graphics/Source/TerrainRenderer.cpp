@@ -154,21 +154,26 @@ namespace Quartz
 
 		/* Transfer Buffer Data */
 
-		mImmediateRecorder.Reset();
-		mImmediateRecorder.BeginRecording();
+		VulkanCommandRecorder& immediateRecorder = mImmediateRecorders[2];
+		VulkanCommandBuffer* pImmidateCommandBuffer = mImmediateCommandBuffers[2];
+		VkFence& vkImmediateFence = mImmediateFences[2];
 
-		mImmediateRecorder.CopyBuffer(pMeshLODStagingVertexBuffer, mpLODVertexBuffer, meshLODVertexBufferInfo.sizeBytes, 0, 0);
-		mImmediateRecorder.CopyBuffer(pMeshLODStagingIndexBuffer, mpLODIndexBuffer, meshLODIndexBufferInfo.sizeBytes, 0, 0);
+		immediateRecorder.Reset();
+		immediateRecorder.BeginRecording();
 
-		mImmediateRecorder.EndRecording();
+		immediateRecorder.CopyBuffer(pMeshLODStagingVertexBuffer, mpLODVertexBuffer, meshLODVertexBufferInfo.sizeBytes, 0, 0);
+		immediateRecorder.CopyBuffer(pMeshLODStagingIndexBuffer, mpLODIndexBuffer, meshLODIndexBufferInfo.sizeBytes, 0, 0);
+
+		immediateRecorder.EndRecording();
 
 		VulkanSubmission submission = {};
-		submission.commandBuffers	= { mpTerrainCommandBuffer };
+		submission.commandBuffers	= { pImmidateCommandBuffer };
 		submission.signalSemaphores = {};
 		submission.waitSemaphores	= {};
 		submission.waitStages		= {};
 
-		mpGraphics->Submit(submission, device.queues.graphics, VK_NULL_HANDLE);
+		vkResetFences(device.vkDevice, 1, &vkImmediateFence);
+		mpGraphics->Submit(submission, device.queues.graphics, vkImmediateFence);
 
 		/* Destroy Staging Buffers */
 
@@ -201,7 +206,7 @@ namespace Quartz
 
 	void VulkanTerrainRenderer::UpdateGrid(const Vec2f& centerPos)
 	{
-		constexpr const sSize maxChunkDist = 3;
+		constexpr const sSize maxChunkDist = 4;
 
 		sSize tileX = (sSize)centerPos.x;
 		sSize tileY = (sSize)centerPos.y;
@@ -212,7 +217,7 @@ namespace Quartz
 		for (TerrainTile& tile : mActiveTiles)
 		{
 			Vec2i dist = tile.position - tileCenterPos;
-			if (abs(dist.Magnitude()) > maxChunkDist)
+			if (abs(dist.MagnitudeF()) > maxChunkDist)
 			{
 				DestroyTile(tile);
 				mActiveTileMap.Remove(tile.position);
@@ -228,7 +233,7 @@ namespace Quartz
 				Vec2i tilePosition(x, y);
 				Vec2i dist = tilePosition - tileCenterPos;
 
-				if (abs(dist.Magnitude()) <= (float)maxChunkDist)
+				if (abs(dist.MagnitudeF()) <= (float)maxChunkDist)
 				{
 					TerrainTile tile;
 
@@ -324,8 +329,15 @@ namespace Quartz
 
 		/* Generate Command Buffers */
 
-		mImmediateRecorder.Reset();
-		mImmediateRecorder.BeginRecording();
+		VulkanCommandRecorder& immediateRecorder = mImmediateRecorders[mImmediateIdx];
+		VulkanCommandBuffer* pImmediateCommandBuffer = mImmediateCommandBuffers[mImmediateIdx];
+		VkFence& vkImmediateFence = mImmediateFences[mImmediateIdx];
+
+		vkWaitForFences(device.vkDevice, 1, &vkImmediateFence, true, UINT64_MAX);
+		vkResetFences(device.vkDevice, 1, &vkImmediateFence);
+
+		immediateRecorder.Reset();
+		immediateRecorder.BeginRecording();
 
 		VkImageMemoryBarrier vkPerlinMemoryBarrier = {};
 		vkPerlinMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -351,7 +363,7 @@ namespace Quartz
 		perlinBarrierInfo.imageMemoryBarrierCount	= 1;
 		perlinBarrierInfo.pImageMemoryBarriers		= &vkPerlinMemoryBarrier;
 
-		mImmediateRecorder.PipelineBarrier(perlinBarrierInfo);
+		immediateRecorder.PipelineBarrier(perlinBarrierInfo);
 
 		VkBufferImageCopy vkPerlinImageCopy = {};
 		vkPerlinImageCopy.bufferOffset						= 0;
@@ -368,7 +380,7 @@ namespace Quartz
 		vkPerlinImageCopy.imageExtent.height				= resolution;
 		vkPerlinImageCopy.imageExtent.depth					= 1;
 
-		mImmediateRecorder.CopyBufferToImage(pPerlinImageBuffer, pPerlinImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkPerlinImageCopy });
+		immediateRecorder.CopyBufferToImage(pPerlinImageBuffer, pPerlinImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkPerlinImageCopy });
 
 		VkImageMemoryBarrier vkPerlinMemoryBarrier2 = {};
 		vkPerlinMemoryBarrier2.sType							= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -394,17 +406,19 @@ namespace Quartz
 		perlinBarrierInfo2.imageMemoryBarrierCount	= 1;
 		perlinBarrierInfo2.pImageMemoryBarriers		= &vkPerlinMemoryBarrier2;
 
-		mImmediateRecorder.PipelineBarrier(perlinBarrierInfo2);
+		immediateRecorder.PipelineBarrier(perlinBarrierInfo2);
 
-		mImmediateRecorder.EndRecording();
+		immediateRecorder.EndRecording();
 
 		VulkanSubmission renderSubmition	= {};
-		renderSubmition.commandBuffers		= { mpTerrainCommandBuffer };
+		renderSubmition.commandBuffers		= { pImmediateCommandBuffer };
 		renderSubmition.waitSemaphores		= {};
 		renderSubmition.waitStages			= {};
 		renderSubmition.signalSemaphores	= {};
 
-		mpGraphics->Submit(renderSubmition, device.queues.graphics, VK_NULL_HANDLE);
+		mpGraphics->Submit(renderSubmition, device.queues.graphics, vkImmediateFence);
+
+		mImmediateIdx = (mImmediateIdx + 1) % 3;
 
 		TerrainTileTextures textures = {};
 		textures.pHeightMapBuffer	= pPerlinImageBuffer;
@@ -413,9 +427,6 @@ namespace Quartz
 
 		return textures;
 	}
-
-	VulkanTerrainRenderer::VulkanTerrainRenderer() :
-		mImmediateRecorder(nullptr) { }
 
 	void VulkanTerrainRenderer::Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache)
 	{
@@ -427,9 +438,21 @@ namespace Quartz
 		terrainCommandPoolInfo.queueFamilyIndex			= graphics.pPrimaryDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
 		terrainCommandPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		mpTerrainCommandPool = graphics.pResourceManager->CreateCommandPool(graphics.pPrimaryDevice, terrainCommandPoolInfo);
-		graphics.pResourceManager->CreateCommandBuffers(mpTerrainCommandPool, 1, &mpTerrainCommandBuffer);
-		mImmediateRecorder = VulkanCommandRecorder(mpTerrainCommandBuffer);
+		mpImmediateCommandPool = graphics.pResourceManager->CreateCommandPool(graphics.pPrimaryDevice, terrainCommandPoolInfo);
+		graphics.pResourceManager->CreateCommandBuffers(mpImmediateCommandPool, 3, mImmediateCommandBuffers);
+
+		VkFenceCreateInfo vkImmediateFenceInfo = {};
+		vkImmediateFenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		vkImmediateFenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		vkImmediateFenceInfo.pNext = nullptr;
+
+		for (uSize i = 0; i < 3; i++)
+		{
+			mImmediateRecorders[i] = VulkanCommandRecorder(mImmediateCommandBuffers[i]);
+			vkCreateFence(graphics.pPrimaryDevice->vkDevice, &vkImmediateFenceInfo, VK_NULL_HANDLE, &mImmediateFences[i]);
+		}
+
+		mImmediateIdx = 0;
 
 		/* Create LOD Data */
 

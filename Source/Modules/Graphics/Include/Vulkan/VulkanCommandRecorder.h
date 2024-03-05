@@ -73,6 +73,7 @@ namespace Quartz
 		VulkanCommandBuffer* mpCommandBuffer;
 
 	public:
+		VulkanCommandRecorder();
 		VulkanCommandRecorder(VulkanCommandBuffer* pCommandBuffer);
 
 		void BeginRecording();

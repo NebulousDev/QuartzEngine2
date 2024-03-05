@@ -4,11 +4,11 @@
 
 namespace Quartz
 {
+	VulkanCommandRecorder::VulkanCommandRecorder() :
+		mpCommandBuffer(nullptr) { }
+
 	VulkanCommandRecorder::VulkanCommandRecorder(VulkanCommandBuffer* pCommandBuffer) :
-		mpCommandBuffer(pCommandBuffer)
-	{
-		// Nothing
-	}
+		mpCommandBuffer(pCommandBuffer) { }
 
 	void VulkanCommandRecorder::BeginRecording()
 	{
