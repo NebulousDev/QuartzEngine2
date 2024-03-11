@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Types/Array.h"
+#include "Types/Stack.h"
 #include "GfxAPI.h"
 #include "ModelData.h"
 
@@ -48,6 +49,7 @@ namespace Quartz
 		float				scale;
 		uInt32				lodIndex;
 		TerrainTileTextures	textures;
+		bool				ready;
 	};
 
 	class QUARTZ_GRAPHICS_API VulkanTerrainRenderer
@@ -59,6 +61,7 @@ namespace Quartz
 		Array<TerrainLOD>			mLODs;
 		Array<TerrainTile>			mActiveTiles;
 		Map<Vec2i, TerrainTile>		mActiveTileMap;
+		Stack<TerrainTile>			mLoadingTiles;
 
 		VulkanBuffer*				mpPerTileStagingBuffer;
 		VulkanBuffer*				mpPerTileBuffer;

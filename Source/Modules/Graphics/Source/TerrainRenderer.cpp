@@ -194,6 +194,7 @@ namespace Quartz
 		tile.scale		= scale;
 		tile.lodIndex	= lodIndex;
 		tile.textures	= textures;
+		tile.ready		= true;
 
 		return tile;
 	}
@@ -213,7 +214,17 @@ namespace Quartz
 		sSize tileX = (sSize)centerPos.x;
 		sSize tileY = (sSize)centerPos.y;
 
-		// Destroy tiles outside of range
+		/* Create pending tiles */
+
+		if (!mLoadingTiles.IsEmpty())
+		{
+			TerrainTile tile = mLoadingTiles.Pop();
+			tile = CreateTile(0, tile.position, tile.scale, 1234);
+			mActiveTileMap.Put(tile.position, tile);
+		}
+
+		/* Destroy tiles outside of range */
+
 		for (TerrainTile& tile : mActiveTiles)
 		{
 			float tileCenterX = tile.position.x + 0.5 * tile.scale;
@@ -228,13 +239,15 @@ namespace Quartz
 			}
 		}
 
+		/* Build active tile list */
+
 		mActiveTiles.Clear();
 
 		for (sSize y = tileY - maxChunkDist; y <= tileY + maxChunkDist; y++)
 		{
 			for (sSize x = tileX - maxChunkDist; x <= tileX + maxChunkDist; x++)
 			{
-				TerrainTile tile;
+				TerrainTile tile = {};
 
 				auto& tileIt = mActiveTileMap.Find(Vec2i{x, y});
 				if (tileIt != mActiveTileMap.End())
@@ -243,8 +256,12 @@ namespace Quartz
 				}
 				else
 				{
-					tile = CreateTile(0, { x, y }, 1.0f, 1234);
+					tile.position	= { x, y };
+					tile.ready		= false;
+					tile.scale		= 1.0f;
+
 					mActiveTileMap.Put(tile.position, tile);
+					mLoadingTiles.Push(tile);
 				}
 
 				float tileCenterX = tile.position.x + 0.5 * tile.scale;
@@ -286,7 +303,7 @@ namespace Quartz
 		float sampleY = position.y * (float)(resolution - 1);
 
 		Array<float> perlin = GeneratePerlinNoiseMT(
-			resolution, sampleX, sampleY, seed, 450.0f, 2.0f, {1.0f, 0.5f, 0.25f, 0.125, 0.125 / 2 }
+			resolution, sampleX, sampleY, seed, 450.0f, 2.0f, { 1.0f, 0.5f, 0.25f, 0.125, 0.125 / 2 }
 		);
 
 		VulkanImageInfo perlinImageInfo = {};
@@ -559,6 +576,8 @@ namespace Quartz
 
 		for (uSize i = 0; i < mActiveTiles.Size(); i++)
 		{
+			if (!mActiveTiles[i].ready) continue;
+
 			uInt32 lodIndex = mActiveTiles[i].lodIndex;
 			TerrainLOD& lod = mLODs[lodIndex];
 

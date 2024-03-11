@@ -6,7 +6,9 @@ include(GNUInstallDirs)
 
 add_library(${PROJECT_NAME} SHARED 
 	"Source/SandboxModule.cpp"
- )
+	"Source/Physics.cpp"
+	"Source/Collisions.cpp"
+)
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

@@ -219,18 +219,18 @@ namespace Quartz
 		}
 
 		Vec2f centerPos = { -mpCameraTransformComponent->position.x, -mpCameraTransformComponent->position.z };
-		mTerrainRenderer.Update(centerPos, *mpCameraComponent, *mpCameraTransformComponent);
+		//mTerrainRenderer.Update(centerPos, *mpCameraComponent, *mpCameraTransformComponent);
 	}
 
 	void VulkanRenderer::RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx)
 	{
 		mBufferCache.RecordTransfers(recorder);
-		mTerrainRenderer.RecordTransfers(recorder);
+		//mTerrainRenderer.RecordTransfers(recorder);
 	}
 
 	void VulkanRenderer::RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
 	{
-		mTerrainRenderer.RecordDraws(recorder);
+		//mTerrainRenderer.RecordDraws(recorder);
 
 		for (VulkanRenderable& renderable : mRenderables)
 		{

@@ -18,6 +18,8 @@
 #include "Component/MaterialComponent.h"
 #include "Component/CameraComponent.h"
 
+#include "Physics.h"
+
 #include <vulkan/vulkan.h>
 
 #include "Input/Input.h"
@@ -31,6 +33,8 @@ namespace Quartz
 
 		Window*			gpWindow;
 		Entity			gpCamera;
+		Entity			gpCube;
+		Physics			gPhysics;
 
 		bool QUARTZ_ENGINE_API ModuleQuery(bool isEditor, Quartz::ModuleQueryInfo& moduleQuery)
 		{
@@ -150,9 +154,22 @@ namespace Quartz
 				}
 			};
 
+			ModelData planeData
+			{
+				{
+					-0.5f, 0.0f, -0.5f,		1.0f, 1.0f, 1.0f,	// Bottom Left
+					-0.5f, 0.0f,  0.5f,		1.0f, 1.0f, 1.0f,	// Top Left
+					 0.5f, 0.0f,  0.5f,		1.0f, 1.0f, 1.0f,	// Top Right
+					 0.5f, 0.0f, -0.5f,		1.0f, 1.0f, 1.0f	// Bottom Right
+				},
+				{
+					0, 1, 2, 0, 2, 3
+				}
+			};
+
 			TransformComponent transformCube
 			(
-				{ 0.0f, 0.0f, 0.0f },
+				{ 0.0f, 2.0f, 0.0f },
 				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
 				{ 1.0f, 1.0f, 1.0f }
 			);
@@ -164,7 +181,7 @@ namespace Quartz
 				{ 1.0f, 1.0f, 1.0f }
 			);
 
-			TransformComponent transformTerrain
+			TransformComponent transformPlane
 			(
 				{ 0.0f, 0.0f, 0.0f },
 				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
@@ -191,16 +208,30 @@ namespace Quartz
 
 			MeshComponent renderable1("simpleTri", triData);
 			MeshComponent renderable2("simpleCube", cubeData);
-			//MeshComponent renderable3("terrain", terrainData);
+			MeshComponent renderable3("simplePlane", planeData);
 			//TerrainComponent terrainComponent;
 
-			Entity cube = world.CreateEntity(transformCube, renderable2, material1);
+			RigidBodyComponent cubePhysics;
+			cubePhysics.friction = 1.0f;
+			cubePhysics.collider = SphereCollider(transformCube, 0.5f);
+			cubePhysics.AddForce(Vec3f(0.0f, -1.0f, 0.0f) * 0.0f);
+
+			RigidBodyComponent planePhysics;
+			planePhysics.friction = 1.0f;
+			planePhysics.collider = PlaneCollider(transformPlane, { 0.0f, 1.0f, 0.0f }, 1.0f);
+
+			RigidBodyComponent cameraPhysics;
+			cameraPhysics.friction = 1.0f;
+			cameraPhysics.collider = SphereCollider(transformCube, 0.5f);
+
+			gpCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
 			//Entity tri	= world.CreateEntity(transformTri, renderable1, material2);
 			//Entity terr = world.CreateEntity(transformTerrain, renderable3, material3, terrainComponent);
+			Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
 			TransformComponent cameraTransform({ 0.0f, -2.0f, 0.0f }, { { 0.0f, 0.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
-			gpCamera = world.CreateEntity(camera, cameraTransform);
+			gpCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
 			pRenderer->Register(&runtime);
@@ -223,11 +254,13 @@ namespace Quartz
 					}
 
 					TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
+					RigidBodyComponent& rigidBody = Engine::GetWorld().Get<RigidBodyComponent>(gpCamera);
 
-					float speed = 1.0f;
+					float speed = 2.0f;
 
-					if(moveForward)
-						transform.position += transform.GetForward() * speed * delta;
+					if (moveForward)
+						//transform.position += transform.GetForward() * speed * delta;
+						rigidBody.AddForce(transform.GetForward() * speed * delta);
 
 					if (moveBackward)
 						transform.position += transform.GetBackward() * speed * delta;
@@ -237,6 +270,11 @@ namespace Quartz
 
 					if (moveRight)
 						transform.position += -transform.GetRight() * speed * delta;
+
+					/// PHYSICS
+
+					gPhysics.Step(Engine::GetWorld(), delta);
+					gPhysics.Resolve(Engine::GetWorld(), delta);
 				}
 			);
 
@@ -252,6 +290,7 @@ namespace Quartz
 			input.MapKeyboardButton("MoveRight",	INPUT_KEYBOARD_ANY, 77 /* > */, INPUT_ACTION_ANY);
 
 			input.MapKeyboardButton("Interact",		INPUT_KEYBOARD_ANY, 18 /* E */, INPUT_ACTION_RELEASED);
+			input.MapKeyboardButton("Push",			INPUT_KEYBOARD_ANY, 33 /* > */, INPUT_ACTION_RELEASED);
 
 			input.RegisterOnAxisInput("MouseLook",
 				[](Vec2f direction, InputActions actions)
@@ -302,6 +341,16 @@ namespace Quartz
 					const InputMouse& mouse = *Engine::GetDeviceRegistry().GetPrimaryMouse();
 					input.SetMouseHidden(*gpWindow, mouse, captured);
 					input.SetMouseBounds(*gpWindow, mouse, gpWindow->GetBounds(), captured);
+				}
+			);
+
+			input.RegisterOnButtonInput("Push",
+				[](float value, InputActions actions)
+				{
+					RigidBodyComponent& physics = Engine::GetWorld().Get<RigidBodyComponent>(gpCube);
+					TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gpCamera);
+
+					physics.AddForce(-transform.GetForward() * 1.0f);
 				}
 			);
 		}
