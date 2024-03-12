@@ -44,8 +44,17 @@ namespace Quartz
 
 				if (collision.isColliding)
 				{
-					transform1.position -= (collision.extent1 - collision.extent0);
-					physics1.force = {};
+					if (!physics0.collider.isStatic)
+					{
+						transform0.position += (collision.extent1 - collision.extent0) / 2.0f;
+					}
+
+					if (!physics1.collider.isStatic)
+					{
+						transform1.position -= (collision.extent1 - collision.extent0) / 2.0f;
+					}
+
+					//physics1.force = {};
 				}
 
 			}

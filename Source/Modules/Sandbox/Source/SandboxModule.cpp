@@ -167,6 +167,19 @@ namespace Quartz
 				}
 			};
 
+			ModelData planeData2
+			{
+				{
+					-0.5f, 0.0f, -0.5f,		0.5f, 0.5f, 0.5f,	// Bottom Left
+					-0.5f, 0.0f,  0.5f,		0.5f, 0.5f, 0.5f,	// Top Left
+					 0.5f, 0.0f,  0.5f,		0.5f, 0.5f, 0.5f,	// Top Right
+					 0.5f, 0.0f, -0.5f,		0.5f, 0.5f, 0.5f	// Bottom Right
+				},
+				{
+					0, 1, 2, 0, 2, 3
+				}
+			};
+
 			TransformComponent transformCube
 			(
 				{ 0.0f, 2.0f, 0.0f },
@@ -186,6 +199,13 @@ namespace Quartz
 				{ 0.0f, 0.0f, 0.0f },
 				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
 				{ 20.0f, 20.0f, 20.0f }
+			);
+
+			TransformComponent transformPlane2
+			(
+				{ -10.0f, 0.0f, 0.0f },
+				Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(90.0f)),
+				{ 20.0f, 10.0f, 20.0f }
 			);
 
 			MaterialComponent material1
@@ -209,6 +229,7 @@ namespace Quartz
 			MeshComponent renderable1("simpleTri", triData);
 			MeshComponent renderable2("simpleCube", cubeData);
 			MeshComponent renderable3("simplePlane", planeData);
+			MeshComponent renderable4("simplePlane2", planeData2);
 			//TerrainComponent terrainComponent;
 
 			RigidBodyComponent cubePhysics;
@@ -218,7 +239,11 @@ namespace Quartz
 
 			RigidBodyComponent planePhysics;
 			planePhysics.friction = 1.0f;
-			planePhysics.collider = PlaneCollider(transformPlane, { 0.0f, 1.0f, 0.0f }, 1.0f);
+			planePhysics.collider = PlaneCollider(transformPlane, { 0.0f, 1.0f, 0.0f }, 1.0f, true);
+
+			RigidBodyComponent planePhysics2;
+			planePhysics2.friction = 1.0f;
+			planePhysics2.collider = PlaneCollider(transformPlane, { 0.0f, 1.0f, 0.0f }, 1.0f, true);
 
 			RigidBodyComponent cameraPhysics;
 			cameraPhysics.friction = 1.0f;
@@ -227,10 +252,11 @@ namespace Quartz
 			gpCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
 			//Entity tri	= world.CreateEntity(transformTri, renderable1, material2);
 			//Entity terr = world.CreateEntity(transformTerrain, renderable3, material3, terrainComponent);
+			Entity plane2 = world.CreateEntity(transformPlane2, renderable4, material1, planePhysics2);
 			Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ 0.0f, -2.0f, 0.0f }, { { 0.0f, 0.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
+			TransformComponent cameraTransform({ 0.0f, 4.0f, 0.0f }, { { 0.0f, 0.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
 			gpCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
@@ -259,17 +285,16 @@ namespace Quartz
 					float speed = 2.0f;
 
 					if (moveForward)
-						//transform.position += transform.GetForward() * speed * delta;
-						rigidBody.AddForce(transform.GetForward() * speed * delta);
+						transform.position -= transform.GetForward() * speed * delta;
 
 					if (moveBackward)
-						transform.position += transform.GetBackward() * speed * delta;
+						transform.position -= transform.GetBackward() * speed * delta;
 
 					if (moveLeft)
-						transform.position += -transform.GetLeft() * speed * delta;
+						transform.position += transform.GetLeft() * speed * delta;
 
 					if (moveRight)
-						transform.position += -transform.GetRight() * speed * delta;
+						transform.position += transform.GetRight() * speed * delta;
 
 					/// PHYSICS
 

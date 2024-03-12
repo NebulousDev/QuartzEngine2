@@ -52,12 +52,14 @@ namespace Quartz
 			struct { char _shapeData[8 * sizeof(float)]; } shapeData;
 		};
 
-		ShapeType shape;
-		Transform transform;
+		ShapeType	shape;
+		Transform	transform;
+		bool		isStatic;
 
 		inline Collider() : shapeData{} {};
 		inline Collider(const Collider& collider) :
-			shape(collider.shape), transform(collider.transform), shapeData(collider.shapeData) { }
+			shape(collider.shape), transform(collider.transform), 
+			shapeData(collider.shapeData), isStatic(collider.isStatic) { }
 	};
 
 	class SphereCollider : public Collider
@@ -67,11 +69,12 @@ namespace Quartz
 		Collider::transform;
 
 	public:
-		inline SphereCollider(Transform transform, float radius)
+		inline SphereCollider(Transform transform, float radius, bool isStatic = false)
 		{ 
-			shape = SHAPE_SPHERE;
+			this->shape = SHAPE_SPHERE;
 			this->transform = transform;
-			sphere.radius = radius;
+			this->sphere.radius = radius;
+			this->isStatic = isStatic;
 		};
 	};
 
@@ -82,12 +85,13 @@ namespace Quartz
 		Collider::transform;
 
 	public:
-		inline PlaneCollider(Transform transform, Vec3f normal, float length)
+		inline PlaneCollider(Transform transform, Vec3f normal, float length, bool isStatic = false)
 		{
-			shape = SHAPE_PLANE;
+			this->shape = SHAPE_PLANE;
 			this->transform = transform;
-			plane.normal = normal;
-			plane.length = length;
+			this->plane.normal = normal;
+			this->plane.length = length;
+			this->isStatic = isStatic;
 		};
 	};
 
@@ -98,11 +102,12 @@ namespace Quartz
 		Collider::transform;
 
 	public:
-		inline RectCollider(Transform transform, Bounds3f bounds)
+		inline RectCollider(Transform transform, Bounds3f bounds, bool isStatic = false)
 		{
-			shape = SHAPE_RECT;
+			this->shape = SHAPE_RECT;
 			this->transform = transform;
-			rect.bounds = bounds;
+			this->rect.bounds = bounds;
+			this->isStatic = isStatic;
 		};
 	};
 
@@ -113,10 +118,11 @@ namespace Quartz
 		Collider::transform;
 
 	public:
-		inline CapsuleCollider(Transform transform)
+		inline CapsuleCollider(Transform transform, bool isStatic = false)
 		{
-			shape = SHAPE_CAPSULE;
+			this->shape = SHAPE_CAPSULE;
 			this->transform = transform;
+			this->isStatic = isStatic;
 		};
 	};
 
@@ -127,10 +133,11 @@ namespace Quartz
 		Collider::transform;
 
 	public:
-		inline MeshCollider(Transform transform)
+		inline MeshCollider(Transform transform, bool isStatic = false)
 		{
-			shape = SHAPE_MESH;
+			this->shape = SHAPE_MESH;
 			this->transform = transform;
+			this->isStatic = isStatic;
 		};
 	};
 

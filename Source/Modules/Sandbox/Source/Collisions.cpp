@@ -9,18 +9,19 @@ namespace Quartz
 
 	Collision ResolveSphereSphere(Collider sphere0, Collider sphere1)
 	{
-		Vec3f dir		= sphere1.transform.position - sphere0.transform.position;
-		float dist		= dir.Magnitude();
-		float scale0	= sphere0.transform.scale.Magnitude();
-		float scale1	= sphere1.transform.scale.Magnitude();
+		Vec3f diff		= sphere1.transform.position - sphere0.transform.position;
+		float scale0	= 1.0f; //sphere0.transform.scale.Magnitude();
+		float scale1	= 1.0f; //sphere1.transform.scale.Magnitude();
 		float radius0	= scale0 * sphere0.sphere.radius;
 		float radius1	= scale1 * sphere1.sphere.radius;
 
+		float dist = diff.Magnitude();
+
 		if (dist > PHYSICS_SMALLEST_DISTANCE && dist < (radius0 + radius1))
 		{
-			Vec3f normDir = dir.Normalized();
+			Vec3f normDir = diff.Normalized();
 			Vec3f extent0 = sphere0.transform.position + normDir * radius0;
-			Vec3f extent1 = sphere1.transform.position + normDir * radius1;
+			Vec3f extent1 = sphere1.transform.position - normDir * radius1;
 
 			return Collision(extent0, extent1);
 		}
@@ -32,14 +33,15 @@ namespace Quartz
 	{
 		float scale0	= 1.0f;//sphere0.transform.scale.Magnitude();
 		float radius0	= scale0 * sphere0.sphere.radius;
-		Vec3f planeExt	= plane1.transform.position;//plane1.plane.normal * plane1.plane.length + plane1.transform.position;
+		Vec3f rotNormal = plane1.transform.rotation * plane1.plane.normal;
+		Vec3f planeExt	= plane1.transform.position; //rotNormal * plane1.plane.length + plane1.transform.position;
 
-		float dist = Dot(sphere0.transform.position - planeExt, plane1.plane.normal);
+		float dist = Dot(sphere0.transform.position - planeExt, rotNormal);
 
 		if (dist > PHYSICS_SMALLEST_DISTANCE && dist < radius0)
 		{
-			Vec3f extent0 = sphere0.transform.position - plane1.plane.normal * radius0;
-			Vec3f extent1 = sphere0.transform.position - plane1.plane.normal * dist;
+			Vec3f extent0 = sphere0.transform.position - rotNormal * radius0;
+			Vec3f extent1 = sphere0.transform.position - rotNormal * dist;
 
 			return Collision(extent0, extent1);
 		}
