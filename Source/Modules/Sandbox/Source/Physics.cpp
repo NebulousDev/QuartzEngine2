@@ -40,7 +40,7 @@ namespace Quartz
 				TransformComponent& transform0 = world.Get<TransformComponent>(entity0);
 				TransformComponent& transform1 = world.Get<TransformComponent>(entity1);
 
-				Collision collision = ResolveCollision(physics0.collider, physics1.collider);
+				Collision collision = Collide(physics0.collider, physics1.collider);
 
 				if (collision.isColliding)
 				{

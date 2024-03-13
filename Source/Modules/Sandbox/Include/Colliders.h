@@ -10,12 +10,14 @@ namespace Quartz
 		SHAPE_PLANE		= 1,
 		SHAPE_RECT		= 2,
 		SHAPE_CAPSULE	= 3,
-		SHAPE_MESH		= 4
+		SHAPE_HULL		= 4,
+		SHAPE_MESH		= 5
 	};
 
 	struct SphereShape
 	{
 		float radius;
+		// center
 	};
 
 	struct PlaneShape
@@ -34,6 +36,11 @@ namespace Quartz
 
 	};
 
+	struct HullShape
+	{
+		
+	};
+
 	struct MeshShape
 	{
 
@@ -47,6 +54,7 @@ namespace Quartz
 			PlaneShape		plane;
 			RectShape		rect;
 			CapsuleShape	capsule;
+			HullShape		hull;
 			MeshShape		mesh;
 
 			struct { char _shapeData[8 * sizeof(float)]; } shapeData;
@@ -121,6 +129,21 @@ namespace Quartz
 		inline CapsuleCollider(Transform transform, bool isStatic = false)
 		{
 			this->shape = SHAPE_CAPSULE;
+			this->transform = transform;
+			this->isStatic = isStatic;
+		};
+	};
+
+	class HullCollider : protected Collider
+	{
+	public:
+		Collider::hull;
+		Collider::transform;
+
+	public:
+		inline HullCollider(Transform transform, bool isStatic = false)
+		{
+			this->shape = SHAPE_HULL;
 			this->transform = transform;
 			this->isStatic = isStatic;
 		};

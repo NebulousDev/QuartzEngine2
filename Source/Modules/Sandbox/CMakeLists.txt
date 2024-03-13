@@ -8,7 +8,7 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/SandboxModule.cpp"
 	"Source/Physics.cpp"
 	"Source/Collisions.cpp"
- "Include/RigidBody.h")
+ "Include/RigidBody.h" "Source/FurthestPoint.cpp" "Source/GJK.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
