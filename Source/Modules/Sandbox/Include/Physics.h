@@ -79,12 +79,16 @@ namespace Quartz
 		static Vec3f FurthestPointMesh(const Collider& mesh, const Vec3f& direction);
 
 		static Vec3f MinkowskiFurthestPoint(const Collider& collider0, const Collider& collider1, const Vec3f direction);
-		static Vec3f MinkowskiFurthestPointRect(const Collider& collider0, const Collider& rect1, const Vec3f direction, Vec3f(&points)[8]);
+		static Vec3f MinkowskiFurthestPointRect(const Collider& collider0, const Collider& rect1, Vec3f(&points)[8], const Vec3f direction);
+		static Vec3f MinkowskiFurthestPointRectRect(const Collider& rect0, Vec3f(&points0)[8], const Collider& rect1, Vec3f(&points1)[8], const Vec3f direction);
 
 		static bool GJK(const Collider& collider0, const Collider& collider1, Simplex& outSimplex);
 		static bool GJKRect(const Collider& collider0, const Collider& rect1, Vec3f(&points)[8], Simplex& outSimplex);
+		static bool GJKRectRect(const Collider& rect0, Vec3f(&points0)[8], const Collider& rect1, Vec3f(&points1)[8], Simplex& outSimplex);
 
 		static Collision EPA(const Collider& collider0, const Collider& collider1, const Simplex& simplex);
+		static Collision EPARect(const Collider& collider0, const Collider& rect1, Vec3f(&points)[8], const Simplex& simplex);
+		static Collision EPARectRect(const Collider& rect0, Vec3f(&points0)[8], const Collider& rect1, Vec3f(&points1)[8], const Simplex& simplex);
 
 		static Collision CollideSphereSphere(const Collider& sphere0, const Collider& sphere1);
 		static Collision CollideSpherePlane(const Collider& sphere0, const Collider& plane1);

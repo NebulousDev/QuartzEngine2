@@ -6,13 +6,7 @@ namespace Quartz
 
 	void Physics::Simplex::Push(const Vec3f& point)
 	{
-		//mPoints[3] = mPoints[2];
-		//mPoints[2] = mPoints[1];
-		//mPoints[1] = mPoints[0];
-		//mPoints[0] = point;
-
-		//mSize = mSize == 4 ? 4 : mSize + 1;
-
+		// @TODO: assert mSize < 4
 		mPoints[mSize++] = point;
 	}
 
@@ -33,15 +27,6 @@ namespace Quartz
 		{
 			inOutDir = Cross(Cross(ab, ao), ab);
 		}
-
-		/*
-		else
-		{
-			mPoints[0]	= a;
-			mSize		= 1;
-			inOutDir	= ao;
-		}
-		*/
 
 		return false;
 	}
@@ -393,9 +378,14 @@ namespace Quartz
 		return FurthestPoint(collider0, direction) - FurthestPoint(collider1, -direction);
 	}
 
-	Vec3f Physics::MinkowskiFurthestPointRect(const Collider& collider0, const Collider& rect1, const Vec3f direction, Vec3f(&mPoints)[8])
+	Vec3f Physics::MinkowskiFurthestPointRect(const Collider& collider0, const Collider& rect1, Vec3f(&points)[8], const Vec3f direction)
 	{
-		return FurthestPointSphere(collider0, direction) - FurthestPointRect(rect1, -direction, mPoints);
+		return FurthestPointSphere(collider0, direction) - FurthestPointRect(rect1, -direction, points);
+	}
+
+	Vec3f Physics::MinkowskiFurthestPointRectRect(const Collider& rect0, Vec3f(&points0)[8], const Collider& rect1, Vec3f(&points1)[8], const Vec3f direction)
+	{
+		return FurthestPointRect(rect0, direction, points0) - FurthestPointRect(rect1, -direction, points1);
 	}
 
 	bool Physics::GJK(const Collider& collider0, const Collider& collider1, Simplex& outSimplex)
@@ -451,7 +441,7 @@ namespace Quartz
 
 		// Check any inital direction (x-axis) for the furthest point in minkowski difference.
 		Vec3f direction = Vec3f::X_AXIS;
-		Vec3f furthestPoint = MinkowskiFurthestPointRect(collider0, rect1, direction, points);
+		Vec3f furthestPoint = MinkowskiFurthestPointRect(collider0, rect1, points, direction);
 
 		// If the initial minkowski point is zero, 
 		// the colliders are touching but not overlapping. Do not collide.
@@ -470,7 +460,54 @@ namespace Quartz
 		uSize iter = 0;
 		while (iter++ < PHYSICS_GJK_MAX_ITERATIONS)
 		{
-			furthestPoint = MinkowskiFurthestPointRect(collider0, rect1, direction, points);
+			furthestPoint = MinkowskiFurthestPointRect(collider0, rect1, points, direction);
+
+			// Is the origin outside the search region
+			if (Dot(furthestPoint, direction) < 0.0f)
+			{
+				return false; // No Collision
+			}
+
+			// Add the new point to the simplex.
+			simplex.Push(furthestPoint);
+
+			// Get the next direction from the simplex
+			if (simplex.Next(direction))
+			{
+				outSimplex = simplex;
+				return true;
+			}
+		}
+
+		return false; // Exceeded max iterations
+	}
+
+	bool Physics::GJKRectRect(const Collider& rect0, Vec3f(&points0)[8], const Collider& rect1, Vec3f(&points1)[8], Simplex& outSimplex)
+	{
+		Simplex simplex;
+
+		// Check any inital direction (x-axis) for the furthest point in minkowski difference.
+		Vec3f direction = Vec3f::X_AXIS;
+		Vec3f furthestPoint = MinkowskiFurthestPointRectRect(rect0, points0, rect1, points1, direction);
+
+		// If the initial minkowski point is zero, 
+		// the colliders are touching but not overlapping. Do not collide.
+		if (furthestPoint.IsZero())
+		{
+			// @TODO
+			return false;
+		}
+
+		// Add the inital point to the simplex.
+		simplex.Push(furthestPoint);
+
+		// Search in the opposite direction of the inital point.
+		direction = -furthestPoint;
+
+		uSize iter = 0;
+		while (iter++ < PHYSICS_GJK_MAX_ITERATIONS)
+		{
+			furthestPoint = MinkowskiFurthestPointRectRect(rect0, points0, rect1, points1, direction);
 
 			// Is the origin outside the search region
 			if (Dot(furthestPoint, direction) < 0.0f)
@@ -519,10 +556,84 @@ namespace Quartz
 			}
 			else
 			{
-				float dist2 = DistanceToPlane(Vec3f::ZERO, tri.points[0], normal);
+				Vec3f extent0 = FurthestPoint(collider0, normal);
+				Vec3f extent1 = extent0 - normal.Normalized() * dist;
 
-				// @TODO: double check
-				return Collision(normal.Normalized() * dist2, {0.0f, 0.0f, 0.0f});
+				return Collision(extent0, extent1);
+			}
+		}
+
+		return Collision();
+	}
+
+	Collision Physics::EPARect(const Collider& collider0, const Collider& rect1, Vec3f(&points)[8], const Simplex& simplex)
+	{
+		constexpr float tolerance = 0.01f;
+
+		Polytope polytope;
+		polytope.AddSimplex(simplex);
+
+		uSize iteration = 0;
+		while (iteration++ < PHYSICS_EPA_MAX_ITERATIONS)
+		{
+			Triangle	tri;
+			uSize		index;
+			float		dist;
+			Vec3f		normal;
+
+			// Find the triangle closest to the origin
+			polytope.ClosestTriangle(Vec3f::ZERO, tri, index, dist, normal);
+
+			// Get the furthest point in the normal direction
+			Vec3f furthestPoint = MinkowskiFurthestPointRect(collider0, rect1, points, normal);
+
+			if (Dot(furthestPoint, normal) > dist + tolerance)
+			{
+				polytope.Extend(furthestPoint);
+			}
+			else
+			{
+				Vec3f extent0 = FurthestPoint(collider0, normal);
+				Vec3f extent1 = extent0 - normal.Normalized() * dist;
+
+				return Collision(extent0, extent1);
+			}
+		}
+
+		return Collision();
+	}
+
+	Collision Physics::EPARectRect(const Collider& rect0, Vec3f(&points0)[8], const Collider& rect1, Vec3f(&points1)[8], const Simplex& simplex)
+	{
+		constexpr float tolerance = 0.01f;
+
+		Polytope polytope;
+		polytope.AddSimplex(simplex);
+
+		uSize iteration = 0;
+		while (iteration++ < PHYSICS_EPA_MAX_ITERATIONS)
+		{
+			Triangle	tri;
+			uSize		index;
+			float		dist;
+			Vec3f		normal;
+
+			// Find the triangle closest to the origin
+			polytope.ClosestTriangle(Vec3f::ZERO, tri, index, dist, normal);
+
+			// Get the furthest point in the normal direction
+			Vec3f furthestPoint = MinkowskiFurthestPointRectRect(rect0, points0, rect1, points1, normal);
+
+			if (Dot(furthestPoint, normal) > dist + tolerance)
+			{
+				polytope.Extend(furthestPoint);
+			}
+			else
+			{
+				Vec3f extent0 = FurthestPoint(rect0, normal);
+				Vec3f extent1 = extent0 - normal.Normalized() * dist;
+
+				return Collision(extent0, extent1);
 			}
 		}
 

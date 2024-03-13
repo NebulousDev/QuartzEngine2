@@ -40,22 +40,17 @@ namespace Quartz
 	Vec3f Physics::FurthestPointRect(const Collider& rect, const Vec3f& direction)
 	{
 		Mat4f rectTransform = rect.transform.GetMatrix();
-		Bounds3f rectBounds = rect.rect.bounds;
-
-		// Transform Rect in to world space
-		//rectBounds.start = rectTransform * rectBounds.start;
-		//rectBounds.end = rectTransform * rectBounds.end;
 
 		Vec3f points[8]
 		{
-			rectTransform * rectBounds.BottomRightFront(),
-			rectTransform * rectBounds.BottomLeftFront(),
-			rectTransform * rectBounds.BottomRightBack(),
-			rectTransform * rectBounds.BottomLeftBack(),
-			rectTransform * rectBounds.TopRightFront(),
-			rectTransform * rectBounds.TopLeftFront(),
-			rectTransform * rectBounds.TopRightBack(),
-			rectTransform * rectBounds.TopLeftBack()
+			rectTransform * rect.rect.bounds.BottomRightFront(),
+			rectTransform * rect.rect.bounds.BottomLeftFront(),
+			rectTransform * rect.rect.bounds.BottomRightBack(),
+			rectTransform * rect.rect.bounds.BottomLeftBack(),
+			rectTransform * rect.rect.bounds.TopRightFront(),
+			rectTransform * rect.rect.bounds.TopLeftFront(),
+			rectTransform * rect.rect.bounds.TopRightBack(),
+			rectTransform * rect.rect.bounds.TopLeftBack()
 		};
 
 		return FurthestPointRect(rect, direction, points);

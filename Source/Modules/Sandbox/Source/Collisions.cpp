@@ -51,29 +51,24 @@ namespace Quartz
 	Collision Physics::CollideSphereRect(const Collider& sphere0, const Collider& rect1)
 	{
 		Mat4f rectTransform = rect1.transform.GetMatrix();
-		Bounds3f rectBounds = rect1.rect.bounds;
-
-		// Transform Rect in to world space
-		//rectBounds.start = rectTransform * rectBounds.start;
-		//rectBounds.end = rectTransform * rectBounds.end;
 
 		Vec3f points[8]
 		{
-			rectTransform * rectBounds.BottomRightFront(),
-			rectTransform * rectBounds.BottomLeftFront(),
-			rectTransform * rectBounds.BottomRightBack(),
-			rectTransform * rectBounds.BottomLeftBack(),
-			rectTransform * rectBounds.TopRightFront(),
-			rectTransform * rectBounds.TopLeftFront(),
-			rectTransform * rectBounds.TopRightBack(),
-			rectTransform * rectBounds.TopLeftBack()
+			rectTransform * rect1.rect.bounds.BottomRightFront(),
+			rectTransform * rect1.rect.bounds.BottomLeftFront(),
+			rectTransform * rect1.rect.bounds.BottomRightBack(),
+			rectTransform * rect1.rect.bounds.BottomLeftBack(),
+			rectTransform * rect1.rect.bounds.TopRightFront(),
+			rectTransform * rect1.rect.bounds.TopLeftFront(),
+			rectTransform * rect1.rect.bounds.TopRightBack(),
+			rectTransform * rect1.rect.bounds.TopLeftBack()
 		};
 
 		Simplex simplex;
 
 		if (GJKRect(sphere0, rect1, points, simplex))
 		{
-			return EPA(sphere0, rect1, simplex);
+			return EPARect(sphere0, rect1, points, simplex);
 		}
 
 		return Collision(); // No Collision
@@ -86,6 +81,13 @@ namespace Quartz
 
 	Collision Physics::CollideSphereHull(const Collider& sphere0, const Collider& hull1)
 	{
+		Simplex simplex;
+
+		if (GJK(sphere0, hull1, simplex))
+		{
+			return EPA(sphere0, hull1, simplex);
+		}
+
 		return Collision(); // No Collision
 	}
 
@@ -109,16 +111,18 @@ namespace Quartz
 		Vec3f rotNormal = plane0.transform.rotation * plane0.plane.normal;
 		Vec3f planePoint = rotNormal * plane0.plane.length + plane0.transform.position;
 
+		Mat4f rectTransform = rect1.transform.GetMatrix();
+
 		Vec3f points[8]
 		{
-			rect1.rect.bounds.BottomRightFront(),
-			rect1.rect.bounds.BottomLeftFront(),
-			rect1.rect.bounds.BottomRightBack(),
-			rect1.rect.bounds.BottomLeftBack(),
-			rect1.rect.bounds.TopRightFront(),
-			rect1.rect.bounds.TopLeftFront(),
-			rect1.rect.bounds.TopRightBack(),
-			rect1.rect.bounds.TopLeftBack()
+			rectTransform * rect1.rect.bounds.BottomRightFront(),
+			rectTransform * rect1.rect.bounds.BottomLeftFront(),
+			rectTransform * rect1.rect.bounds.BottomRightBack(),
+			rectTransform * rect1.rect.bounds.BottomLeftBack(),
+			rectTransform * rect1.rect.bounds.TopRightFront(),
+			rectTransform * rect1.rect.bounds.TopLeftFront(),
+			rectTransform * rect1.rect.bounds.TopRightBack(),
+			rectTransform * rect1.rect.bounds.TopLeftBack()
 		};
 
 		float maxDist = -1000000.0f;
@@ -126,13 +130,12 @@ namespace Quartz
 
 		for (uSize i = 0; i < 8; i++)
 		{
-			Vec3f point = rect1.transform.GetMatrix() * points[i];
-			float dist = Dot(point, -rotNormal);
+			float dist = Dot(points[i], -rotNormal);
 
 			if (dist > maxDist)
 			{
 				maxDist = dist;
-				maxPoint = point;
+				maxPoint = points[i];
 			}
 		}
 
@@ -157,6 +160,13 @@ namespace Quartz
 
 	Collision Physics::CollidePlaneHull(const Collider& plane0, const Collider& hull1)
 	{
+		Simplex simplex;
+
+		if (GJK(plane0, hull1, simplex))
+		{
+			return EPA(plane0, hull1, simplex);
+		}
+
 		return Collision(); // No Collision
 	}
 
@@ -177,6 +187,40 @@ namespace Quartz
 
 	Collision Physics::CollideRectRect(const Collider& rect0, const Collider& rect1)
 	{
+		Mat4f rectTransform0 = rect0.transform.GetMatrix();
+		Mat4f rectTransform1 = rect1.transform.GetMatrix();
+
+		Vec3f points0[8]
+		{
+			rectTransform0 * rect0.rect.bounds.BottomRightFront(),
+			rectTransform0 * rect0.rect.bounds.BottomLeftFront(),
+			rectTransform0 * rect0.rect.bounds.BottomRightBack(),
+			rectTransform0 * rect0.rect.bounds.BottomLeftBack(),
+			rectTransform0 * rect0.rect.bounds.TopRightFront(),
+			rectTransform0 * rect0.rect.bounds.TopLeftFront(),
+			rectTransform0 * rect0.rect.bounds.TopRightBack(),
+			rectTransform0 * rect0.rect.bounds.TopLeftBack()
+		};
+
+		Vec3f points1[8]
+		{
+			rectTransform1 * rect1.rect.bounds.BottomRightFront(),
+			rectTransform1 * rect1.rect.bounds.BottomLeftFront(),
+			rectTransform1 * rect1.rect.bounds.BottomRightBack(),
+			rectTransform1 * rect1.rect.bounds.BottomLeftBack(),
+			rectTransform1 * rect1.rect.bounds.TopRightFront(),
+			rectTransform1 * rect1.rect.bounds.TopLeftFront(),
+			rectTransform1 * rect1.rect.bounds.TopRightBack(),
+			rectTransform1 * rect1.rect.bounds.TopLeftBack()
+		};
+
+		Simplex simplex;
+
+		if (GJKRectRect(rect0, points0, rect1, points1, simplex))
+		{
+			return EPARectRect(rect0, points0, rect1, points1, simplex);
+		}
+
 		return Collision(); // No Collision
 	}
 
@@ -187,6 +231,27 @@ namespace Quartz
 
 	Collision Physics::CollideRectHull(const Collider& rect0, const Collider& hull1)
 	{
+		Mat4f rectTransform = rect0.transform.GetMatrix();
+
+		Vec3f points[8]
+		{
+			rectTransform * rect0.rect.bounds.BottomRightFront(),
+			rectTransform * rect0.rect.bounds.BottomLeftFront(),
+			rectTransform * rect0.rect.bounds.BottomRightBack(),
+			rectTransform * rect0.rect.bounds.BottomLeftBack(),
+			rectTransform * rect0.rect.bounds.TopRightFront(),
+			rectTransform * rect0.rect.bounds.TopLeftFront(),
+			rectTransform * rect0.rect.bounds.TopRightBack(),
+			rectTransform * rect0.rect.bounds.TopLeftBack()
+		};
+
+		Simplex simplex;
+
+		if (GJKRect(hull1, rect0, points, simplex))
+		{
+			return EPARect(hull1, rect0, points, simplex).Flip();
+		}
+
 		return Collision(); // No Collision
 	}
 
@@ -247,6 +312,13 @@ namespace Quartz
 
 	Collision Physics::CollideHullHull(const Collider& hull0, const Collider& hull1)
 	{
+		Simplex simplex;
+
+		if (GJK(hull0, hull1, simplex))
+		{
+			return EPA(hull0, hull1, simplex);
+		}
+
 		return Collision(); // No Collision
 	}
 

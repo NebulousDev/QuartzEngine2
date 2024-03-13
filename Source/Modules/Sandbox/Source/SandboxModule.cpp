@@ -234,7 +234,7 @@ namespace Quartz
 
 			RigidBodyComponent cubePhysics;
 			cubePhysics.friction = 1.0f;
-			cubePhysics.collider = RectCollider(transformCube, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, true);
+			cubePhysics.collider = RectCollider(transformCube, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
 
 			RigidBodyComponent planePhysics;
 			planePhysics.friction = 1.0f;
