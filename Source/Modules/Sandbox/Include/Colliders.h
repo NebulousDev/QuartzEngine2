@@ -6,6 +6,7 @@ namespace Quartz
 {
 	enum ShapeType
 	{
+		SHAPE_NONE		= -1,
 		SHAPE_SPHERE	= 0,
 		SHAPE_PLANE		= 1,
 		SHAPE_RECT		= 2,
@@ -64,7 +65,7 @@ namespace Quartz
 		Transform	transform;
 		bool		isStatic;
 
-		inline Collider() : shapeData{} {};
+		inline Collider() : shape(SHAPE_NONE), shapeData{} {};
 		inline Collider(const Collider& collider) :
 			shape(collider.shape), transform(collider.transform), 
 			shapeData(collider.shapeData), isStatic(collider.isStatic) { }

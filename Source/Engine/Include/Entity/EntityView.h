@@ -55,11 +55,42 @@ namespace Quartz
 				}
 			}
 
+			Iterator& operator--()
+			{
+				if constexpr (sizeof...(Component) == 1)
+				{
+					--itr;
+					return *this;
+				}
+				else
+				{
+					while (true)
+					{
+						--itr;
+
+						if (*this == pView->rend() ||
+							(pView->mStorages. template Get<ComponentStorage<Component>*>()->Contains(itr->index) && ...))
+						{
+							return *this;
+						}
+					}
+
+					return *this;
+				}
+			}
+
 			Iterator operator++(int)
 			{
 				Iterator temp(*this);
-				(*this)++;
-				return *temp;
+				++(*this);
+				return temp;
+			}
+
+			Iterator operator--(int)
+			{
+				Iterator temp(*this);
+				--(*this);
+				return temp;
 			}
 
 			bool operator==(const Iterator& it) const
@@ -99,7 +130,7 @@ namespace Quartz
 
 			Entity* operator->()
 			{
-				return (Entity*)itr;
+				return &(*itr);
 			}
 		};
 
@@ -138,7 +169,17 @@ namespace Quartz
 
 		Iterator end()
 		{
-			return  mPrimarySet != nullptr ? Iterator(mPrimarySet->end(), this) : Iterator();
+			return mPrimarySet != nullptr ? Iterator(mPrimarySet->end(), this) : Iterator();
+		}
+
+		Iterator rbegin()
+		{
+			return mPrimarySet != nullptr ? Iterator(mPrimarySet->rbegin(), this) : Iterator();
+		}
+
+		Iterator rend()
+		{
+			return mPrimarySet != nullptr ? Iterator(mPrimarySet->rend(), this) : Iterator();
 		}
 	};
 }

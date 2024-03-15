@@ -404,6 +404,12 @@ namespace Quartz
 			CollideMeshMesh
 		};
 
+		// Improperly formed colliders
+		if (collider0.shape == SHAPE_NONE || collider1.shape == SHAPE_NONE)
+		{
+			return Collision(); // No Collision
+		}
+
 		uSize index = (uSize)collider1.shape + ((uSize)collider0.shape * 6);
 
 		return functionTable[index](collider0, collider1);

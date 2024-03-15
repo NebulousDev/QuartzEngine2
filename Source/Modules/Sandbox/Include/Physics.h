@@ -8,12 +8,17 @@
 #define PHYSICS_GJK_MAX_ITERATIONS	32
 #define PHYSICS_EPA_MAX_ITERATIONS	32
 #define PHYSICS_EPA_MAX_TRIANGLES	64
+#define PHYSICS_STEP_ITERATIONS		16
 
 namespace Quartz
 {
 	class Physics
 	{
 	public:
+		using RigidBodyView = EntityView<RigidBodyComponent, TransformComponent>;
+
+	public:
+
 		class Simplex
 		{
 		private:
@@ -70,6 +75,9 @@ namespace Quartz
 		};
 
 	private:
+
+		/* Point Detection */
+
 		static Vec3f FurthestPointSphere(const Collider& sphere, const Vec3f& direction);
 		static Vec3f FurthestPointPlane(const Collider& plane, const Vec3f& direction);
 		static Vec3f FurthestPointRect(const Collider& rect, const Vec3f& direction, Vec3f(&points)[8]);
@@ -77,6 +85,8 @@ namespace Quartz
 		static Vec3f FurthestPointCapsule(const Collider& capsule, const Vec3f& direction);
 		static Vec3f FurthestPointHull(const Collider& hull, const Vec3f& direction);
 		static Vec3f FurthestPointMesh(const Collider& mesh, const Vec3f& direction);
+
+		/* GJK + EPA */
 
 		static Vec3f MinkowskiFurthestPoint(const Collider& collider0, const Collider& collider1, const Vec3f direction);
 		static Vec3f MinkowskiFurthestPointRect(const Collider& collider0, const Collider& rect1, Vec3f(&points)[8], const Vec3f direction);
@@ -89,6 +99,8 @@ namespace Quartz
 		static Collision EPA(const Collider& collider0, const Collider& collider1, const Simplex& simplex);
 		static Collision EPARect(const Collider& collider0, const Collider& rect1, Vec3f(&points)[8], const Simplex& simplex);
 		static Collision EPARectRect(const Collider& rect0, Vec3f(&points0)[8], const Collider& rect1, Vec3f(&points1)[8], const Simplex& simplex);
+
+		/* Find Collisions */
 
 		static Collision CollideSphereSphere(const Collider& sphere0, const Collider& sphere1);
 		static Collision CollideSpherePlane(const Collider& sphere0, const Collider& plane1);
@@ -127,11 +139,16 @@ namespace Quartz
 		static Collision CollideMeshHull(const Collider& mesh0, const Collider& hull1);
 		static Collision CollideMeshMesh(const Collider& mesh0, const Collider& mesh1);
 
+		/* Apply Physics */
+
+		void ApplyForces(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
+		void ResolveCollisions(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
+		void ApplyImpulses(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
+
 	public:
 		static Vec3f FurthestPoint(const Collider& collider0, const Vec3f& direction);
 		static Collision Collide(const Collider& collider0, const Collider& collider1);
 
 		void Step(EntityWorld& world, double deltaTime);
-		void Resolve(EntityWorld& world, double deltaTime);
 	};
 }
