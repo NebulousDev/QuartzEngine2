@@ -46,53 +46,6 @@ namespace Quartz
 		Array<EntitySet*>	mStorageSets;
 		Array<Entity>		mEntites;
 
-	private:
-		template<typename Component>
-		bool HasComponentImpl(Entity entity)
-		{
-			using ComponentType = std::decay_t<Component>;
-			uSize typeIndex = GetTypeIndex<ComponentType>();
-
-			if (typeIndex >= mStorageSets.Size())
-			{
-				return false;
-			}
-
-			ComponentStorage<Component>* pStorage = 
-				static_cast<ComponentStorage<Component>*>(mStorageSets[typeIndex]);
-
-			if (!pStorage)
-			{
-				return false;
-			}
-
-			return pStorage->Contains(entity);
-		}
-
-		template<typename Component>
-		void AddComponentImpl(Entity entity, Component&& component)
-		{
-			using ComponentType = std::decay_t<Component>;
-			uSize typeIndex = GetTypeIndex<ComponentType>();
-
-			if (typeIndex >= mStorageSets.Size())
-			{
-				mStorageSets.Resize(typeIndex + 1, nullptr);
-				mStorageSets[typeIndex] = new ComponentStorage<ComponentType>();
-			}
-
-			static_cast<ComponentStorage<ComponentType>*>
-				(mStorageSets[typeIndex])->Insert(entity, Forward<Component>(component));
-		}
-
-		template<typename Component>
-		void RemoveComponentImpl(Entity entity)
-		{
-			using ComponentType = std::decay_t<Component>;
-			uSize typeIndex = GetTypeIndex<ComponentType>();
-			static_cast<ComponentStorage<ComponentType>*>(mStorageSets[typeIndex])->Remove(entity);
-		}
-
 	public:
 		EntityDatabase();
 
@@ -107,30 +60,55 @@ namespace Quartz
 			return mEntites[entity.index - 1].version == entity.version;
 		}
 
-		template<typename... Component>
-		Entity CreateEntity(Component&&... component)
+		inline Entity CreateEntity()
 		{
-			Entity entity = mEntites.PushBack(Entity(mEntites.Size() + 1, 0));
-			AddComponent(entity, Forward<Component>(component)...);
-			return entity;
+			return mEntites.PushBack(Entity(mEntites.Size() + 1, 0));
 		}
 
-		template<typename... Component>
-		void AddComponent(Entity entity, Component&&... component)
+		template<typename Component>
+		Component& AddComponent(Entity entity, Component&& component)
 		{
-			(AddComponentImpl<Component>(entity, Forward<Component>(component)), ...);
+			using ComponentType = std::decay_t<Component>;
+			uSize typeIndex = GetTypeIndex<ComponentType>();
+
+			if (typeIndex >= mStorageSets.Size())
+			{
+				mStorageSets.Resize(typeIndex + 1, nullptr);
+				mStorageSets[typeIndex] = new ComponentStorage<ComponentType>();
+			}
+
+			return static_cast<ComponentStorage<ComponentType>*>
+				(mStorageSets[typeIndex])->Insert(entity, Forward<Component>(component));
 		}
 
-		template<typename... Component>
+		template<typename Component>
 		void RemoveComponent(Entity entity)
 		{
-			(RemoveComponentImpl<Component>(entity), ...);
+			using ComponentType = std::decay_t<Component>;
+			uSize typeIndex = GetTypeIndex<ComponentType>();
+			static_cast<ComponentStorage<ComponentType>*>(mStorageSets[typeIndex])->Remove(entity);
 		}
 
-		template<typename... Component>
+		template<typename Component>
 		bool HasComponent(Entity entity)
 		{
-			return (HasComponentImpl<Component>(entity) && ...);
+			using ComponentType = std::decay_t<Component>;
+			uSize typeIndex = GetTypeIndex<ComponentType>();
+
+			if (typeIndex >= mStorageSets.Size())
+			{
+				return false;
+			}
+
+			ComponentStorage<Component>* pStorage =
+				static_cast<ComponentStorage<Component>*>(mStorageSets[typeIndex]);
+
+			if (!pStorage)
+			{
+				return false;
+			}
+
+			return pStorage->Contains(entity);
 		}
 
 		// @TODO Assumes entity has component. Undefiened otherwise

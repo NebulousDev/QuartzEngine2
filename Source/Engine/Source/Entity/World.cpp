@@ -1,5 +1,8 @@
 #include "Entity/World.h"
 
+#include "Engine.h"
+#include "Runtime/Runtime.h"
+
 namespace Quartz
 {
 	EntityWorld::EntityWorld()
@@ -14,6 +17,11 @@ namespace Quartz
 		mpDatabase = pDatabase;
 		mpGraph = pGraph;
 		mSingleton = CreateEntity();
+	}
+
+	Runtime& EntityWorld::GetEngineRuntime()
+	{
+		return Engine::GetRuntime();
 	}
 
 	EntityWorld::EntityWorld(EntityDatabase* pDatabase, EntityGraph* pGraph)

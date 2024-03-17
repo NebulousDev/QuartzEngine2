@@ -1,6 +1,8 @@
 #include "Engine.h"
 
 #include "EngineAPI.h"
+#include "Entity/World.h"
+#include "Module/ModuleRegistry.h"
 #include "Sinks/Windows/WinApiConsoleSink.h"
 #include "Module/LibraryLoader.h"
 

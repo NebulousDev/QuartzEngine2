@@ -2,29 +2,44 @@
 
 namespace Quartz
 {
-	/*
-	Engine* spInstance = nullptr;
+	Engine* Engine::spInstance = nullptr;
 
-	EntityWorld& Engine::GetWorld() { return *spInstance->mpWorld; }
+	EntityWorld& Engine::GetWorld()
+	{
+		return *spInstance->mpWorld;
+	}
 
-	Runtime& Engine::GetRuntime() { return *spInstance->mpRuntime; }
+	Runtime& Engine::GetRuntime()
+	{
+		return *spInstance->mpRuntime;
+	}
 
-	Input& Engine::GetInput() { return *spInstance->mpInput; }
+	Input& Engine::GetInput()
+	{
+		return *spInstance->mpInput;
+	}
 
-	InputDeviceRegistry& Engine::GetDeviceRegistry() { return *spInstance->mpDeviceRegistry; }
+	InputDeviceRegistry& Engine::GetDeviceRegistry()
+	{
+		return *spInstance->mpDeviceRegistry;
+	}
 
-	SystemRegistry& Engine::GetSystemRegistry() { return *spInstance->mpSystemRegistry; }
+	ModuleRegistry& Engine::GetModuleRegistry()
+	{
+		return *spInstance->mpModuleRegistry;
+	}
 
-	Log& Engine::GetLog() { return *spInstance->mpLog; }
+	Log& Engine::GetLog()
+	{
+		return *spInstance->mpLog;
+	}
 
 	Engine& Engine::GetInstance()
 	{
 		return *spInstance;
 	}
-
 	void Engine::SetInstance(Engine& engine)
 	{
 		spInstance = &engine;
 	}
-	*/
 }

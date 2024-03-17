@@ -1,14 +1,44 @@
 #pragma once
 
 #include "EngineAPI.h"
-
 #include "EntityDatabase.h"
 #include "EntityGraph.h"
+#include "Runtime/Runtime.h"
 
 #include "Log.h"
 
 namespace Quartz
 {
+	class EntityWorld;
+
+	struct EntityCreatedEvent
+	{
+		EntityWorld& world;
+		Entity entity;
+	};
+
+	struct EntityDestroyedEvent
+	{
+		EntityWorld& world;
+		Entity entity;
+	};
+
+	template<typename Component>
+	struct ComponentAddedEvent
+	{
+		EntityWorld& world;
+		Entity entity;
+		Component& component;
+	};
+
+	template<typename Component>
+	struct ComponentRemovedEvent
+	{
+		EntityWorld& world;
+		Entity entity;
+		Component component;
+	};
+
 	class QUARTZ_ENGINE_API EntityWorld
 	{
 		friend class Engine;
@@ -21,21 +51,53 @@ namespace Quartz
 	private:
 		void Initialize(EntityDatabase* pDatabase, EntityGraph* pGraph);
 
-#if 0
-		/* Assumes singleton component exists. Undefiened otherwise.*/
-		template<typename Component>
-		Component& GetSingleton()
+		Runtime& GetEngineRuntime();
+
+		void TriggerEntityCreatedEvent(Entity entity)
 		{
-			return mpDatabase->GetComponent<Component>(mSingleton);
+			EntityCreatedEvent event{ *this, entity };
+			GetEngineRuntime().Trigger<EntityCreatedEvent>(event);
 		}
 
-		/* Assumes entity has component. Undefiened otherwise.*/
-		template<typename Component>
-		Component& GetComponent(Entity entity)
+		void TriggerEntityDestroyedEvent(Entity entity)
 		{
-			return mpDatabase->GetComponent<Component>(entity);
+			EntityDestroyedEvent event{ *this, entity };
+			GetEngineRuntime().Trigger<EntityDestroyedEvent>(event);
 		}
-#endif
+
+		template<typename Component>
+		void TriggerComponentAddedEvent(Entity entity, Component&& component)
+		{
+			ComponentAddedEvent<Component> event{ *this, entity, component };
+			GetEngineRuntime().Trigger<ComponentAddedEvent<Component>>(event);
+		}
+
+		template<typename Component>
+		void TriggerComponentRemovedEvent(Entity entity, Component&& component)
+		{
+			ComponentRemovedEvent<Component> event{ *this, entity, component };
+			GetEngineRuntime().Trigger<ComponentRemovedEvent<Component>>(event);
+		}
+
+		template<typename Component>
+		Component& AddComponentImpl(Entity entity, Component&& component)
+		{
+			Component& newComponent = mpDatabase->AddComponent(entity, Forward<Component>(component));
+			TriggerComponentAddedEvent<Component>(entity, component);
+			return newComponent;
+		}
+
+		template<typename Component>
+		void RemoveComponentImpl(Entity entity)
+		{
+			mpDatabase->RemoveComponent<Component>(entity);
+		}
+
+		template<typename Component>
+		bool HasComponentImpl(Entity entity)
+		{
+			return mpDatabase->HasComponent<Component>(entity);
+		}
 
 	public:
 		EntityWorld();
@@ -50,10 +112,17 @@ namespace Quartz
 		template<typename... Component>
 		Entity CreateEntity(Component&&... component)
 		{
-			Entity entity = mpDatabase->CreateEntity(Forward<Component>(component)...);
+			Entity entity = mpDatabase->CreateEntity();
 			//mpGraph->ParentEntityToRoot(entity);
+
+			(AddComponentImpl<Component>(entity, Forward<Component>(component)), ...);
+
+			TriggerEntityCreatedEvent(entity);
+
 			return entity;
 		}
+
+		// @TODO: DestroyEntity
 
 		template<typename... Component>
 		Entity CreateEntityParented(Entity parent, Component&&... component)
@@ -96,6 +165,7 @@ namespace Quartz
 		template<typename Component>
 		Component& Get()
 		{
+			// @TODO: check?
 			return mpDatabase->GetComponent<Component>(mSingleton);
 		}
 
@@ -103,11 +173,27 @@ namespace Quartz
 		template<typename Component>
 		Component& Get(Entity entity)
 		{
+			if (!IsValid(entity))
+			{
+				LogWarning("Attempted to get component from invalid entity [%X]", entity);
+			}
+
 			return mpDatabase->GetComponent<Component>(entity);
 		}
 
+		template<typename Component>
+		Component& AddComponent(Entity entity, Component&& component)
+		{
+			if (!IsValid(entity))
+			{
+				LogWarning("Attempted to add component to invalid entity [%X]", entity);
+			}
+
+			return AddComponentImpl(entity, Forward<Component>(component));
+		}
+
 		template<typename... Component>
-		void AddComponent(Entity entity, Component&&... component)
+		void AddComponents(Entity entity, Component&&... component)
 		{
 			if (!IsValid(entity))
 			{
@@ -115,21 +201,57 @@ namespace Quartz
 				return;
 			}
 			
-			mpDatabase->AddComponent(entity, Forward<Component>(component)...);
+			(AddComponentImpl<Component>(entity, Forward<Component>(component)), ...);
+		}
+
+		template<typename Component>
+		void RemoveComponent(Entity entity)
+		{
+			if (!IsValid(entity))
+			{
+				LogWarning("Attempted to remove component from invalid entity [%X]", entity);
+				return;
+			}
+
+			RemoveComponentImpl<Component>(entity);
 		}
 
 		template<typename... Component>
-		void RemoveComponent(Entity entity)
+		void RemoveComponents(Entity entity)
 		{
-			mpDatabase->RemoveComponent<Component...>(entity);
+			if (!IsValid(entity))
+			{
+				LogWarning("Attempted to remove component from invalid entity [%X]", entity);
+				return;
+			}
+
+			(RemoveComponentImpl<Component>(entity), ...);
 		}
 
 		bool HasEntity(Entity entity);
 
-		template<typename... Component>
+		template<typename Component>
 		bool HasComponent(Entity entity)
 		{
-			return mpDatabase->HasComponent<Component...>(entity);
+			if (!IsValid(entity))
+			{
+				LogWarning("Attempted to find component in invalid entity [%X]", entity);
+				return false;
+			}
+
+			return HasComponentImpl<Component>(entity);
+		}
+
+		template<typename... Component>
+		bool HasComponents(Entity entity)
+		{
+			if (!IsValid(entity))
+			{
+				LogWarning("Attempted to find component in invalid entity [%X]", entity);
+				return false;
+			}
+
+			return (HasComponentImpl<Component>(entity) && ...);
 		}
 
 		template<typename... Component>
