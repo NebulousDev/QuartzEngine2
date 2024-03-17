@@ -94,8 +94,9 @@ namespace Quartz
 		}
 
 	public:
+		EntityDatabase();
 
-		// NOTE/TODO: Does not check for NullEntity!
+		// @TODO: Does not check for NullEntity!
 		bool EntityExists(Entity entity)
 		{
 			if ((entity.index - 1) > mEntites.Size())
@@ -132,7 +133,7 @@ namespace Quartz
 			return (HasComponentImpl<Component>(entity) && ...);
 		}
 
-		/* Assumes entity has component. Undefiened otherwise.*/
+		// @TODO Assumes entity has component. Undefiened otherwise
 		template<typename Component>
 		Component& GetComponent(Entity entity)
 		{
@@ -160,5 +161,7 @@ namespace Quartz
 			return EntityView<Component...>(
 				static_cast<ComponentStorage<Component>*>(mStorageSets[GetTypeIndex<Component>()])...);
 		}
+
+		inline const uSize EntityCount() const { return mEntites.Size(); }
 	};
 }

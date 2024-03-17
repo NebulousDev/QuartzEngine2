@@ -14,4 +14,10 @@ namespace Quartz
 
 		return mTypeIndexMap.Put(componentName, mTypeCount++);
 	}
+
+	EntityDatabase::EntityDatabase()
+	{
+		mStorageSets.Reserve(64);
+		mEntites.Reserve(1024);
+	};
 }

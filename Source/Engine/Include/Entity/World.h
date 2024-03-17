@@ -51,7 +51,7 @@ namespace Quartz
 		Entity CreateEntity(Component&&... component)
 		{
 			Entity entity = mpDatabase->CreateEntity(Forward<Component>(component)...);
-			mpGraph->ParentEntityToRoot(entity);
+			//mpGraph->ParentEntityToRoot(entity);
 			return entity;
 		}
 
@@ -62,7 +62,7 @@ namespace Quartz
 
 			if (!mpGraph->ParentEntity(entity, parent))
 			{
-				mpGraph->ParentEntityToRoot(entity);
+				//mpGraph->ParentEntityToRoot(entity);
 				LogWarning("Attempted to parent entity [%X] to invalid parent [%X]!", entity, parent);
 			}
 
@@ -140,5 +140,7 @@ namespace Quartz
 
 		EntityDatabase& GetDatabase();
 		EntityGraph& GetGraph();
+
+		inline const uSize EntityCount() const { return mpDatabase->EntityCount(); }
 	};
 }

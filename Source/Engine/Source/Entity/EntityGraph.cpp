@@ -67,6 +67,7 @@ namespace Quartz
         return nullptr;
     }
 
+    // @TODO: This needs to be remade
     bool EntityGraph::ParentEntity(Entity entity, Entity parent)
     {
         // TODO: check for cycles
@@ -83,7 +84,7 @@ namespace Quartz
             return false;
         }
 
-        SceneNode& parentNode = mNodes.Get(parent);
+        SceneNode& parentNode = mNodes.Get(parent); // @TODO: Fails when mNodes is resized
         SceneNode* pChildNode = nullptr;
 
         if (!mNodes.Contains(entity))

@@ -158,8 +158,10 @@ namespace Quartz
 		}
 
 		mCameraEntity				= cameraEntity;
-		mpCameraComponent			= &Engine::GetWorld().Get<CameraComponent>(cameraEntity);
-		mpCameraTransformComponent	= &Engine::GetWorld().Get<TransformComponent>(cameraEntity);
+
+		// @TODO: Allow this to be a thing again?
+		//mpCameraComponent			= &Engine::GetWorld().Get<CameraComponent>(cameraEntity);
+		//mpCameraTransformComponent	= &Engine::GetWorld().Get<TransformComponent>(cameraEntity);
 	}
 
 	struct PerModelUBO
@@ -172,6 +174,8 @@ namespace Quartz
 	void VulkanRenderer::UpdateAll(EntityWorld* pWorld)
 	{
 		auto& renderableView = pWorld->CreateView<MeshComponent, TransformComponent>();
+		TransformComponent& cameraTransformComponent = pWorld->Get<TransformComponent>(mCameraEntity);
+		CameraComponent& cameraComponent = pWorld->Get<CameraComponent>(mCameraEntity);
 
 		mRenderables.Clear();
 
@@ -189,8 +193,8 @@ namespace Quartz
 
 			PerModelUBO perModelUbo = {};
 			perModelUbo.model	= transformComponent.GetMatrix();
-			perModelUbo.view	= mpCameraTransformComponent->GetViewMatrix();
-			perModelUbo.proj	= mpCameraComponent->GetProjectionMatrix();
+			perModelUbo.view	= cameraTransformComponent.GetViewMatrix();
+			perModelUbo.proj	= cameraComponent.GetProjectionMatrix();
 
 			mBufferCache.FillRenderablePerModelData(renderable, 0, &perModelUbo, sizeof(PerModelUBO));
 
@@ -218,7 +222,7 @@ namespace Quartz
 			mRenderables.PushBack(renderable);
 		}
 
-		Vec2f centerPos = { -mpCameraTransformComponent->position.x, -mpCameraTransformComponent->position.z };
+		Vec2f centerPos = { -cameraTransformComponent.position.x, -cameraTransformComponent.position.z };
 		//mTerrainRenderer.Update(centerPos, *mpCameraComponent, *mpCameraTransformComponent);
 	}
 

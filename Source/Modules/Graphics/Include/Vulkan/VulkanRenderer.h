@@ -37,8 +37,8 @@ namespace Quartz
 		VulkanImageView*		mDepthImageViews[3];
 
 		Entity					mCameraEntity;
-		CameraComponent*		mpCameraComponent;
-		TransformComponent*		mpCameraTransformComponent;
+		//CameraComponent*		mpCameraComponent;
+		//TransformComponent*	mpCameraTransformComponent;
 
 		VulkanTerrainRenderer	mTerrainRenderer;
 
