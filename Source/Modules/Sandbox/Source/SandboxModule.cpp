@@ -75,8 +75,169 @@ namespace Quartz
 
 		bool captured		= false;
 
+		ModelData triData
+		{
+			{
+				-0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
+				 0.0f,  0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
+				 0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f
+			},
+			{
+				0, 1, 2
+			}
+		};
+
+		ModelData cubeData
+		{
+			{
+				-0.5f, -0.5f, -0.5f,	1.0f, 0.0f, 0.0f,	 // 0 - Front Bottom Left
+				-0.5f,  0.5f, -0.5f,	0.0f, 1.0f, 0.0f,	 // 1 - Front Top Left
+				 0.5f,  0.5f, -0.5f,	0.0f, 0.0f, 1.0f,	 // 2 - Front Top Right
+				 0.5f, -0.5f, -0.5f,	1.0f, 0.0f, 1.0f,	 // 3 - Front Bottom Right
+
+				-0.5f, -0.5f,  0.5f,	1.0f, 1.0f, 0.0f,	 // 4 - Back Bottom Left
+				-0.5f,  0.5f,  0.5f,	0.0f, 1.0f, 1.0f,	 // 5 - Back Top Left
+				 0.5f,  0.5f,  0.5f,	1.0f, 1.0f, 1.0f,	 // 6 - Back Top Right
+				 0.5f, -0.5f,  0.5f,	0.0f, 0.0f, 0.0f,	 // 7 - Back Bottom Right
+			},
+			{
+				0, 1, 2,  0, 2, 3,		// Front
+				3, 2, 6,  3, 6, 7,		// Right
+				7, 6, 5,  7, 5, 4,		// Back
+				4, 5, 1,  4, 1, 0,		// Left
+				1, 5, 6,  1, 6, 2,		// Top
+				0, 7, 4,  0, 3, 7,		// Bottom
+
+			}
+		};
+
+		ModelData planeData
+		{
+			{
+				-0.5f, 0.0f, -0.5f,		1.0f, 1.0f, 1.0f,	// Bottom Left
+				-0.5f, 0.0f,  0.5f,		1.0f, 1.0f, 1.0f,	// Top Left
+				 0.5f, 0.0f,  0.5f,		1.0f, 1.0f, 1.0f,	// Top Right
+				 0.5f, 0.0f, -0.5f,		1.0f, 1.0f, 1.0f	// Bottom Right
+			},
+			{
+				0, 1, 2, 0, 2, 3
+			}
+		};
+
+		ModelData planeData2
+		{
+			{
+				-0.5f, 0.0f, -0.5f,		0.5f, 0.5f, 0.5f,	// Bottom Left
+				-0.5f, 0.0f,  0.5f,		0.5f, 0.5f, 0.5f,	// Top Left
+				 0.5f, 0.0f,  0.5f,		0.5f, 0.5f, 0.5f,	// Top Right
+				 0.5f, 0.0f, -0.5f,		0.5f, 0.5f, 0.5f	// Bottom Right
+			},
+			{
+				0, 1, 2, 0, 2, 3
+			}
+		};
+
+		TransformComponent transformCube
+		(
+			{ 0.0f, 2.0f, 0.0f },
+			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
+			{ 1.0f, 1.0f, 1.0f }
+		);
+
+		TransformComponent transformCube2
+		(
+			{ 0.0f, 10.0f, 0.0f },
+			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
+			{ 1.0f, 1.0f, 1.0f }
+		);
+
+		TransformComponent transformTri
+		(
+			{ -1.0f, -1.0f, -1.0f },
+			Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
+			{ 1.0f, 1.0f, 1.0f }
+		);
+
+		TransformComponent transformPlane
+		(
+			{ 0.0f, 0.0f, 0.0f },
+			Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
+			{ 20.0f, 20.0f, 20.0f }
+		);
+
+		TransformComponent transformPlaneL
+		(
+			{ -10.0f, 0.0f, 0.0f },
+			Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(90.0f)),
+			{ 20.0f, 5.0f, 20.0f }
+		);
+
+		TransformComponent transformPlaneR
+		(
+			{ 10.0f, 0.0f, 0.0f },
+			Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(-90.0f)),// * Quatf({ 0.0f, 1.0f, 0.0f }, ToRadians(180.0f)),
+			{ 20.0f, 5.0f, 20.0f }
+		);
+
+		TransformComponent transformPlaneF
+		(
+			{ 0.0f, 0.0f, -10.0f },
+			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(-90.0f)),// * Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(-90.0f)),
+			{ 20.0f, 5.0f, 20.0f }
+		);
+
+		TransformComponent transformPlaneB
+		(
+			{ 0.0f, 0.0f, 10.0f },
+			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(90.0f)),// * Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(90.0f)),
+			{ 20.0f, 5.0f, 20.0f }
+		);
+
+		MaterialComponent material1
+		{
+			"Shaders/default.vert",
+			"Shaders/default.frag"
+		};
+
+		MaterialComponent material2
+		{
+			"Shaders/default2.vert",
+			"Shaders/default2.frag"
+		};
+
+		MaterialComponent material3
+		{
+			"Shaders/default3.vert",
+			"Shaders/default3.frag"
+		};
+
+		MeshComponent renderable1("simpleTri", triData);
+		MeshComponent renderable2("simpleCube", cubeData);
+		MeshComponent renderable3("simplePlane", planeData);
+		MeshComponent renderable4("simplePlane2", planeData2);
+
+		RigidBody cubeRigidBody(1.0f, 0.7f, 1.0f);
+		RectCollider cubeCollider({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
+
+		RigidBody cubeRigidBody2(1.0f, 0.7f, 1.0f);
+		RectCollider cubeCollider2({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
+		//SphereCollider cubeCollider2({}, 0.5f, false);
+
+		RigidBody planeRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
+		PlaneCollider planeCollider({}, { 0.0f, 1.0f, 0.0f }, 0.0f, true);
+
+		RigidBody cameraRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
+		SphereCollider cameraCollider({}, 0.5f, true);
+
 		void QUARTZ_ENGINE_API ModuleInit()
 		{
+			RigidBodyComponent cubePhysics(cubeRigidBody, cubeCollider);
+			RigidBodyComponent cubePhysics2(cubeRigidBody2, cubeCollider2);
+			RigidBodyComponent planePhysics(planeRigidBody, planeCollider);
+			RigidBodyComponent planePhysics2(planeRigidBody, planeCollider);
+			RigidBodyComponent cameraPhysics(cameraRigidBody, cameraCollider);
+
+
 			LogInfo("Starting Sandbox");
 
 			//// TESTING ////
@@ -119,144 +280,7 @@ namespace Quartz
 			// TEMP
 			gfx.pSurface = gfx.pResourceManager->CreateSurface(gfx.pPrimaryDevice, gfx.vkInstance, *(VulkanApiSurface*)gpWindow->GetSurface());
 
-			ModelData triData
-			{
-				{
-					-0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
-					 0.0f,  0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
-					 0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f
-				},
-				{
-					0, 1, 2
-				}
-			};
-
-			ModelData cubeData
-			{
-				{
-					-0.5f, -0.5f, -0.5f,	1.0f, 0.0f, 0.0f,	 // 0 - Front Bottom Left
-					-0.5f,  0.5f, -0.5f,	0.0f, 1.0f, 0.0f,	 // 1 - Front Top Left
-					 0.5f,  0.5f, -0.5f,	0.0f, 0.0f, 1.0f,	 // 2 - Front Top Right
-					 0.5f, -0.5f, -0.5f,	1.0f, 0.0f, 1.0f,	 // 3 - Front Bottom Right
-					
-					-0.5f, -0.5f,  0.5f,	1.0f, 1.0f, 0.0f,	 // 4 - Back Bottom Left
-					-0.5f,  0.5f,  0.5f,	0.0f, 1.0f, 1.0f,	 // 5 - Back Top Left
-					 0.5f,  0.5f,  0.5f,	1.0f, 1.0f, 1.0f,	 // 6 - Back Top Right
-					 0.5f, -0.5f,  0.5f,	0.0f, 0.0f, 0.0f,	 // 7 - Back Bottom Right
-				},
-				{
-					0, 1, 2,  0, 2, 3,		// Front
-					3, 2, 6,  3, 6, 7,		// Right
-					7, 6, 5,  7, 5, 4,		// Back
-					4, 5, 1,  4, 1, 0,		// Left
-					1, 5, 6,  1, 6, 2,		// Top
-					0, 7, 4,  0, 3, 7,		// Bottom
-
-				}
-			};
-
-			ModelData planeData
-			{
-				{
-					-0.5f, 0.0f, -0.5f,		1.0f, 1.0f, 1.0f,	// Bottom Left
-					-0.5f, 0.0f,  0.5f,		1.0f, 1.0f, 1.0f,	// Top Left
-					 0.5f, 0.0f,  0.5f,		1.0f, 1.0f, 1.0f,	// Top Right
-					 0.5f, 0.0f, -0.5f,		1.0f, 1.0f, 1.0f	// Bottom Right
-				},
-				{
-					0, 1, 2, 0, 2, 3
-				}
-			};
-
-			ModelData planeData2
-			{
-				{
-					-0.5f, 0.0f, -0.5f,		0.5f, 0.5f, 0.5f,	// Bottom Left
-					-0.5f, 0.0f,  0.5f,		0.5f, 0.5f, 0.5f,	// Top Left
-					 0.5f, 0.0f,  0.5f,		0.5f, 0.5f, 0.5f,	// Top Right
-					 0.5f, 0.0f, -0.5f,		0.5f, 0.5f, 0.5f	// Bottom Right
-				},
-				{
-					0, 1, 2, 0, 2, 3
-				}
-			};
-
-			TransformComponent transformCube
-			(
-				{ 0.0f, 2.0f, 0.0f },
-				Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(20.0f)),
-				{ 2.0f, 2.0f, 5.0f }
-			);
-
-			TransformComponent transformCube2
-			(
-				{ 0.0f, 10.0f, 0.0f },
-				Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
-				{ 1.0f, 1.0f, 1.0f }
-			);
-
-			TransformComponent transformTri
-			( 
-				{ -1.0f, -1.0f, -1.0f }, 
-				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f), 
-				{ 1.0f, 1.0f, 1.0f }
-			);
-
-			TransformComponent transformPlane
-			(
-				{ 0.0f, 0.0f, 0.0f },
-				Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
-				{ 20.0f, 20.0f, 20.0f }
-			);
-
-			TransformComponent transformPlane2
-			(
-				{ -10.0f, 0.0f, 0.0f },
-				Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(90.0f)),
-				{ 20.0f, 10.0f, 20.0f }
-			);
-
-			MaterialComponent material1
-			{
-				"Shaders/default.vert",
-				"Shaders/default.frag"
-			};
-
-			MaterialComponent material2
-			{
-				"Shaders/default2.vert",
-				"Shaders/default2.frag"
-			};
-
-			MaterialComponent material3
-			{
-				"Shaders/default3.vert",
-				"Shaders/default3.frag"
-			};
-
-			MeshComponent renderable1("simpleTri", triData);
-			MeshComponent renderable2("simpleCube", cubeData);
-			MeshComponent renderable3("simplePlane", planeData);
-			MeshComponent renderable4("simplePlane2", planeData2);
-
-			RigidBody cubeRigidBody(1.0f, 0.2f, 1.0f);
-			RectCollider cubeCollider({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
-
-			RigidBody cubeRigidBody2(1.0f, 1.0f, 1.0f);
-			//RectCollider cubeCollider2({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
-			SphereCollider cubeCollider2({}, 0.5f, false);
-
-			RigidBody planeRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
-			PlaneCollider planeCollider({}, { 0.0f, 1.0f, 0.0f }, 0.0f, true);
-
-			RigidBody cameraRigidBody(1.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
-			SphereCollider cameraCollider({}, 0.5f, false);
-
-			RigidBodyComponent cubePhysics(cubeRigidBody, cubeCollider);
-			RigidBodyComponent cubePhysics2(cubeRigidBody2, cubeCollider2);
-			RigidBodyComponent planePhysics(planeRigidBody, planeCollider);
-			RigidBodyComponent planePhysics2(planeRigidBody, planeCollider);
-			RigidBodyComponent cameraPhysics(cameraRigidBody, cameraCollider);
+			gPhysics.Initialize();
 
 			//cubePhysics2.AddForce({ 0.0f, -9.81f, 0.0f });
 			//cameraPhysics.AddForce({ 0.0f, -9.81f, 0.0f });
@@ -264,14 +288,17 @@ namespace Quartz
 			gCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
 			gCube2 = world.CreateEntity(transformCube2, renderable2, material1, cubePhysics2);
 			Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
-			Entity plane2 = world.CreateEntity(transformPlane2, renderable4, material1, planePhysics2);
+			Entity planeL = world.CreateEntity(transformPlaneL, renderable4, material1, planePhysics2);
+			Entity planeR = world.CreateEntity(transformPlaneR, renderable4, material1, planePhysics2);
+			Entity planeF = world.CreateEntity(transformPlaneF, renderable4, material1, planePhysics2);
+			Entity planeB = world.CreateEntity(transformPlaneB, renderable4, material1, planePhysics2);
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ 4.0f, 5.0f, 0.0f }, { { 0.0f, 0.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
+			TransformComponent cameraTransform({ 4.0f, 2.0f, 0.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(-90.0f)}, {1.0f, 1.0f, 1.0f});
 			gCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
-			pRenderer->Register(&runtime);
+			pRenderer->Register(runtime);
 			pRenderer->Initialize(&gfx);
 			pRenderer->SetCamera(gCamera);
 
@@ -279,7 +306,7 @@ namespace Quartz
 			runtime.SetTargetTps(20);
 
 			runtime.RegisterOnUpdate(
-				[](Runtime* pRuntime, double delta)
+				[](Runtime& runtime, double delta)
 				{
 					static double deltaAcc = 0;
 					deltaAcc += delta;
@@ -347,8 +374,21 @@ namespace Quartz
 					if (captured)
 					{
 						TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gCamera);
-						transform.rotation *= Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, direction.x * upSpeed * runtime.GetUpdateDelta());
-						transform.rotation *= Quatf().SetAxisAngle(transform.GetRight(), direction.y * rightSpeed * runtime.GetUpdateDelta());
+
+						Quatf rotX = Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, direction.x * upSpeed * runtime.GetUpdateDelta());
+						Quatf rotY = Quatf().SetAxisAngle(transform.GetRight(), direction.y * rightSpeed * runtime.GetUpdateDelta());
+
+						transform.rotation *= rotX;
+	
+						Vec3f lookDir = rotY * transform.GetForward();
+						Vec3f backDir = Cross(transform.GetRight(), Vec3f::UP);
+
+						float dot = Dot(lookDir, backDir);
+
+						if (dot <= 0.0f)
+						{
+							transform.rotation *= rotY;  // Could be better
+						}
 					}
 				}
 			);
@@ -390,10 +430,24 @@ namespace Quartz
 			input.RegisterOnButtonInput("Push",
 				[](float value, InputActions actions)
 				{
-					RigidBodyComponent& physics = Engine::GetWorld().Get<RigidBodyComponent>(gCube);
-					TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gCamera);
+					TransformComponent& cameraTransform = Engine::GetWorld().Get<TransformComponent>(gCamera);
+					Vec3f normal = -cameraTransform.GetForward();
 
-					physics.AddForce(-transform.GetForward() * 10.0f);
+					TransformComponent transform
+					(
+						cameraTransform.position + normal * 2.0f,
+						cameraTransform.rotation,
+						{ 1.0f, 1.0f, 1.0f }
+					);
+
+					RigidBodyComponent physics(cubeRigidBody2, cubeCollider2);
+					physics.AddForce(normal * 5.0f);
+
+					if (Engine::GetWorld().EntityCount() < 128)
+					{
+						Entity entity = Engine::GetWorld().CreateEntity(transform, renderable2, material1, physics);
+					}
+
 				}
 			);
 		}
