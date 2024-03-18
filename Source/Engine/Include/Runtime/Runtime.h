@@ -15,17 +15,17 @@ namespace Quartz
 	class Runtime;
 
 	template<typename Event, typename Scope>
-	using ScopedRuntimeEventFunc	= void (Scope::*)(Runtime* pRuntime, const Event& event);
+	using ScopedRuntimeEventFunc	= void (Scope::*)(Runtime& runtime, const Event& event);
 	template<typename Event>
-	using RuntimeEventFunc			= void (*)(Runtime* pRuntime, const Event& event);
+	using RuntimeEventFunc			= void (*)(Runtime& runtime, const Event& event);
 
 	template<typename Scope>
-	using ScopedRuntimeUpdateFunc	= void (Scope::*)(Runtime* pRuntime, double delta);
-	using RuntimeUpdateFunc			= void (*)(Runtime* pRuntime, double delta);
+	using ScopedRuntimeUpdateFunc	= void (Scope::*)(Runtime& runtime, double delta);
+	using RuntimeUpdateFunc			= void (*)(Runtime& runtime, double delta);
 
 	template<typename Scope>
-	using ScopedRuntimeTickFunc		= void (Scope::*)(Runtime* pRuntime, uSize tick);
-	using RuntimeTickFunc			= void (*)(Runtime* pRuntime, uSize tick);
+	using ScopedRuntimeTickFunc		= void (Scope::*)(Runtime& runtime, uSize tick);
+	using RuntimeTickFunc			= void (*)(Runtime& runtime, uSize tick);
 
 	using RuntimeID					= uSize;
 
@@ -38,19 +38,19 @@ namespace Quartz
 			void* pInstance;
 			RuntimeUpdateFunc updateFunc;
 
-			virtual void Call(Runtime* pRuntime, double delta)
+			virtual void Call(Runtime& runtime, double delta)
 			{
-				updateFunc(pRuntime, delta);
+				updateFunc(runtime, delta);
 			}
 		};
 
 		template<typename Scope>
 		struct ScopedUpdateFunctor : public UpdateFunctor
 		{
-			void Call(Runtime* pRuntime, double delta) override
+			void Call(Runtime& runtime, double delta) override
 			{
 				ScopedRuntimeUpdateFunc<Scope>* pfunc = (ScopedRuntimeUpdateFunc<Scope>*)reinterpret_cast<void**>(&updateFunc);
-				(static_cast<Scope*>(pInstance)->**pfunc)(pRuntime, delta);
+				(static_cast<Scope*>(pInstance)->**pfunc)(runtime, delta);
 			}
 		};
 
@@ -59,19 +59,19 @@ namespace Quartz
 			void* pInstance;
 			RuntimeTickFunc tickFunc;
 
-			virtual void Call(Runtime* pRuntime, uSize tick)
+			virtual void Call(Runtime& runtime, uSize tick)
 			{
-				tickFunc(pRuntime, tick);
+				tickFunc(runtime, tick);
 			}
 		};
 
 		template<typename Scope>
 		struct ScopedTickFunctor : public TickFunctor
 		{
-			void Call(Runtime* pRuntime, uSize tick) override
+			void Call(Runtime& runtime, uSize tick) override
 			{
 				ScopedRuntimeTickFunc<Scope>* pfunc = (ScopedRuntimeTickFunc<Scope>*)reinterpret_cast<void**>(&tickFunc);
-				(static_cast<Scope*>(pInstance)->**pfunc)(pRuntime, tick);
+				(static_cast<Scope*>(pInstance)->**pfunc)(runtime, tick);
 			}
 		};
 
@@ -83,20 +83,20 @@ namespace Quartz
 			void* pInstance;
 			RuntimeEventFunc<Event> eventFunc;
 
-			virtual void Call(Runtime* pRuntime, const Event& event)
+			virtual void Call(Runtime& runtime, const Event& event)
 			{
-				eventFunc(pRuntime, event);
+				eventFunc(runtime, event);
 			}
 		};
 
 		template<typename Event, typename Scope>
 		struct ScopedEventFunctor : public EventFunctor<Event>
 		{
-			void Call(Runtime* pRuntime, const Event& event) override
+			void Call(Runtime& runtime, const Event& event) override
 			{
 				ScopedRuntimeEventFunc<Event, Scope>* pfunc = 
 					(ScopedRuntimeEventFunc<Event, Scope>*)reinterpret_cast<void**>(&eventFunc);
-				(static_cast<Scope*>(pInstance)->**pfunc)(pRuntime, event);
+				(static_cast<Scope*>(pInstance)->**pfunc)(runtime, event);
 			}
 		};
 
@@ -170,7 +170,7 @@ namespace Quartz
 
 				if (pFunctor->eventFunc)
 				{
-					pFunctor->Call(this, event);
+					pFunctor->Call(*this, event);
 				}
 			}
 

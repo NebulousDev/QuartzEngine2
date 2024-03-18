@@ -56,34 +56,36 @@ namespace Quartz
 		void TriggerEntityCreatedEvent(Entity entity)
 		{
 			EntityCreatedEvent event{ *this, entity };
-			GetEngineRuntime().Trigger<EntityCreatedEvent>(event);
+			GetEngineRuntime().Trigger<EntityCreatedEvent>(event, true);
 		}
 
 		void TriggerEntityDestroyedEvent(Entity entity)
 		{
 			EntityDestroyedEvent event{ *this, entity };
-			GetEngineRuntime().Trigger<EntityDestroyedEvent>(event);
+			GetEngineRuntime().Trigger<EntityDestroyedEvent>(event, true);
 		}
 
 		template<typename Component>
-		void TriggerComponentAddedEvent(Entity entity, Component&& component)
+		void TriggerComponentAddedEvent(Entity entity, Component& component)
 		{
-			ComponentAddedEvent<Component> event{ *this, entity, component };
-			GetEngineRuntime().Trigger<ComponentAddedEvent<Component>>(event);
+			using ComponentType = std::decay_t<Component>;
+			ComponentAddedEvent<ComponentType> event{ *this, entity, component };
+			GetEngineRuntime().Trigger<ComponentAddedEvent<ComponentType>>(event, true);
 		}
 
 		template<typename Component>
-		void TriggerComponentRemovedEvent(Entity entity, Component&& component)
+		void TriggerComponentRemovedEvent(Entity entity, Component& component)
 		{
-			ComponentRemovedEvent<Component> event{ *this, entity, component };
-			GetEngineRuntime().Trigger<ComponentRemovedEvent<Component>>(event);
+			using ComponentType = std::decay_t<Component>;
+			ComponentRemovedEvent<ComponentType> event{ *this, entity, component };
+			GetEngineRuntime().Trigger<ComponentRemovedEvent<ComponentType>>(event, true);
 		}
 
 		template<typename Component>
 		Component& AddComponentImpl(Entity entity, Component&& component)
 		{
 			Component& newComponent = mpDatabase->AddComponent(entity, Forward<Component>(component));
-			TriggerComponentAddedEvent<Component>(entity, component);
+			TriggerComponentAddedEvent<Component>(entity, newComponent);
 			return newComponent;
 		}
 

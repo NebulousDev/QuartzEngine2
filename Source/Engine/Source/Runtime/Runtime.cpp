@@ -77,7 +77,7 @@ namespace Quartz
 		{
 			if (pUpdateFunctor->updateFunc)
 			{
-				pUpdateFunctor->Call(this, delta);
+				pUpdateFunctor->Call(*this, delta);
 			}
 		}
 
@@ -109,7 +109,7 @@ namespace Quartz
 		{
 			if (pTickFunctor->tickFunc)
 			{
-				pTickFunctor->Call(this, tick);
+				pTickFunctor->Call(*this, tick);
 			}
 		}
 

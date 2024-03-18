@@ -77,8 +77,10 @@ namespace Quartz
 				mStorageSets[typeIndex] = new ComponentStorage<ComponentType>();
 			}
 
-			return static_cast<ComponentStorage<ComponentType>*>
-				(mStorageSets[typeIndex])->Insert(entity, Forward<Component>(component));
+			ComponentStorage<ComponentType>* pStorage =
+				static_cast<ComponentStorage<ComponentType>*>(mStorageSets[typeIndex]);
+
+			return pStorage->Insert(entity, Forward<Component>(component));
 		}
 
 		template<typename Component>
@@ -100,8 +102,8 @@ namespace Quartz
 				return false;
 			}
 
-			ComponentStorage<Component>* pStorage =
-				static_cast<ComponentStorage<Component>*>(mStorageSets[typeIndex]);
+			ComponentStorage<ComponentType>* pStorage =
+				static_cast<ComponentStorage<ComponentType>*>(mStorageSets[typeIndex]);
 
 			if (!pStorage)
 			{
