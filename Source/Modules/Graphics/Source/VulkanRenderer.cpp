@@ -368,7 +368,7 @@ namespace Quartz
 		mSwapTimer.Present();
 	}
 
-	void VulkanRenderer::RenderUpdate(Runtime* pRuntime, double delta)
+	void VulkanRenderer::RenderUpdate(Runtime& runtime, double delta)
 	{
 		EntityWorld& world = Engine::GetWorld();
 
@@ -376,8 +376,8 @@ namespace Quartz
 		RenderScene(&world);
 	}
 
-	void VulkanRenderer::Register(Runtime* pRuntime)
+	void VulkanRenderer::Register(Runtime& runtime)
 	{
-		pRuntime->RegisterOnUpdate(&VulkanRenderer::RenderUpdate, this);
+		runtime.RegisterOnUpdate(&VulkanRenderer::RenderUpdate, this);
 	}
 }

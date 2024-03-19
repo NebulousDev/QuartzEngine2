@@ -208,6 +208,9 @@ namespace Quartz
 			if (accumulatedUpdateTime >= targetUpdateTime)
 			{
 				mUpdateDelta = accumulatedUpdateTime / SECOND;
+
+				if (mUpdateDelta > 1.0f) mUpdateDelta = 1.0f;
+
 				UpdateAll(mUpdateDelta);
 				accumulatedUpdates++;
 				accumulatedUpdateTime = 0;

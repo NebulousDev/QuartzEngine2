@@ -122,13 +122,13 @@ namespace Quartz
 		LogTrace("[%s] MOUSE %s", pWindow->GetTitle().Str(), entered ? "ENTERED" : "EXITED");
 	}
 
-	void Update(Runtime* pRuntime, double delta)
+	void Update(Runtime& runtime, double delta)
 	{
 		gRawInput.PollInput();
 		gpApp->Update();
 	}
 
-	void Tick(Runtime* pRuntime, uSize tick)
+	void Tick(Runtime& runtime, uSize tick)
 	{
 		if (tick == 0)
 		{

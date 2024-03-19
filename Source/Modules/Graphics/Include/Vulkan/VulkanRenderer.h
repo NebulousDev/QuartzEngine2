@@ -52,7 +52,7 @@ namespace Quartz
 		void RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
 		void RenderScene(EntityWorld* pWorld);
 
-		void RenderUpdate(Runtime* pRuntime, double delta);
-		void Register(Runtime* pRuntime);
+		void RenderUpdate(Runtime& runtime, double delta);
+		void Register(Runtime& runtime);
 	};
 }
