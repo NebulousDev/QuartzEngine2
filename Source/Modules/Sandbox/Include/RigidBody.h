@@ -12,6 +12,7 @@ namespace Quartz
 		Vec3f gravity;
 
 		Vec3f force;
+		Vec3f torque;
 		Vec3f linearVelocity;
 		Vec3f angularVelocity;
 		Mat3f invInertiaTensor;
@@ -33,6 +34,21 @@ namespace Quartz
 		inline void AddForce(const Vec3f& force)
 		{
 			this->force += force;
+		}
+
+		inline void AddTorque(const Vec3f& torque)
+		{
+			this->torque += torque;
+		}
+
+		inline void AddLinearVelocity(const Vec3f& velocity)
+		{
+			this->linearVelocity += velocity;
+		}
+
+		inline void AddAngularVelocity(const Vec3f& velocity)
+		{
+			this->angularVelocity += velocity;
 		}
 	};
 }

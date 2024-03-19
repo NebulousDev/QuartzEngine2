@@ -16,29 +16,25 @@ namespace Quartz
 				continue;
 			}
 
+			/* Linear Integration */
+
 			Vec3f linearAccel = (rigidBody.gravity * stepTime) + rigidBody.force * rigidBody.invMass;
-			Vec3f angularAccel = (Vec3f{ 0.01f,0.01f,0.01f} * stepTime);
-
-			Vec3f oldPosition = transform.position;
-
 			rigidBody.linearVelocity += linearAccel;
+
 			transform.position += rigidBody.linearVelocity * stepTime;
-			transform.rotation *= rigidBody.angularVelocity * stepTime;
-
-			if (Abs(rigidBody.linearVelocity.Magnitude()) < 0.01f)
-			{
-				transform.position = oldPosition;
-			}
-
-			if (!physics.collider.isStatic)
-			{
-				//rigidBody.angularVelocity += angularAccel;
-				//
-			}
-
-			//physics.collider.transform = transform; /// ?
 
 			rigidBody.force = Vec3f::ZERO;
+
+			/* Angular Integration */
+
+			Mat3f mrot = Mat3f().SetRotation(transform.rotation);
+			Vec3f angularAccel = mrot * rigidBody.invInertiaTensor * mrot.Transposed() * rigidBody.torque;// *stepTime;
+			rigidBody.angularVelocity += angularAccel;
+
+			transform.rotation *= rigidBody.angularVelocity * stepTime;
+			transform.rotation.Normalize();
+
+			rigidBody.torque = Vec3f::ZERO;
 		}
 	}
 
@@ -123,7 +119,10 @@ namespace Quartz
 
 			Collision& collision	= collisionData.collision;
 
-			Vec3f scaledNormal = collision.normal * collision.dist;
+			Vec3f normal = collision.normal;
+			float dist = collision.dist;
+
+			Vec3f scaledNormal = normal * dist;
 
 			float j = CalcResolvedForces(rigidBody0, rigidBody1, scaledNormal);
 			Vec3f linearImpulse = j * scaledNormal;
@@ -139,15 +138,7 @@ namespace Quartz
 					transform0.position += -scaledNormal / 2.0f;
 				}
 
-				rigidBody0.linearVelocity += -linearImpulse * rigidBody0.invMass; // @TODO investigate implicit euler integration?
-
-				if (rigidBody0.angularVelocity.y > 0)
-				{
-					Mat3f mrot = Mat3f().SetRotation(transform0.rotation);
-					Vec3f omega = mrot * rigidBody0.invInertiaTensor * mrot.Transposed() * rigidBody0.angularVelocity;
-
-					//rigidBody0.angularVelocity = Mat3f().SetCross(omega) * mrot * rigidBody0.angularVelocity;
-				}
+				rigidBody0.AddLinearVelocity(-linearImpulse * rigidBody0.invMass);
 			}
 
 			if (!collider1.isStatic)
@@ -160,8 +151,8 @@ namespace Quartz
 				{
 					transform1.position += scaledNormal / 2.0f;
 				}
-				
-				rigidBody1.linearVelocity += linearImpulse * rigidBody1.invMass;
+
+				rigidBody1.AddLinearVelocity(linearImpulse * rigidBody1.invMass);
 			}
 		}
 	}
@@ -171,7 +162,12 @@ namespace Quartz
 		RigidBody& rigidBody	= event.component.rigidBody;
 		Collider& collider		= event.component.collider;
 
-		rigidBody.invInertiaTensor = Mat3f().SetIdentity(InitalInertia(rigidBody, collider)).Inverse();
+		Vec3f initInertia = InitalInertia(rigidBody, collider);
+
+		if (!initInertia.IsZero())
+		{
+			rigidBody.invInertiaTensor = Mat3f().SetIdentity(InitalInertia(rigidBody, collider)).Inverse();
+		}
 	}
 
 	void Physics::Initialize()
@@ -187,9 +183,9 @@ namespace Quartz
 		{
 			double stepTime = deltaTime / (double)PHYSICS_STEP_ITERATIONS;
 
-			FindCollisions(world, rigidBodies, stepTime);
-			ApplyImpulses(world, rigidBodies, stepTime);
 			ApplyForces(world, rigidBodies, stepTime);
+			ApplyImpulses(world, rigidBodies, stepTime);
+			FindCollisions(world, rigidBodies, stepTime);
 		}
 
 	}

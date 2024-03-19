@@ -10,7 +10,7 @@ namespace Quartz
 	struct RigidBodyComponent : public Component<RigidBodyComponent>
 	{
 		Transform	transform;
-		RigidBody	rigidBody;
+		RigidBody	rigidBody; // Move? ^
 		Collider	collider;
 
 		inline RigidBodyComponent() {}
@@ -21,6 +21,11 @@ namespace Quartz
 		inline void AddForce(const Vec3f& force)
 		{
 			rigidBody.AddForce(force);
+		}
+
+		inline void AddTorque(const Vec3f& torque)
+		{
+			rigidBody.AddTorque(torque);
 		}
 	};
 }

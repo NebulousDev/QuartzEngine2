@@ -444,14 +444,14 @@ namespace Quartz
 					(
 						cameraTransform.position + normal * 2.0f,
 						cameraTransform.rotation,
-						{ 2.0f, 1.0f, 1.0f }
+						{ 1.0f, 1.0f, 1.0f }
 					);
 
 					RigidBodyComponent physics(cubeRigidBody2, cubeCollider2);
 					physics.AddForce(normal * 5.0f);
-					physics.rigidBody.angularVelocity = { 0.0f, 1.0f, 0.0f };
+					physics.AddTorque({ 0.0f, 1.0f, 0.0f });
 
-					if (Engine::GetWorld().EntityCount() < 128)
+					if (Engine::GetWorld().EntityCount() < 256)
 					{
 						Entity entity = Engine::GetWorld().CreateEntity(transform, renderable2, material1, physics);
 					}
