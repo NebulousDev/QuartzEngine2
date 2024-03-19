@@ -2,183 +2,6 @@
 
 namespace Quartz
 {
-	Physics::Simplex::Simplex() : mSize(0), mPoints{} {}
-
-	void Physics::Simplex::Push(const Vec3f& point)
-	{
-		// @TODO: assert mSize < 4
-		mPoints[mSize++] = point;
-	}
-
-	uSize Physics::Simplex::Size() const
-	{
-		return mSize;
-	}
-
-	bool Physics::Simplex::Line(Vec3f& inOutDir)
-	{
-		Vec3f a = mPoints[1];
-		Vec3f b = mPoints[0];
-
-		Vec3f ab = b - a;
-		Vec3f ao = -a;
-
-		if (Dot(ab, ao) > 0.0f)
-		{
-			inOutDir = Cross(Cross(ab, ao), ab);
-		}
-
-		return false;
-	}
-
-	bool Physics::Simplex::Triangle(Vec3f& inOutDir)
-	{
-		Vec3f a = mPoints[2];
-		Vec3f b = mPoints[1];
-		Vec3f c = mPoints[0];
-
-		Vec3f ab = b - a;
-		Vec3f ac = c - a;
-		Vec3f ao = -a;
- 
-		Vec3f abc = Cross(ab, ac);
-
-		if (Dot(Cross(abc, ac), ao) > 0.0f)
-		{
-			if (Dot(ac, ao) > 0.0f)
-			{
-				mPoints[0] = a;
-				mPoints[1] = c;
-				mSize = 2;
-
-				inOutDir = Cross(Cross(ac, ao), ac);
-			}
-
-			else
-			{
-				if (Dot(ab, ao) > 0.0f)
-				{
-					mPoints[0] = a;
-					mPoints[1] = b;
-					mSize = 2;
-
-					inOutDir = Cross(Cross(ab, ao), ab);
-				}
-				else
-				{
-					mPoints[0] = a;
-					mSize = 1;
-
-					inOutDir = ao;
-				}
-			}
-		}
- 
-		else if (Dot(Cross(ab, abc), ao) > 0.0f)
-		{
-			if (Dot(ab, ao) > 0.0f)
-			{
-				mPoints[0] = a;
-				mPoints[1] = b;
-				mSize = 2;
-
-				inOutDir = Cross(Cross(ab, ao), ab);
-			}
-			else
-			{
-				mPoints[0] = a;
-				mSize = 1;
-
-				inOutDir = ao;
-			}
-		}
-
-		else // Inside the triangle
-		{
-			if (Dot(abc, ao) > 0.0f)
-			{
-				mPoints[0] = b;
-				mPoints[1] = c;
-				mPoints[2] = a;
-				mSize = 3;
-
-				inOutDir = abc;
-			}
-
-			else // Opposite winding
-			{
-				inOutDir = -abc;
-			}
-		}
-
-		return false;
-	}
-
-	bool Physics::Simplex::Tetrahedron(Vec3f& inOutDir)
-	{
-		Vec3f a = mPoints[3];
-		Vec3f b = mPoints[2];
-		Vec3f c = mPoints[1];
-		Vec3f d = mPoints[0];
-
-		Vec3f ab = b - a;
-		Vec3f ac = c - a;
-		Vec3f ad = d - a;
-		Vec3f ao = -a;
- 
-		Vec3f acb = Cross(ac, ab);
-		Vec3f adc = Cross(ad, ac);
-		Vec3f abd = Cross(ab, ad);
- 
-		if (Dot(acb, ao) > 0.0f)
-		{
-			mPoints[0] = a;
-			mPoints[1] = c;
-			mPoints[2] = b;
-			mSize = 3;
-
-			return Triangle(inOutDir);
-		}
-		
-		else if (Dot(adc, ao) > 0.0f)
-		{
-			mPoints[0] = a;
-			mPoints[1] = d;
-			mPoints[2] = c;
-			mSize = 3;
-
-			return Triangle(inOutDir);
-		}
- 
-		else if (Dot(abd, ao) > 0.0f)
-		{
-			mPoints[0] = a;
-			mPoints[1] = b;
-			mPoints[2] = d;
-			mSize = 3;
-
-			return Triangle(inOutDir);
-		}
- 
-		return true;
-	}
-
-	bool Physics::Simplex::Next(Vec3f& inOutDir)
-	{
-		switch (mSize)
-		{
-			case 2: return Line(inOutDir);
-			case 3: return Triangle(inOutDir);
-			case 4: return Tetrahedron(inOutDir);
-			default: return false;
-		}
-	}
-
-	const Vec3f& Physics::Simplex::operator[](uSize index) const
-	{
-		return mPoints[index];
-	}
-
 	Physics::Line::Line() :
 		points{} {}
 
@@ -189,7 +12,13 @@ namespace Quartz
 		points{} {}
 
 	Physics::Triangle::Triangle(const Vec3f& a, const Vec3f& b, const Vec3f& c) :
-		points{a, b, c} {}
+		points{ a, b, c } {}
+
+	Physics::Tetrahedron::Tetrahedron() :
+		points{} {};
+
+	Physics::Tetrahedron::Tetrahedron(const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d) :
+		points{ a, b, c, d } {};
 
 	Physics::Polytope::Polytope() :
 		mTris{}, mSize(0) {}
@@ -263,7 +92,7 @@ namespace Quartz
 		return fabsf(Dot(diff, normal));
 	}
 
-	void Physics::Polytope::ClosestTriangle(const Vec3f& point, Triangle& outTri, uSize& outIndex, float& outDist, Vec3f& outNormal)
+	void Physics::Polytope::ClosestTriangle(const Vec3f& point, Triangle& outTri, uSize& outIndex, float& outDist, Vec3f& outNormal) const
 	{
 		Triangle closestTri		= {};
 		float closestDist		= FLT_MAX;
@@ -292,8 +121,9 @@ namespace Quartz
 
 	void Physics::Polytope::Extend(const Vec3f& point)
 	{
-		Line lines[PHYSICS_EPA_MAX_TRIANGLES * 3];
-		uSize lineCount = 0;
+		Line	lines[PHYSICS_EPA_MAX_EDGES];
+		uSize	lineCount = 0;
+		Simplex	contactSimplex;
 
 		for (uSize i = 0; i < mSize; i++)
 		{
@@ -366,10 +196,10 @@ namespace Quartz
 				}
 			}
 		}
-
 		for (uSize i = 0; i < lineCount; i++)
 		{
-			AddTriangle(Triangle(lines[i].points[0], lines[i].points[1], point));
+			Triangle newTriangle(lines[i].points[0], lines[i].points[1], point);
+			AddTriangle(newTriangle);
 		}
 	}
 
@@ -547,6 +377,8 @@ namespace Quartz
 			// Find the triangle closest to the origin
 			polytope.ClosestTriangle(Vec3f::ZERO, tri, index, dist, normal);
 
+			//normal.Normalize();
+
 			// Get the furthest point in the normal direction
 			Vec3f furthestPoint = MinkowskiFurthestPoint(collider0, collider1, normal);
 
@@ -559,7 +391,10 @@ namespace Quartz
 				Vec3f extent0 = FurthestPoint(collider0, normal);
 				Vec3f extent1 = extent0 - normal.Normalized() * dist;
 
-				return Collision(extent0, extent1);
+				Simplex contact0 = FurthestSimplex(collider0, normal);
+				Simplex contact1 = FurthestSimplex(collider1, -normal);
+
+				return Collision(extent0, extent1, normal.Normalized(), dist, contact0, contact1);
 			}
 		}
 
@@ -596,7 +431,10 @@ namespace Quartz
 				Vec3f extent0 = FurthestPoint(collider0, normal);
 				Vec3f extent1 = extent0 - normal.Normalized() * dist;
 
-				return Collision(extent0, extent1);
+				Simplex contact0 = FurthestSimplex(collider0, normal);
+				Simplex contact1 = FurthestSimplexRect(rect1, -normal, points);
+
+				return Collision(extent0, extent1, normal.Normalized(), dist, contact0, contact1);
 			}
 		}
 
@@ -633,7 +471,10 @@ namespace Quartz
 				Vec3f extent0 = FurthestPoint(rect0, normal);
 				Vec3f extent1 = extent0 - normal.Normalized() * dist;
 
-				return Collision(extent0, extent1);
+				Simplex contact0 = FurthestSimplexRect(rect0, normal, points0);
+				Simplex contact1 = FurthestSimplexRect(rect1, -normal, points1);
+
+				return Collision(extent0, extent1, normal.Normalized(), dist, contact0, contact1);
 			}
 		}
 

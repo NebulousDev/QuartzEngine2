@@ -2,13 +2,17 @@
 
 #include "Engine.h"
 #include "Colliders.h"
+#include "Entity/World.h"
 #include "Component/PhysicsComponent.h"
 #include "Component/TransformComponent.h"
 
 #define PHYSICS_GJK_MAX_ITERATIONS	32
 #define PHYSICS_EPA_MAX_ITERATIONS	32
-#define PHYSICS_EPA_MAX_TRIANGLES	64
+#define PHYSICS_EPA_MAX_EDGES		256 //1536
+#define PHYSICS_EPA_MAX_TRIS		64 //256
+//#define PHYSICS_EPA_MAX_TETRAS	64
 #define PHYSICS_STEP_ITERATIONS		16
+#define PHYSICS_SMALLEST_DISTANCE	0.0001f
 
 namespace Quartz
 {
@@ -19,26 +23,14 @@ namespace Quartz
 
 	public:
 
-		class Simplex
+		struct CollisionData
 		{
-		private:
-			Vec3f mPoints[4];
-			uSize mSize;
+			RigidBodyComponent* pRigidBody0;
+			RigidBodyComponent* pRigidBody1;
+			TransformComponent* pTransform0;
+			TransformComponent* pTransform1;
 
-		private:
-			inline bool Line(Vec3f& inOutDir);
-			inline bool Triangle(Vec3f& inOutDir);
-			inline bool Tetrahedron(Vec3f& inOutDir);
-
-		public:
-			Simplex();
-			
-			inline void Push(const Vec3f& point);
-			inline uSize Size() const;
-
-			inline bool Next(Vec3f& inOutDir);
-
-			inline const Vec3f& operator[](uSize index) const;
+			Collision collision;
 		};
 
 		struct Line
@@ -57,10 +49,18 @@ namespace Quartz
 			Triangle(const Vec3f& a, const Vec3f& b, const Vec3f& c);
 		};
 
+		struct Tetrahedron
+		{
+			Vec3f points[4];
+
+			Tetrahedron();
+			Tetrahedron(const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d);
+		};
+
 		class Polytope
 		{
 		private:
-			Triangle	mTris[PHYSICS_EPA_MAX_TRIANGLES];
+			Triangle	mTris[PHYSICS_EPA_MAX_TRIS];
 			uSize		mSize;
 
 		public:
@@ -70,9 +70,12 @@ namespace Quartz
 			inline void AddTriangle(const Triangle& tri);
 			inline void RemoveTriangle(uSize index);
 			inline void ClosestTriangle(const Vec3f& point, Triangle& outTri, 
-				uSize& outIndex, float& outDist, Vec3f& outNormal);
+				uSize& outIndex, float& outDist, Vec3f& outNormal) const;
 			inline void Extend(const Vec3f& point);
 		};
+
+	private:
+		Array<CollisionData> mCollisions;
 
 	private:
 
@@ -85,6 +88,26 @@ namespace Quartz
 		static Vec3f FurthestPointCapsule(const Collider& capsule, const Vec3f& direction);
 		static Vec3f FurthestPointHull(const Collider& hull, const Vec3f& direction);
 		static Vec3f FurthestPointMesh(const Collider& mesh, const Vec3f& direction);
+		static Vec3f FurthestPoint(const Collider& collider0, const Vec3f& direction);
+
+		static Simplex FurthestSimplexSphere(const Collider& sphere, const Vec3f& direction);
+		static Simplex FurthestSimplexPlane(const Collider& plane, const Vec3f& direction);
+		static Simplex FurthestSimplexRect(const Collider& rect, const Vec3f& direction, Vec3f(&points)[8]);
+		static Simplex FurthestSimplexRect(const Collider& rect, const Vec3f& direction);
+		static Simplex FurthestSimplexCapsule(const Collider& capsule, const Vec3f& direction);
+		static Simplex FurthestSimplexHull(const Collider& hull, const Vec3f& direction);
+		static Simplex FurthestSimplexMesh(const Collider& mesh, const Vec3f& direction);
+		static Simplex FurthestSimplex(const Collider& collider0, const Vec3f& direction);
+
+		/* Default Inertia */
+
+		static Vec3f InitalInertiaSphere(const RigidBody& rigidBody, const Collider& sphere);
+		static Vec3f InitalInertiaPlane(const RigidBody& rigidBody, const Collider& plane);
+		static Vec3f InitalInertiaRect(const RigidBody& rigidBody, const Collider& rect);
+		static Vec3f InitalInertiaCapsule(const RigidBody& rigidBody, const Collider& capsule);
+		static Vec3f InitalInertiaHull(const RigidBody& rigidBody, const Collider& hull);
+		static Vec3f InitalInertiaMesh(const RigidBody& rigidBody, const Collider& mesh);
+		static Vec3f InitalInertia(const RigidBody& rigidBody, const Collider& collider);
 
 		/* GJK + EPA */
 
@@ -142,11 +165,16 @@ namespace Quartz
 		/* Apply Physics */
 
 		void ApplyForces(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
-		void ResolveCollisions(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
+		void FindCollisions(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
 		void ApplyImpulses(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
 
+		/* Triggers */
+
+		void OnRigidBodyAdded(Runtime& runtime, const ComponentAddedEvent<RigidBodyComponent>& event);
+
 	public:
-		static Vec3f FurthestPoint(const Collider& collider0, const Vec3f& direction);
+		void Initialize();
+
 		static Collision Collide(const Collider& collider0, const Collider& collider1);
 
 		void Step(EntityWorld& world, double deltaTime);

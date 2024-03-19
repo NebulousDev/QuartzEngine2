@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Math/Math.h"
+#include "Simplex.h"
 
 namespace Quartz
 {
@@ -18,12 +19,13 @@ namespace Quartz
 	struct SphereShape
 	{
 		float radius;
-		// center
 	};
 
 	struct PlaneShape
 	{
 		Vec3f normal;
+		float width;
+		float height;
 		float length;
 	};
 
@@ -61,11 +63,13 @@ namespace Quartz
 			struct { char _shapeData[8 * sizeof(float)]; } shapeData;
 		};
 
-		ShapeType	shape;
 		Transform	transform;
+		ShapeType	shape;
+		Vec3f		center;
 		bool		isStatic;
 
-		inline Collider() : shape(SHAPE_NONE), shapeData{} {};
+		inline Collider() : 
+			shape(SHAPE_NONE), shapeData{} {};
 		inline Collider(const Collider& collider) :
 			shape(collider.shape), transform(collider.transform), 
 			shapeData(collider.shapeData), isStatic(collider.isStatic) { }
@@ -84,6 +88,7 @@ namespace Quartz
 			this->transform = transform;
 			this->sphere.radius = radius;
 			this->isStatic = isStatic;
+			this->center = Vec3f::ZERO;
 		};
 	};
 
@@ -101,6 +106,7 @@ namespace Quartz
 			this->plane.normal = normal;
 			this->plane.length = length;
 			this->isStatic = isStatic;
+			this->center = Vec3f::ZERO;
 		};
 	};
 
@@ -117,6 +123,7 @@ namespace Quartz
 			this->transform = transform;
 			this->rect.bounds = bounds;
 			this->isStatic = isStatic;
+			this->center = bounds.start + bounds.end * 0.5f;
 		};
 	};
 
@@ -167,14 +174,21 @@ namespace Quartz
 
 	struct Collision
 	{
-		bool isColliding;
 		Vec3f extent0;
 		Vec3f extent1;
+		Vec3f normal;
+		float dist;
+		Simplex contact0;
+		Simplex contact1;
+		bool isColliding;
 
-		inline Collision() : extent0(), extent1(), isColliding(false) {};
-		inline Collision(Vec3f extent0, Vec3f extent1, bool colliding = true) :
-			extent0(extent0), extent1(extent1), isColliding(colliding) {};
+		inline Collision() : 
+			extent0(), extent1(), contact0(), contact1(), isColliding(false) {};
 
-		inline Collision Flip() { return Collision(extent1, extent0, isColliding); }
+		inline Collision(const Vec3f& extent0, const Vec3f& extent1, const Vec3f& normal, float dist,
+			const Simplex& contact0, const Simplex& contact1, bool colliding = true) :
+			extent0(extent0), extent1(extent1), normal(normal), dist (dist), contact0(contact0), contact1(contact1), isColliding(colliding) {};
+
+		inline Collision Flip() { return Collision(extent1, extent0, -normal, dist, contact1, contact0, isColliding); }
 	};
 }

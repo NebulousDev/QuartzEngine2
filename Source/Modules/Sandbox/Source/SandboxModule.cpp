@@ -348,6 +348,13 @@ namespace Quartz
 				}
 			);
 
+			runtime.RegisterOnTick(
+				[](Runtime& runtime, uSize tick)
+				{
+					//gPhysics.Step(Engine::GetWorld(), 1.0 / runtime.GetTargetTps());
+				}
+			);
+
 			input.MapMouseAxis("MouseLook",			INPUT_MOUSE_ANY,				INPUT_ACTION_MOVE);
 
 			input.MapKeyboardButton("MoveForward",	INPUT_KEYBOARD_ANY, 17 /* W */, INPUT_ACTION_ANY);
@@ -437,11 +444,12 @@ namespace Quartz
 					(
 						cameraTransform.position + normal * 2.0f,
 						cameraTransform.rotation,
-						{ 1.0f, 1.0f, 1.0f }
+						{ 2.0f, 1.0f, 1.0f }
 					);
 
 					RigidBodyComponent physics(cubeRigidBody2, cubeCollider2);
 					physics.AddForce(normal * 5.0f);
+					physics.rigidBody.angularVelocity = { 0.0f, 1.0f, 0.0f };
 
 					if (Engine::GetWorld().EntityCount() < 128)
 					{

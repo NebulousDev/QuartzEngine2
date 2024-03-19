@@ -12,10 +12,10 @@ namespace Quartz
 		Vec3f gravity;
 
 		Vec3f force;
-
 		Vec3f linearVelocity;
 		Vec3f angularVelocity;
-		Mat3f inverseInertiaTensor;
+		Mat3f invInertiaTensor;
+		bool  asleep;
 
 		inline RigidBody() :
 			invMass(1.0f),
@@ -23,7 +23,7 @@ namespace Quartz
 			friction(1.0f),
 			gravity(0.0f, -9.81f, 0.0f) {}
 
-		inline RigidBody(float invMass, float restitution, float friction, 
+		inline RigidBody(float invMass, float restitution, float friction,
 			const Vec3f& gravity = { 0.0f, -9.81f, 0.0f }) :
 			invMass(invMass),
 			restitution(restitution),

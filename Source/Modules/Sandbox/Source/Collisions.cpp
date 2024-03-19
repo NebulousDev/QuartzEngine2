@@ -1,7 +1,5 @@
 #include "Physics.h"
 
-#define PHYSICS_SMALLEST_DISTANCE 0.0001f
-
 namespace Quartz
 {
 	using CollisionFunc = Collision(*)(const Collider& collider0, const Collider& collider1);
@@ -19,10 +17,14 @@ namespace Quartz
 		if (dist > PHYSICS_SMALLEST_DISTANCE && dist < (radius0 + radius1))
 		{
 			Vec3f normDir = diff.Normalized();
+
 			Vec3f extent0 = sphere0.transform.position + normDir * radius0;
 			Vec3f extent1 = sphere1.transform.position - normDir * radius1;
 
-			return Collision(extent0, extent1);
+			Simplex contact0 = FurthestSimplexSphere(sphere0, normDir);
+			Simplex contact1 = FurthestSimplexSphere(sphere1, -normDir);
+
+			return Collision(extent0, extent1, normDir, dist, contact0, contact1);
 		}
 			
 		return Collision(); // No Collision
@@ -42,7 +44,12 @@ namespace Quartz
 			Vec3f extent0 = sphere0.transform.position - rotNormal * radius0;
 			Vec3f extent1 = sphere0.transform.position - rotNormal * dist;
 
-			return Collision(extent0, extent1);
+			Vec3f normDir = extent1 - extent0;
+
+			Simplex contact0 = FurthestSimplexSphere(sphere0, normDir);
+			Simplex contact1 = FurthestSimplexPlane(plane1, -normDir);
+
+			return Collision(extent0, extent1, normDir, dist, contact0, contact1);
 		}
 
 		return Collision(); // No Collision
@@ -125,7 +132,7 @@ namespace Quartz
 			rectTransform * rect1.rect.bounds.TopLeftBack()
 		};
 
-		float maxDist = -1000000.0f;
+		float maxDist = -FLT_MAX;
 		Vec3f maxPoint;
 
 		for (uSize i = 0; i < 8; i++)
@@ -144,10 +151,15 @@ namespace Quartz
 
 		if (dist > PHYSICS_SMALLEST_DISTANCE)
 		{
-			Vec3f extent0 = maxPoint + rotNormal * dist / 2.0f;
-			Vec3f extent1 = maxPoint - rotNormal * dist / 2.0f;
+			Vec3f extent0 = maxPoint + rotNormal * dist;
+			Vec3f extent1 = maxPoint;
 
-			return Collision(extent0, extent1);
+			Vec3f normDir = extent1 - extent0;
+
+			Simplex contact0 = FurthestSimplexPlane(plane0, normDir);
+			Simplex contact1 = FurthestSimplexRect(rect1, -normDir, points);
+
+			return Collision(extent0, extent1, rotNormal, dist, contact0, contact1);
 		}
 
 		return Collision(); // No Collision
