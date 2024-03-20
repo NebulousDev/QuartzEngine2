@@ -135,7 +135,7 @@ namespace Quartz
 				maxPointIndex2 = maxPointIndex1;
 				maxPointIndex1 = i;
 			}
-			else if (dist > maxDist1)
+			else if (dist > maxDist2)
 			{
 				maxDist2 = dist;
 				maxPointIndex2 = i;

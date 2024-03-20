@@ -171,24 +171,4 @@ namespace Quartz
 			this->isStatic = isStatic;
 		};
 	};
-
-	struct Collision
-	{
-		Vec3f extent0;
-		Vec3f extent1;
-		Vec3f normal;
-		float dist;
-		Simplex contact0;
-		Simplex contact1;
-		bool isColliding;
-
-		inline Collision() : 
-			extent0(), extent1(), contact0(), contact1(), isColliding(false) {};
-
-		inline Collision(const Vec3f& extent0, const Vec3f& extent1, const Vec3f& normal, float dist,
-			const Simplex& contact0, const Simplex& contact1, bool colliding = true) :
-			extent0(extent0), extent1(extent1), normal(normal), dist (dist), contact0(contact0), contact1(contact1), isColliding(colliding) {};
-
-		inline Collision Flip() { return Collision(extent1, extent0, -normal, dist, contact1, contact0, isColliding); }
-	};
 }

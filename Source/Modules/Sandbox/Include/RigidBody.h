@@ -18,6 +18,8 @@ namespace Quartz
 		Mat3f invInertiaTensor;
 		bool  asleep;
 
+		Vec3f lastAcceleration;
+
 		inline RigidBody() :
 			invMass(1.0f),
 			restitution(1.0f),

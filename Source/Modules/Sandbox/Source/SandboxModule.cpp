@@ -140,7 +140,7 @@ namespace Quartz
 		TransformComponent transformCube
 		(
 			{ 0.0f, 2.0f, 0.0f },
-			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
+			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(15.0f)),
 			{ 1.0f, 1.0f, 1.0f }
 		);
 
@@ -216,10 +216,10 @@ namespace Quartz
 		MeshComponent renderable3("simplePlane", planeData);
 		MeshComponent renderable4("simplePlane2", planeData2);
 
-		RigidBody cubeRigidBody(1.0f, 0.7f, 1.0f);
+		RigidBody cubeRigidBody(1.0f, 0.3f, 1.0f);
 		RectCollider cubeCollider({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
 
-		RigidBody cubeRigidBody2(1.0f, 0.7f, 1.0f);
+		RigidBody cubeRigidBody2(1.0f, 0.3f, 1.0f);
 		RectCollider cubeCollider2({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
 		//SphereCollider cubeCollider2({}, 0.5f, false);
 
@@ -286,7 +286,7 @@ namespace Quartz
 			//cameraPhysics.AddForce({ 0.0f, -9.81f, 0.0f });
 
 			gCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
-			gCube2 = world.CreateEntity(transformCube2, renderable2, material1, cubePhysics2);
+			//gCube2 = world.CreateEntity(transformCube2, renderable2, material1, cubePhysics2);
 			Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
 			Entity planeL = world.CreateEntity(transformPlaneL, renderable4, material1, planePhysics2);
 			Entity planeR = world.CreateEntity(transformPlaneR, renderable4, material1, planePhysics2);
@@ -294,7 +294,7 @@ namespace Quartz
 			Entity planeB = world.CreateEntity(transformPlaneB, renderable4, material1, planePhysics2);
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ 4.0f, 2.0f, 0.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(-90.0f)}, {1.0f, 1.0f, 1.0f});
+			TransformComponent cameraTransform({ 4.0f, 2.0f, 0.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
 			gCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
@@ -320,11 +320,11 @@ namespace Quartz
 					TransformComponent& cameraTransform = Engine::GetWorld().Get<TransformComponent>(gCamera);
 					RigidBodyComponent& cameraRigidBody = Engine::GetWorld().Get<RigidBodyComponent>(gCamera);
 
-					TransformComponent& cubeTransform = Engine::GetWorld().Get<TransformComponent>(gCube);
-					RigidBodyComponent& cubeRigidBody = Engine::GetWorld().Get<RigidBodyComponent>(gCube);
+					//TransformComponent& cubeTransform = Engine::GetWorld().Get<TransformComponent>(gCube);
+					//RigidBodyComponent& cubeRigidBody = Engine::GetWorld().Get<RigidBodyComponent>(gCube);
 
-					TransformComponent& cube2Transform = Engine::GetWorld().Get<TransformComponent>(gCube2);
-					RigidBodyComponent& cube2RigidBody = Engine::GetWorld().Get<RigidBodyComponent>(gCube2);
+					//TransformComponent& cube2Transform = Engine::GetWorld().Get<TransformComponent>(gCube2);
+					//RigidBodyComponent& cube2RigidBody = Engine::GetWorld().Get<RigidBodyComponent>(gCube2);
 
 					float speed = 2.0f;
 
@@ -382,14 +382,14 @@ namespace Quartz
 					{
 						TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gCamera);
 
-						Quatf rotX = Quatf().SetAxisAngle({ 0.0f, 1.0f, 0.0f }, direction.x * upSpeed * runtime.GetUpdateDelta());
+						Quatf rotX = Quatf().SetAxisAngle(Vec3f::UP, direction.x * upSpeed * runtime.GetUpdateDelta());
 						Quatf rotY = Quatf().SetAxisAngle(transform.GetRight(), direction.y * rightSpeed * runtime.GetUpdateDelta());
 
 						transform.rotation *= rotX;
 	
 						Vec3f lookDir = rotY * transform.GetForward();
 						Vec3f backDir = Cross(transform.GetRight(), Vec3f::UP);
-
+						
 						float dot = Dot(lookDir, backDir);
 
 						if (dot <= 0.0f)
@@ -448,8 +448,8 @@ namespace Quartz
 					);
 
 					RigidBodyComponent physics(cubeRigidBody2, cubeCollider2);
-					physics.AddForce(normal * 5.0f);
-					physics.AddTorque({ 0.0f, 1.0f, 0.0f });
+					physics.AddForce(normal * 15.0f);
+					physics.AddTorque({ 0.0f, 0.0f, 0.0f });
 
 					if (Engine::GetWorld().EntityCount() < 256)
 					{

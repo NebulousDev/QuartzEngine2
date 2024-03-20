@@ -388,13 +388,13 @@ namespace Quartz
 			}
 			else
 			{
-				Vec3f extent0 = FurthestPoint(collider0, normal);
-				Vec3f extent1 = extent0 - normal.Normalized() * dist;
+				//Vec3f extent0 = FurthestPoint(collider0, normal);
+				//Vec3f extent1 = extent0 - normal.Normalized() * dist;
 
-				Simplex contact0 = FurthestSimplex(collider0, normal);
-				Simplex contact1 = FurthestSimplex(collider1, -normal);
+				Simplex contact0 = FurthestSimplex(collider0, -normal);
+				Simplex contact1 = FurthestSimplex(collider1, normal);
 
-				return Collision(extent0, extent1, normal.Normalized(), dist, contact0, contact1);
+				return Collision(normal.Normalized(), dist, contact0, contact1);
 			}
 		}
 
@@ -428,13 +428,13 @@ namespace Quartz
 			}
 			else
 			{
-				Vec3f extent0 = FurthestPoint(collider0, normal);
-				Vec3f extent1 = extent0 - normal.Normalized() * dist;
+				//Vec3f extent0 = FurthestPoint(collider0, normal);
+				//Vec3f extent1 = extent0 - normal.Normalized() * dist;
 
-				Simplex contact0 = FurthestSimplex(collider0, normal);
-				Simplex contact1 = FurthestSimplexRect(rect1, -normal, points);
+				Simplex contact0 = FurthestSimplex(collider0, -normal);
+				Simplex contact1 = FurthestSimplexRect(rect1, normal, points);
 
-				return Collision(extent0, extent1, normal.Normalized(), dist, contact0, contact1);
+				return Collision(normal.Normalized(), dist, contact0, contact1);
 			}
 		}
 
@@ -468,13 +468,13 @@ namespace Quartz
 			}
 			else
 			{
-				Vec3f extent0 = FurthestPoint(rect0, normal);
-				Vec3f extent1 = extent0 - normal.Normalized() * dist;
+				//Vec3f extent0 = FurthestPoint(rect0, normal);
+				//Vec3f extent1 = extent0 - normal.Normalized() * dist;
 
-				Simplex contact0 = FurthestSimplexRect(rect0, normal, points0);
-				Simplex contact1 = FurthestSimplexRect(rect1, -normal, points1);
+				Simplex contact0 = FurthestSimplexRect(rect0, -normal, points0);
+				Simplex contact1 = FurthestSimplexRect(rect1, normal, points1);
 
-				return Collision(extent0, extent1, normal.Normalized(), dist, contact0, contact1);
+				return Collision(normal.Normalized(), dist, contact0, contact1);
 			}
 		}
 

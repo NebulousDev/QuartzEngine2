@@ -18,13 +18,13 @@ namespace Quartz
 		{
 			Vec3f normDir = diff.Normalized();
 
-			Vec3f extent0 = sphere0.transform.position + normDir * radius0;
-			Vec3f extent1 = sphere1.transform.position - normDir * radius1;
+			//Vec3f extent0 = sphere0.transform.position + normDir * radius0;
+			//Vec3f extent1 = sphere1.transform.position - normDir * radius1;
 
 			Simplex contact0 = FurthestSimplexSphere(sphere0, normDir);
 			Simplex contact1 = FurthestSimplexSphere(sphere1, -normDir);
 
-			return Collision(extent0, extent1, normDir, dist, contact0, contact1);
+			return Collision(normDir, dist, contact0, contact1);
 		}
 			
 		return Collision(); // No Collision
@@ -41,15 +41,15 @@ namespace Quartz
 
 		if (dist > PHYSICS_SMALLEST_DISTANCE && dist < radius0)
 		{
-			Vec3f extent0 = sphere0.transform.position - rotNormal * radius0;
-			Vec3f extent1 = sphere0.transform.position - rotNormal * dist;
+			//Vec3f extent0 = sphere0.transform.position - rotNormal * radius0;
+			//Vec3f extent1 = sphere0.transform.position - rotNormal * dist;
 
-			Vec3f normDir = extent1 - extent0;
+			//Vec3f normDir = extent1 - extent0;
 
-			Simplex contact0 = FurthestSimplexSphere(sphere0, normDir);
-			Simplex contact1 = FurthestSimplexPlane(plane1, -normDir);
+			Simplex contact0 = FurthestSimplexSphere(sphere0, rotNormal);
+			Simplex contact1 = FurthestSimplexPlane(plane1, -rotNormal);
 
-			return Collision(extent0, extent1, normDir, dist, contact0, contact1);
+			return Collision(rotNormal, dist, contact0, contact1);
 		}
 
 		return Collision(); // No Collision
@@ -154,12 +154,15 @@ namespace Quartz
 			Vec3f extent0 = maxPoint + rotNormal * dist;
 			Vec3f extent1 = maxPoint;
 
-			Vec3f normDir = extent1 - extent0;
+			//Simplex contact0;// = maxPoint + rotNormal * dist;//FurthestSimplexPlane(plane0, -rotNormal);
+			//contact0.Push(extent0);
+			//Simplex contact1 = FurthestSimplexRect(rect1, -rotNormal, points);
+			Simplex contact0;
+			contact0.Push(extent0);
+			Simplex contact1;
+			contact1.Push(extent1);
 
-			Simplex contact0 = FurthestSimplexPlane(plane0, normDir);
-			Simplex contact1 = FurthestSimplexRect(rect1, -normDir, points);
-
-			return Collision(extent0, extent1, rotNormal, dist, contact0, contact1);
+			return Collision(rotNormal, dist, contact0, contact1);
 		}
 
 		return Collision(); // No Collision
