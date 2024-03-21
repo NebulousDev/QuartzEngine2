@@ -6,25 +6,28 @@ namespace Quartz
 
 	Collision Physics::CollideSphereSphere(const Collider& sphere0, const Collider& sphere1)
 	{
-		Vec3f diff		= sphere1.transform.position - sphere0.transform.position;
-		float scale0	= sphere0.transform.scale.Maximum();
-		float scale1	= sphere1.transform.scale.Maximum();
-		float radius0	= scale0 * sphere0.sphere.radius;
-		float radius1	= scale1 * sphere1.sphere.radius;
+		const Vec3f position0	= sphere0.transform.position;
+		const Vec3f position1	= sphere1.transform.position;
+		const float scale0		= sphere0.transform.scale.Maximum();
+		const float scale1		= sphere1.transform.scale.Maximum();
+		const float radius0		= sphere0.sphere.radius * scale0;
+		const float radius1		= sphere1.sphere.radius * scale1;
+		const float totalRadius = radius0 + radius1;
 
-		float dist = diff.Magnitude();
+		Vec3f normal = position0 - position1; // Sphere1 to Sphere0
+		float dist = normal.Magnitude();
 
-		if (dist > PHYSICS_SMALLEST_DISTANCE && dist < (radius0 + radius1))
+		if (dist > 0.0f && dist < totalRadius) // PHYSICS_SMALLEST_DISTANCE?
 		{
-			Vec3f normDir = diff.Normalized();
+			Vec3f contactPoint = position0 + normal * 0.5;
+			float depth = totalRadius - dist;
 
-			//Vec3f extent0 = sphere0.transform.position + normDir * radius0;
-			//Vec3f extent1 = sphere1.transform.position - normDir * radius1;
+			normal = normal * (1.0f / dist); // Quick normalize
 
-			Simplex contact0 = FurthestSimplexSphere(sphere0, normDir);
-			Simplex contact1 = FurthestSimplexSphere(sphere1, -normDir);
+			Collision collision(normal, depth);
+			collision.AddContact(contactPoint);
 
-			return Collision(normDir, dist, contact0, contact1);
+			return collision;
 		}
 			
 		return Collision(); // No Collision
@@ -32,24 +35,34 @@ namespace Quartz
 
 	Collision Physics::CollideSpherePlane(const Collider& sphere0, const Collider& plane1)
 	{
-		float scale0		= sphere0.transform.scale.Maximum();
-		float radius0		= scale0 * sphere0.sphere.radius;
-		Vec3f rotNormal		= plane1.transform.rotation * plane1.plane.normal;
-		Vec3f planePoint	= rotNormal * plane1.plane.length + plane1.transform.position;
+		const Vec3f position0	= sphere0.transform.position;
+		const Vec3f position1	= plane1.transform.position;
+		const float scale0		= sphere0.transform.scale.Maximum();
+		const float radius0		= sphere0.sphere.radius * scale0;
+		
+		Vec3f normal = plane1.transform.rotation * plane1.plane.normal; // Should always be normal
 
-		float dist = Dot(sphere0.transform.position - planePoint, rotNormal);
+		float offset = Dot(normal, position1);
+		float dist = Dot(normal, position0) - offset;
 
-		if (dist > PHYSICS_SMALLEST_DISTANCE && dist < radius0)
+		if (dist * dist <= radius0 * radius0) // PHYSICS_SMALLEST_DISTANCE?
 		{
-			//Vec3f extent0 = sphere0.transform.position - rotNormal * radius0;
-			//Vec3f extent1 = sphere0.transform.position - rotNormal * dist;
+			float depth = -dist;
 
-			//Vec3f normDir = extent1 - extent0;
+			if (dist < 0)
+			{
+				normal = -normal;
+				depth = -depth;
+			}
 
-			Simplex contact0 = FurthestSimplexSphere(sphere0, rotNormal);
-			Simplex contact1 = FurthestSimplexPlane(plane1, -rotNormal);
+			depth += radius0;
 
-			return Collision(rotNormal, dist, contact0, contact1);
+			Vec3f contactPoint = position0 - normal * dist;
+
+			Collision collision(normal, depth);
+			collision.AddContact(contactPoint);
+
+			return collision;
 		}
 
 		return Collision(); // No Collision
@@ -115,7 +128,7 @@ namespace Quartz
 
 	Collision Physics::CollidePlaneRect(const Collider& plane0, const Collider& rect1)
 	{
-		Vec3f rotNormal = plane0.transform.rotation * plane0.plane.normal;
+		Vec3f rotNormal = plane0.transform.rotation * -plane0.plane.normal;
 		Vec3f planePoint = rotNormal * plane0.plane.length + plane0.transform.position;
 
 		Mat4f rectTransform = rect1.transform.GetMatrix();
@@ -132,37 +145,28 @@ namespace Quartz
 			rectTransform * rect1.rect.bounds.TopLeftBack()
 		};
 
-		float maxDist = -FLT_MAX;
-		Vec3f maxPoint;
+		float minDist = -FLT_MAX;
+		Vec3f minPoint;
 
+		float offset = Dot(rotNormal, plane0.transform.position);
+		
 		for (uSize i = 0; i < 8; i++)
 		{
-			float dist = Dot(points[i], -rotNormal);
+			float dist = Dot(rotNormal, points[i]) - offset;
 
-			if (dist > maxDist)
+			if (dist > minDist)
 			{
-				maxDist = dist;
-				maxPoint = points[i];
+				minDist = dist;
+				minPoint = points[i];
 			}
 		}
 
-		Vec3f diff = planePoint - maxPoint;
-		float dist = Dot(diff, rotNormal);
-
-		if (dist > PHYSICS_SMALLEST_DISTANCE)
+		if (minDist > 0.0f) //PHYSICS_SMALLEST_DISTANCE?
 		{
-			Vec3f extent0 = maxPoint + rotNormal * dist;
-			Vec3f extent1 = maxPoint;
+			Collision collision(-rotNormal, minDist);
+			collision.AddContact(minPoint);
 
-			//Simplex contact0;// = maxPoint + rotNormal * dist;//FurthestSimplexPlane(plane0, -rotNormal);
-			//contact0.Push(extent0);
-			//Simplex contact1 = FurthestSimplexRect(rect1, -rotNormal, points);
-			Simplex contact0;
-			contact0.Push(extent0);
-			Simplex contact1;
-			contact1.Push(extent1);
-
-			return Collision(rotNormal, dist, contact0, contact1);
+			return collision;
 		}
 
 		return Collision(); // No Collision

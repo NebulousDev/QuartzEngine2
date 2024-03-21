@@ -87,10 +87,10 @@ namespace Quartz
 		return functionTable[(uSize)collider0.shape](collider0, direction);
 	}
 
-	Simplex Physics::FurthestSimplexSphere(const Collider& collider0, const Vec3f& direction)
+	Simplex Physics::FurthestSimplexSphere(const Collider& sphere, const Vec3f& direction)
 	{
 		Simplex simplex;
-		simplex.Push(collider0.transform.position + direction.Normalized() * collider0.sphere.radius);
+		simplex.Push(sphere.transform.position + direction * sphere.sphere.radius);
 		return simplex;
 	}
 

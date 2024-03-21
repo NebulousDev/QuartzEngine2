@@ -140,7 +140,7 @@ namespace Quartz
 		TransformComponent transformCube
 		(
 			{ 0.0f, 2.0f, 0.0f },
-			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(15.0f)),
+			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
 			{ 1.0f, 1.0f, 1.0f }
 		);
 
@@ -216,17 +216,18 @@ namespace Quartz
 		MeshComponent renderable3("simplePlane", planeData);
 		MeshComponent renderable4("simplePlane2", planeData2);
 
-		RigidBody cubeRigidBody(1.0f, 0.3f, 1.0f);
-		RectCollider cubeCollider({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
+		RigidBody cubeRigidBody(1.0f, 0.2f, 1.0f);
+		//RectCollider cubeCollider({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
+		SphereCollider cubeCollider({}, 0.5f, false);
 
-		RigidBody cubeRigidBody2(1.0f, 0.3f, 1.0f);
-		RectCollider cubeCollider2({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
-		//SphereCollider cubeCollider2({}, 0.5f, false);
+		RigidBody cubeRigidBody2(1.0f, 0.2f, 1.0f);
+		//RectCollider cubeCollider2({}, Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
+		SphereCollider cubeCollider2({}, 0.5f, false);
 
-		RigidBody planeRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
+		RigidBody planeRigidBody(0.0f, 0.5f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		PlaneCollider planeCollider({}, { 0.0f, 1.0f, 0.0f }, 0.0f, true);
 
-		RigidBody cameraRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
+		RigidBody cameraRigidBody(0.0f, 0.5f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		SphereCollider cameraCollider({}, 0.5f, true);
 
 		void QUARTZ_ENGINE_API ModuleInit()
@@ -294,7 +295,7 @@ namespace Quartz
 			Entity planeB = world.CreateEntity(transformPlaneB, renderable4, material1, planePhysics2);
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ 4.0f, 2.0f, 0.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
+			TransformComponent cameraTransform({ 0.0f, 2.0f, 4.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
 			gCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
@@ -388,7 +389,7 @@ namespace Quartz
 						transform.rotation *= rotX;
 	
 						Vec3f lookDir = rotY * transform.GetForward();
-						Vec3f backDir = Cross(transform.GetRight(), Vec3f::UP);
+						Vec3f backDir = Cross(Vec3f::UP, transform.GetRight());
 						
 						float dot = Dot(lookDir, backDir);
 

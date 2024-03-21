@@ -89,6 +89,19 @@ namespace Quartz
 				RigidBody& rigidBody1			= physics1.rigidBody;
 				Collider& collider1				= physics1.collider;
 
+
+				// @TODO: BAD
+				for (const CollisionData& data : (const Array<CollisionData>&)mCollisions)
+				{
+					if ((data.entity0 == entity0 && data.entity1 == entity1) || 
+						(data.entity0 == entity1 && data.entity1 == entity0))
+					{
+						continue;
+					}
+				}
+
+
+
 				collider0.transform = transform0;
 				collider1.transform = transform1;
 
@@ -101,120 +114,77 @@ namespace Quartz
 				
 				if (collision.isColliding)
 				{
-					CollisionData data = { &physics0, &physics1, &transform0, &transform1, collision };
+					CollisionData data = { entity0, entity1, &physics0, &physics1, &transform0, &transform1, collision };
 					mCollisions.PushBack(data);
 				}
 			}
 		}
 	}
 
-	void ResolveCollisionDepths(const Collider& collider0, const Collider& collider1, const Vec3f scaledNormal, Transform& transform0, Transform& transform1)
-	{
-		if (!collider0.isStatic)
-		{
-			if (collider1.isStatic)
-			{
-				transform0.position -= scaledNormal;
-			}
-			else
-			{
-				transform0.position -= scaledNormal / 2.0f;
-			}
-		}
-
-		if (!collider1.isStatic)
-		{
-			if (collider0.isStatic)
-			{
-				transform1.position += scaledNormal;
-			}
-			else
-			{
-				transform1.position += scaledNormal / 2.0f;
-			}
-		}
-	}
-
-	Vec3f CalcContactVelocity(const Collision& collision, const RigidBody& rigidBody0, 
-		const RigidBody& rigidBody1, const Transform& transform0, const Transform& transform1, double stepTime)
-	{
-		/* Body 0 */
-
-		Vec3f contactPointLocal0 = collision.contact0[0] - transform0.position;
-		Vec3f totalContactVelocityLocal0 = Cross(rigidBody0.angularVelocity, contactPointLocal0) + rigidBody0.linearVelocity;
-		Vec3f totalContactVelocityContact0 = collision.invContactBasis.Transposed() * totalContactVelocityLocal0;
-
-		Vec3f accVelocity0 = rigidBody0.lastAcceleration * stepTime;
-		accVelocity0 = collision.invContactBasis.Transposed() * accVelocity0;
-		accVelocity0.x = 0;
-
-		totalContactVelocityContact0 += accVelocity0; // NOTE: negated test?
-
-		/* Body 1 */
-
-		Vec3f contactPointLocal1 = collision.contact1[0] - transform1.position;
-		Vec3f totalContactVelocityLocal1 = Cross(rigidBody1.angularVelocity, contactPointLocal1) + rigidBody1.linearVelocity;
-		Vec3f totalContactVelocityContact1 = collision.invContactBasis.Transposed() * totalContactVelocityLocal1;
-
-		Vec3f accVelocity1 = rigidBody1.lastAcceleration * stepTime;
-		accVelocity1 = collision.invContactBasis.Transposed() * accVelocity1;
-		accVelocity1.x = 0;
-
-		totalContactVelocityContact1 += accVelocity1;
-
-		return totalContactVelocityContact0 - totalContactVelocityContact1;
-	}
-
-	float CalcDesiredDeltaVelocity(const Collision& collision, const RigidBody& rigidBody0, const RigidBody& rigidBody1, 
-		const Transform& transform0, const Transform& transform1, double stepTime)
-	{
-		float velFromAccel = 0;
-
-		Vec3f contactVelocity = CalcContactVelocity(collision, rigidBody0, rigidBody1, transform0, transform1, stepTime); // @TODO: move out of here
-
-		if (!rigidBody0.asleep)
-		{
-			velFromAccel += Dot(rigidBody0.lastAcceleration * stepTime, collision.normal); // NOTE: Negated test
-		}
-
-		if (!rigidBody1.asleep) // @TODO static checks?
-		{
-			velFromAccel += Dot(rigidBody1.lastAcceleration * stepTime, collision.normal);
-		}
-
-		// @TODO properly calculate restition
-		float restitution = Min(rigidBody0.restitution, rigidBody1.restitution);
-
-		//return -contactVelocity.x - restitution * (contactVelocity.x - velFromAccel);
-		return -contactVelocity.x + (1.0f + restitution);
-	}
-
-	Vec3f CalcImpulse(const Collision& collision, const RigidBody& rigidBody0, const RigidBody& rigidBody1, const Vec3f& contactNormal,
-		const Transform& transform0, const Transform& transform1, double stepTime)
+	inline Vec3f CalculateImpulse(const Collision& collision, const RigidBody& rigidBody0, const RigidBody& rigidBody1, const Vec3f& contactNormal,
+		Vec3f contactPointLocal0, Vec3f contactPointLocal1, const Transform& transform0, const Transform& transform1, double stepTime, 
+		float& outAngularComponent0, float& outAngularComponent1)
 	{
 		float angularComponent = 0;
-		float desiredAngularComponent = CalcDesiredDeltaVelocity(collision, rigidBody0, rigidBody1, transform0, transform1, stepTime);
+		Vec3f totalContactVelocity;
 
-		Vec3f contact0 = collision.contact0[0] - transform0.position;
-		Vec3f torqueImpulse0 = Cross(contact0, contactNormal);
-		Vec3f angularVelocityImpulse0 = rigidBody0.invInertiaTensor * torqueImpulse0;
-		Vec3f velocityImpulse0 = Cross(angularVelocityImpulse0, contact0);
-		angularComponent += Dot(velocityImpulse0, contactNormal) + rigidBody0.invMass; // NOTE: negated test?
+		if (rigidBody0.invMass != 0.0f)
+		{
+			Vec3f angularVelocityImpulse0 = rigidBody0.invInertiaTensor * Cross(contactPointLocal0, contactNormal);		// Angular contribution 
+			Vec3f velocityImpulse0 = Cross(angularVelocityImpulse0, contactPointLocal0);								// Linear contribution
 
-		Vec3f contact1 = collision.contact1[0] - transform1.position;
-		Vec3f torqueImpulse1 = Cross(contact1, contactNormal);
-		Vec3f angularVelocityImpulse1 = rigidBody1.invInertiaTensor * torqueImpulse1;
-		Vec3f velocityImpulse1 = Cross(angularVelocityImpulse1, contact1);
-		angularComponent += Dot(velocityImpulse1, contactNormal) + rigidBody1.invMass;
+			outAngularComponent0 = Dot(velocityImpulse0, contactNormal);
+			angularComponent += outAngularComponent0 + rigidBody0.invMass;
 
-		Vec3f contactImpulse = Vec3f(desiredAngularComponent / angularComponent, 0.0f, 0.0f);
+			Vec3f contactVelocity0 = Cross(rigidBody0.angularVelocity, contactPointLocal0) + rigidBody0.linearVelocity;	// Current velocity at the contact point
+			totalContactVelocity += contactVelocity0;
+		}
 
-		Vec3f impulse = collision.invContactBasis * contactImpulse;
+		if (rigidBody1.invMass != 0.0f)
+		{
+			Vec3f angularVelocityImpulse1 = rigidBody1.invInertiaTensor * Cross(contactPointLocal1, contactNormal);		// Angular contribution 
+			Vec3f velocityImpulse1 = Cross(angularVelocityImpulse1, contactPointLocal1);								// Linear contribution
+
+			outAngularComponent1 = Dot(velocityImpulse1, contactNormal);
+			angularComponent += outAngularComponent1 + rigidBody1.invMass;
+
+			Vec3f contactVelocity1 = Cross(rigidBody1.angularVelocity, contactPointLocal1) + rigidBody1.linearVelocity;	// Current velocity at the contact point
+			totalContactVelocity += contactVelocity1;
+		}
+
+		Vec3f totalContactVelocityContact = collision.invContactBasis.Transposed() * totalContactVelocity;
+		float restitution = Min(rigidBody0.restitution, rigidBody1.restitution);
+		float desiredAngularComponent = -totalContactVelocityContact.x * (1.0f + restitution);
+
+		Vec3f impulseContact = Vec3f(desiredAngularComponent / angularComponent, 0.0f, 0.0f);
+		Vec3f impulse = collision.invContactBasis * impulseContact;
 
 		return impulse;
 	}
 
-	void Physics::ApplyImpulses(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime)
+	void BalanceMovements(float& inOutAngularMovement, float& inOutLinearMovement, float limit, float limitScale)
+	{
+		// Limit the rotational resolution to reduce new penetrations
+		float scaledLimit = limit * limitScale;
+		if (Abs(inOutAngularMovement) > scaledLimit)
+		{
+			float total = inOutLinearMovement + inOutAngularMovement;
+
+			if (inOutAngularMovement >= 0.0f)
+			{
+				inOutAngularMovement = scaledLimit;
+			}
+			else
+			{
+				inOutAngularMovement = -scaledLimit;
+			}
+
+			// Linear resolution picks up the slack
+			inOutLinearMovement = total - inOutAngularMovement;
+		}
+	}
+
+	void Physics::ResolveCollisions(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime)
 	{
 		for (CollisionData& collisionData : mCollisions)
 		{
@@ -230,39 +200,94 @@ namespace Quartz
 			Vec3f normal = collision.normal.Normalized();
 			float depth = collision.depth;
 
-			rigidBody0.invInertiaTensor = Mat3f().SetIdentity();
-			rigidBody1.invInertiaTensor = Mat3f().SetIdentity();
+			// Contact points relative to the object's center
+			Vec3f contactPointLocal0 = collision.points[0] - transform0.position;
+			Vec3f contactPointLocal1 = collision.points[0] - transform1.position;
 
-			ResolveCollisionDepths(collider0, collider1, normal * depth, transform0, transform1);
-			Vec3f impulse = CalcImpulse(collision, rigidBody0, rigidBody1, normal, transform0, transform1, stepTime);
+			/* Resolve Linear and Angular Velocities */
 
-			//float j = CalcResolvedForces(rigidBody0, rigidBody1, scaledNormal);
-			//Vec3f linearImpulse = j * scaledNormal;
+			float angularInertia0 = 0;
+			float angularInertia1 = 0;
+			float linerInertia0 = 0;
+			float linerInertia1 = 0;
+
+			float totalInertia = 0;
+
+			Vec3f impulse = CalculateImpulse(collision, rigidBody0, rigidBody1, 
+				normal, contactPointLocal0, contactPointLocal1, transform0, transform1, stepTime,
+				angularInertia0, angularInertia1);
+
+			//impulse *= -1;
 
 			if (!collider0.isStatic)
 			{
-				//rigidBody0.AddLinearVelocity(-linearImpulse * rigidBody0.invMass);
+				Vec3f impulsiveTorque0 = Cross(impulse, contactPointLocal0); // flipped?
+				Vec3f finalAngularVelocity0 = rigidBody0.invInertiaTensor * impulsiveTorque0;
+				Vec3f finalLinearVelocity0 = impulse * rigidBody0.invMass;
 
-				Vec3f contact0 = collision.contact0[0] - transform0.position;
-				Vec3f impulseTorque = Cross(contact0, impulse);
-				Vec3f finalAngularVelocity = rigidBody0.invInertiaTensor * impulseTorque;
-				Vec3f finalLinearVelocity = impulse * rigidBody0.invMass;
+				rigidBody0.AddLinearVelocity(finalLinearVelocity0);
+				rigidBody0.AddAngularVelocity(finalAngularVelocity0);
 
-				rigidBody0.AddLinearVelocity(finalLinearVelocity);
-				rigidBody0.AddAngularVelocity(finalAngularVelocity);
+				linerInertia0 = rigidBody0.invMass;
+				totalInertia += linerInertia0 + angularInertia0;
+			}
+
+			impulse *= -1;
+
+			if (!collider1.isStatic)
+			{
+				Vec3f impulsiveTorque1 = Cross(impulse, contactPointLocal1); // flipped?
+				Vec3f finalAngularVelocity1 = rigidBody1.invInertiaTensor * impulsiveTorque1;
+				Vec3f finalLinearVelocity1 = impulse * rigidBody1.invMass;
+
+				rigidBody1.AddLinearVelocity(finalLinearVelocity1);
+				rigidBody1.AddAngularVelocity(finalAngularVelocity1);
+
+				linerInertia1 = rigidBody1.invMass;
+				totalInertia += linerInertia1 + angularInertia1;
+			}
+
+			/* Resolve Penetration */
+
+			float invInertia = 1.0f / totalInertia;
+			float balanceLimit = 0.2f;
+
+			if (!collider0.isStatic)
+			{
+				//angularInertia0 += rigidBody0.invMass;
+
+				float linearMovement0 = depth * linerInertia0 * invInertia;
+				float angularMovement0 = depth * angularInertia0 * invInertia;
+				
+				BalanceMovements(angularMovement0, linearMovement0, balanceLimit, contactPointLocal0.Magnitude());
+
+				if (angularInertia0 != 0.0f)
+				{
+					Vec3f angularVelocityImpulse0 = rigidBody0.invInertiaTensor * Cross(contactPointLocal0, normal); // Get from CalcImpulse
+					Vec3f rotation0 = angularVelocityImpulse0 * (1.0f / angularInertia0) * angularMovement0;
+					transform0.Rotate(rotation0);
+				}
+
+				transform0.Move(normal * linearMovement0);
 			}
 
 			if (!collider1.isStatic)
 			{
-				//rigidBody1.AddLinearVelocity(linearImpulse * rigidBody1.invMass);
+				//angularInertia1 += rigidBody0.invMass;
 
-				Vec3f contact1 = collision.contact1[0] - transform1.position;
-				Vec3f impulseTorque = Cross(contact1, impulse);
-				Vec3f finalAngularVelocity = rigidBody1.invInertiaTensor * impulseTorque;
-				Vec3f finalLinearVelocity = impulse * -rigidBody1.invMass;
+				float linearMovement1 = -depth * linerInertia1 * invInertia;
+				float angularMovement1 = -depth * angularInertia1 * invInertia;
 
-				rigidBody1.AddLinearVelocity(finalLinearVelocity);
-				rigidBody1.AddAngularVelocity(finalAngularVelocity);
+				BalanceMovements(angularMovement1, linearMovement1, balanceLimit, contactPointLocal1.Magnitude());
+
+				if (angularInertia1 != 0.0f)
+				{
+					Vec3f angularVelocityImpulse1 = rigidBody1.invInertiaTensor * Cross(contactPointLocal1, normal);
+					Vec3f rotation1 = angularVelocityImpulse1 * (1.0f / angularInertia1) * angularMovement1;
+					transform1.Rotate(rotation1);
+				}
+
+				transform1.Move(normal * linearMovement1);
 			}
 		}
 	}
@@ -278,6 +303,8 @@ namespace Quartz
 		{
 			rigidBody.invInertiaTensor = Mat3f().SetIdentity(InitalInertia(rigidBody, collider)).Inverse();
 		}
+
+		//rigidBody.invInertiaTensor = Mat3f().SetIdentity();
 	}
 
 	void Physics::Initialize()
@@ -293,9 +320,9 @@ namespace Quartz
 		{
 			double stepTime = deltaTime / (double)PHYSICS_STEP_ITERATIONS;
 
-			ApplyForces(world, rigidBodies, stepTime);
-			ApplyImpulses(world, rigidBodies, stepTime);
 			FindCollisions(world, rigidBodies, stepTime);
+			ResolveCollisions(world, rigidBodies, stepTime);
+			ApplyForces(world, rigidBodies, stepTime);
 		}
 
 	}

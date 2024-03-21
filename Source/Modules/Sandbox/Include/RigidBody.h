@@ -22,8 +22,8 @@ namespace Quartz
 
 		inline RigidBody() :
 			invMass(1.0f),
-			restitution(1.0f),
-			friction(1.0f),
+			restitution(0.5f),
+			friction(0.5f),
 			gravity(0.0f, -9.81f, 0.0f) {}
 
 		inline RigidBody(float invMass, float restitution, float friction,

@@ -26,6 +26,8 @@ namespace Quartz
 
 		struct CollisionData
 		{
+			Entity entity0;
+			Entity entity1;
 			RigidBodyComponent* pRigidBody0;
 			RigidBodyComponent* pRigidBody1;
 			TransformComponent* pTransform0;
@@ -167,7 +169,7 @@ namespace Quartz
 
 		void ApplyForces(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
 		void FindCollisions(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
-		void ApplyImpulses(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
+		void ResolveCollisions(EntityWorld& world, RigidBodyView& rigidBodies, double stepTime);
 
 		/* Triggers */
 

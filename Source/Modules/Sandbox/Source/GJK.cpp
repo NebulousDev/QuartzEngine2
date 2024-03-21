@@ -394,7 +394,8 @@ namespace Quartz
 				Simplex contact0 = FurthestSimplex(collider0, -normal);
 				Simplex contact1 = FurthestSimplex(collider1, normal);
 
-				return Collision(normal.Normalized(), dist, contact0, contact1);
+				//return Collision(normal.Normalized(), dist, contact0, contact1);
+				return Collision(); // No Collision
 			}
 		}
 
@@ -428,13 +429,22 @@ namespace Quartz
 			}
 			else
 			{
-				//Vec3f extent0 = FurthestPoint(collider0, normal);
-				//Vec3f extent1 = extent0 - normal.Normalized() * dist;
-
 				Simplex contact0 = FurthestSimplex(collider0, -normal);
 				Simplex contact1 = FurthestSimplexRect(rect1, normal, points);
 
-				return Collision(normal.Normalized(), dist, contact0, contact1);
+				Collision collision(normal.Normalized(), dist);
+
+				if (contact1.Size() > contact0.Size())
+				{
+					contact0 = contact1;
+				}
+
+				for (uSize i = 0; i < contact0.Size(); i++)
+				{
+					collision.AddContact(contact0[i]);
+				}
+
+				return collision;
 			}
 		}
 
@@ -474,7 +484,8 @@ namespace Quartz
 				Simplex contact0 = FurthestSimplexRect(rect0, -normal, points0);
 				Simplex contact1 = FurthestSimplexRect(rect1, normal, points1);
 
-				return Collision(normal.Normalized(), dist, contact0, contact1);
+				//return Collision(normal.Normalized(), dist, contact0, contact1);
+				return Collision(); // No Collision
 			}
 		}
 

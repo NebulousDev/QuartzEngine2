@@ -3,30 +3,33 @@
 
 namespace Quartz
 {
-	Collision::Collision(const Vec3f& normal, float depth, const Simplex& contact0, const Simplex& contact1, bool colliding) :
-		normal(normal), depth(depth), contact0(contact0), contact1(contact1), isColliding(colliding)
+	Collision::Collision(const Vec3f& normal, float depth, bool colliding) :
+		normal(normal), depth(depth), count(0), isColliding(colliding)
 	{
 		RecalcContactBasis();
 	};
 
+	void Collision::AddContact(const Vec3f& point)
+	{
+		//@TODO assert point count < PHYSICS_MAX_CONTACT_POINTS
+		points[count++] = point;
+	}
+
 	Collision& Collision::Flip()
 	{
 		normal = -normal;
-		Swap(contact0, contact1);
-
 		RecalcContactBasis();
-
 		return *this;
 	}
 
 	void Collision::RecalcContactBasis()
 	{
-		Vec3f tangentY;
 		Vec3f tangentZ;
+		Vec3f tangentY;
 
 		if (Abs(normal.x) > Abs(normal.y))
 		{
-			float s = FastInvsereSquare(normal.z * normal.z + normal.x * normal.x);
+			const float s = FastInvsereSquare(normal.z * normal.z + normal.x * normal.x);
 
 			tangentZ.x = normal.z * s;
 			tangentZ.y = 0;
@@ -38,7 +41,7 @@ namespace Quartz
 		}
 		else
 		{
-			float s = FastInvsereSquare(normal.z * normal.z + normal.y * normal.y);
+			const float s = FastInvsereSquare(normal.z * normal.z + normal.y * normal.y);
 
 			tangentZ.x = 0;
 			tangentZ.y = -normal.z * s;
@@ -49,6 +52,6 @@ namespace Quartz
 			tangentY.z = normal.x * tangentZ.y;
 		}
 
-		invContactBasis = Mat3f(normal, tangentZ, tangentY);
+		invContactBasis = Mat3f().SetRows(normal, tangentZ, tangentY);
 	}
 }
