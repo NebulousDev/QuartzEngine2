@@ -8,10 +8,10 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/SandboxModule.cpp"
 	"Source/Physics.cpp"
 	"Source/Collisions.cpp"
-	"Source/FurthestPoint.cpp"
 	"Source/GJK.cpp"
 	"Source/Simplex.cpp"
-	"Source/Inertia.cpp" "Source/Collision.cpp")
+	"Source/Inertia.cpp"
+	"Source/Collision.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

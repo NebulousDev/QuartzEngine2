@@ -1,17 +1,18 @@
-#include "Physics.h"
+#include "CollisionDetection.h"
+#include "GJK.h"
+#include <float.h>
 
 namespace Quartz
 {
-	using CollisionFunc = Collision(*)(const Collider& collider0, const Collider& collider1);
-
-	Collision Physics::CollideSphereSphere(const Collider& sphere0, const Collider& sphere1)
+	bool CollisionDetection::CollideSphereSphere(const SphereCollider& sphere0, const Transform& transform0, 
+		const SphereCollider& sphere1, const Transform& transform1, Collision& outCollision)
 	{
-		const Vec3f position0	= sphere0.transform.position;
-		const Vec3f position1	= sphere1.transform.position;
-		const float scale0		= sphere0.transform.scale.Maximum();
-		const float scale1		= sphere1.transform.scale.Maximum();
-		const float radius0		= sphere0.sphere.radius * scale0;
-		const float radius1		= sphere1.sphere.radius * scale1;
+		const Vec3f& position0	= transform0.position;
+		const Vec3f& position1	= transform1.position;
+		const float& scale0		= transform0.scale.Maximum();
+		const float& scale1		= transform1.scale.Maximum();
+		const float radius0		= sphere0.GetSphere().radius * scale0;
+		const float radius1		= sphere1.GetSphere().radius * scale1;
 		const float totalRadius = radius0 + radius1;
 
 		Vec3f normal = position0 - position1; // Sphere1 to Sphere0
@@ -27,20 +28,24 @@ namespace Quartz
 			Collision collision(normal, depth);
 			collision.AddContact(contactPoint);
 
-			return collision;
+			outCollision = collision;
+
+			return true;
 		}
 			
-		return Collision(); // No Collision
+		return false; // No Collision
 	};
 
-	Collision Physics::CollideSpherePlane(const Collider& sphere0, const Collider& plane1)
+	bool CollisionDetection::CollideSpherePlane(const SphereCollider& sphere0, const Transform& transform0,
+		const PlaneCollider& plane1, const Transform& transform1, Collision& outCollision)
 	{
-		const Vec3f position0	= sphere0.transform.position;
-		const Vec3f position1	= plane1.transform.position;
-		const float scale0		= sphere0.transform.scale.Maximum();
-		const float radius0		= sphere0.sphere.radius * scale0;
+		const Vec3f& position0	= transform0.position;
+		const Vec3f& position1	= transform1.position;
+		const Quatf& rotation1	= transform1.rotation;
+		const float& scale0		= transform0.scale.Maximum();
+		const float radius0		= sphere0.GetSphere().radius * scale0;
 		
-		Vec3f normal = plane1.transform.rotation * plane1.plane.normal; // Should always be normal
+		Vec3f normal = rotation1 * plane1.GetPlane().normal; // Should always be normal
 
 		float offset = Dot(normal, position1);
 		float dist = Dot(normal, position0) - offset;
@@ -62,93 +67,109 @@ namespace Quartz
 			Collision collision(normal, depth);
 			collision.AddContact(contactPoint);
 
-			return collision;
+			outCollision = collision;
+
+			return true;
 		}
 
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideSphereRect(const Collider& sphere0, const Collider& rect1)
+	bool CollisionDetection::CollideSphereRect(const SphereCollider& sphere0, const Transform& transform0, 
+		const RectCollider& rect1, const Transform& transform1, Collision& outCollision)
 	{
-		Mat4f rectTransform = rect1.transform.GetMatrix();
+		const Mat4f& transform00 = transform0.GetMatrix();
+		const Mat4f& transform11 = transform1.GetMatrix();
+		const Bounds3f& bounds = rect1.GetRect().bounds;
 
 		Vec3f points[8]
 		{
-			rectTransform * rect1.rect.bounds.BottomRightFront(),
-			rectTransform * rect1.rect.bounds.BottomLeftFront(),
-			rectTransform * rect1.rect.bounds.BottomRightBack(),
-			rectTransform * rect1.rect.bounds.BottomLeftBack(),
-			rectTransform * rect1.rect.bounds.TopRightFront(),
-			rectTransform * rect1.rect.bounds.TopLeftFront(),
-			rectTransform * rect1.rect.bounds.TopRightBack(),
-			rectTransform * rect1.rect.bounds.TopLeftBack()
+			transform11 * bounds.BottomRightFront(),
+			transform11 * bounds.BottomLeftFront(),
+			transform11 * bounds.BottomRightBack(),
+			transform11 * bounds.BottomLeftBack(),
+			transform11 * bounds.TopRightFront(),
+			transform11 * bounds.TopLeftFront(),
+			transform11 * bounds.TopRightBack(),
+			transform11 * bounds.TopLeftBack()
 		};
 
 		Simplex simplex;
 
-		if (GJKRect(sphere0, rect1, points, simplex))
+		if (GJK::GJKRect(sphere0.GetSphere(), transform00, rect1.GetRect(), points, simplex))
 		{
-			return EPARect(sphere0, rect1, points, simplex);
+			//return EPARect(sphere0, rect1, points, simplex);
 		}
 
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideSphereCapsule(const Collider& sphere0, const Collider& capsule1)
+	bool CollisionDetection::CollideSphereCapsule(const SphereCollider& sphere0, const Transform& transform0, 
+		const CapsuleCollider& capsule1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideSphereHull(const Collider& sphere0, const Collider& hull1)
+	bool CollisionDetection::CollideSphereHull(const SphereCollider& sphere0, const Transform& transform0, 
+		const HullCollider& hull1, const Transform& transform1, Collision& outCollision)
 	{
 		Simplex simplex;
 
-		if (GJK(sphere0, hull1, simplex))
-		{
-			return EPA(sphere0, hull1, simplex);
-		}
+		//if (GJK(sphere0, hull1, simplex))
+		//{
+		//	return EPA(sphere0, hull1, simplex);
+		//}
 
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideSphereMesh(const Collider& sphere0, const Collider& mesh1)
+	bool CollisionDetection::CollideSphereMesh(const SphereCollider& sphere0, const Transform& transform0, 
+		const MeshCollider& mesh1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollidePlaneSphere(const Collider& plane0, const Collider& sphere1)
+	bool CollisionDetection::CollidePlaneSphere(const PlaneCollider& plane0, const Transform& transform0, 
+		const SphereCollider& sphere1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollideSpherePlane(sphere1, plane0).Flip();
+		bool result = CollideSpherePlane(sphere1, transform1, plane0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollidePlanePlane(const Collider& plane0, const Collider& plane1)
+	bool CollisionDetection::CollidePlanePlane(const PlaneCollider& plane0, const Transform& transform0, 
+		const PlaneCollider& plane1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollidePlaneRect(const Collider& plane0, const Collider& rect1)
+	bool CollisionDetection::CollidePlaneRect(const PlaneCollider& plane0, const Transform& transform0, 
+		const RectCollider& rect1, const Transform& transform1, Collision& outCollision)
 	{
-		Vec3f rotNormal = plane0.transform.rotation * -plane0.plane.normal;
-		Vec3f planePoint = rotNormal * plane0.plane.length + plane0.transform.position;
+		const Vec3f& position0	= transform0.position;
+		const Vec3f& position1	= transform1.position;
+		const Vec3f rotNormal	= transform0.rotation * -plane0.GetPlane().normal;
+		const Vec3f planePoint	= rotNormal * plane0.GetPlane().length + position0;
 
-		Mat4f rectTransform = rect1.transform.GetMatrix();
+		const Mat4f& transform = transform1.GetMatrix();
+		const Bounds3f& bounds = rect1.GetRect().bounds;
 
 		Vec3f points[8]
 		{
-			rectTransform * rect1.rect.bounds.BottomRightFront(),
-			rectTransform * rect1.rect.bounds.BottomLeftFront(),
-			rectTransform * rect1.rect.bounds.BottomRightBack(),
-			rectTransform * rect1.rect.bounds.BottomLeftBack(),
-			rectTransform * rect1.rect.bounds.TopRightFront(),
-			rectTransform * rect1.rect.bounds.TopLeftFront(),
-			rectTransform * rect1.rect.bounds.TopRightBack(),
-			rectTransform * rect1.rect.bounds.TopLeftBack()
+			transform * bounds.BottomRightFront(),
+			transform * bounds.BottomLeftFront(),
+			transform * bounds.BottomRightBack(),
+			transform * bounds.BottomLeftBack(),
+			transform * bounds.TopRightFront(),
+			transform * bounds.TopLeftFront(),
+			transform * bounds.TopRightBack(),
+			transform * bounds.TopLeftBack()
 		};
 
 		float minDist = -FLT_MAX;
 		Vec3f minPoint;
 
-		float offset = Dot(rotNormal, plane0.transform.position);
+		float offset = Dot(rotNormal, position0);
 		
 		for (uSize i = 0; i < 8; i++)
 		{
@@ -166,271 +187,344 @@ namespace Quartz
 			Collision collision(-rotNormal, minDist);
 			collision.AddContact(minPoint);
 
-			return collision;
+			outCollision = collision;
+			return true;
 		}
 
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollidePlaneCapsule(const Collider& plane0, const Collider& capsule1)
+	bool CollisionDetection::CollidePlaneCapsule(const PlaneCollider& plane0, const Transform& transform0, 
+		const CapsuleCollider& capsule1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollidePlaneHull(const Collider& plane0, const Collider& hull1)
+	bool CollisionDetection::CollidePlaneHull(const PlaneCollider& plane0, const Transform& transform0, 
+		const HullCollider& hull1, const Transform& transform1, Collision& outCollision)
 	{
 		Simplex simplex;
 
-		if (GJK(plane0, hull1, simplex))
-		{
-			return EPA(plane0, hull1, simplex);
-		}
+		//if (GJK(plane0, hull1, simplex))
+		//{
+		//	return EPA(plane0, hull1, simplex, outCollision);
+		//}
 
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollidePlaneMesh(const Collider& plane0, const Collider& mesh1)
+	bool CollisionDetection::CollidePlaneMesh(const PlaneCollider& plane0, const Transform& transform0, const MeshCollider& mesh1, 
+		const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideRectSphere(const Collider& rect0, const Collider& sphere1)
+	bool CollisionDetection::CollideRectSphere(const RectCollider& rect0, const Transform& transform0, 
+		const SphereCollider& sphere1, const Transform& transform1, Collision& outCollision)
 	{ 
-		return CollideSphereRect(sphere1, rect0).Flip();
+		bool result = CollideSphereRect(sphere1, transform1, rect0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideRectPlane(const Collider& rect0, const Collider& plane1)
+	bool CollisionDetection::CollideRectPlane(const RectCollider& rect0, const Transform& transform0, 
+		const PlaneCollider& plane1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollidePlaneRect(plane1, rect0).Flip();
+		bool result = CollidePlaneRect(plane1, transform1, rect0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideRectRect(const Collider& rect0, const Collider& rect1)
+	bool CollisionDetection::CollideRectRect(const RectCollider& rect0, const Transform& transform0,
+		const RectCollider& rect1, const Transform& transform1, Collision& outCollision)
 	{
-		Mat4f rectTransform0 = rect0.transform.GetMatrix();
-		Mat4f rectTransform1 = rect1.transform.GetMatrix();
+		const Mat4f& transform00 = transform0.GetMatrix();
+		const Mat4f& transform11 = transform1.GetMatrix();
+		const Bounds3f& bounds0 = rect1.GetRect().bounds;
+		const Bounds3f& bounds1 = rect1.GetRect().bounds;
 
 		Vec3f points0[8]
 		{
-			rectTransform0 * rect0.rect.bounds.BottomRightFront(),
-			rectTransform0 * rect0.rect.bounds.BottomLeftFront(),
-			rectTransform0 * rect0.rect.bounds.BottomRightBack(),
-			rectTransform0 * rect0.rect.bounds.BottomLeftBack(),
-			rectTransform0 * rect0.rect.bounds.TopRightFront(),
-			rectTransform0 * rect0.rect.bounds.TopLeftFront(),
-			rectTransform0 * rect0.rect.bounds.TopRightBack(),
-			rectTransform0 * rect0.rect.bounds.TopLeftBack()
+			transform00 * bounds0.BottomRightFront(),
+			transform00 * bounds0.BottomLeftFront(),
+			transform00 * bounds0.BottomRightBack(),
+			transform00 * bounds0.BottomLeftBack(),
+			transform00 * bounds0.TopRightFront(),
+			transform00 * bounds0.TopLeftFront(),
+			transform00 * bounds0.TopRightBack(),
+			transform00 * bounds0.TopLeftBack()
 		};
 
 		Vec3f points1[8]
 		{
-			rectTransform1 * rect1.rect.bounds.BottomRightFront(),
-			rectTransform1 * rect1.rect.bounds.BottomLeftFront(),
-			rectTransform1 * rect1.rect.bounds.BottomRightBack(),
-			rectTransform1 * rect1.rect.bounds.BottomLeftBack(),
-			rectTransform1 * rect1.rect.bounds.TopRightFront(),
-			rectTransform1 * rect1.rect.bounds.TopLeftFront(),
-			rectTransform1 * rect1.rect.bounds.TopRightBack(),
-			rectTransform1 * rect1.rect.bounds.TopLeftBack()
+			transform11 * bounds1.BottomRightFront(),
+			transform11 * bounds1.BottomLeftFront(),
+			transform11 * bounds1.BottomRightBack(),
+			transform11 * bounds1.BottomLeftBack(),
+			transform11 * bounds1.TopRightFront(),
+			transform11 * bounds1.TopLeftFront(),
+			transform11 * bounds1.TopRightBack(),
+			transform11 * bounds1.TopLeftBack()
 		};
 
 		Simplex simplex;
 
-		if (GJKRectRect(rect0, points0, rect1, points1, simplex))
+		if (GJK::GJKRectRect(rect0.GetRect(), points0, rect1.GetRect(), points1, simplex))
 		{
-			return EPARectRect(rect0, points0, rect1, points1, simplex);
+			return GJK::EPARectRect(rect0.GetRect(), points0, rect1.GetRect(), points1, simplex, outCollision);
 		}
 
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideRectCapsule(const Collider& rect0, const Collider& capsule1)
+	bool CollisionDetection::CollideRectCapsule(const RectCollider& rect0, const Transform& transform0, 
+		const CapsuleCollider& capsule1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideRectHull(const Collider& rect0, const Collider& hull1)
+	bool CollisionDetection::CollideRectHull(const RectCollider& rect0, const Transform& transform0, 
+		const HullCollider& hull1, const Transform& transform1, Collision& outCollision)
 	{
-		Mat4f rectTransform = rect0.transform.GetMatrix();
+		const Mat4f& transform00 = transform0.GetMatrix();
+		const Mat4f& transform11 = transform1.GetMatrix();
+		const Bounds3f& bounds = rect0.GetRect().bounds;
 
 		Vec3f points[8]
 		{
-			rectTransform * rect0.rect.bounds.BottomRightFront(),
-			rectTransform * rect0.rect.bounds.BottomLeftFront(),
-			rectTransform * rect0.rect.bounds.BottomRightBack(),
-			rectTransform * rect0.rect.bounds.BottomLeftBack(),
-			rectTransform * rect0.rect.bounds.TopRightFront(),
-			rectTransform * rect0.rect.bounds.TopLeftFront(),
-			rectTransform * rect0.rect.bounds.TopRightBack(),
-			rectTransform * rect0.rect.bounds.TopLeftBack()
+			transform00 * bounds.BottomRightFront(),
+			transform00 * bounds.BottomLeftFront(),
+			transform00 * bounds.BottomRightBack(),
+			transform00 * bounds.BottomLeftBack(),
+			transform00 * bounds.TopRightFront(),
+			transform00 * bounds.TopLeftFront(),
+			transform00 * bounds.TopRightBack(),
+			transform00 * bounds.TopLeftBack()
 		};
 
 		Simplex simplex;
 
-		if (GJKRect(hull1, rect0, points, simplex))
+		if (GJK::GJKRect(hull1.GetHull(), transform11, rect0.GetRect(), points, simplex))
 		{
-			return EPARect(hull1, rect0, points, simplex).Flip();
+			bool result = GJK::EPARect(hull1.GetHull(), transform11, rect0.GetRect(), points, simplex, outCollision);
+			outCollision.Flip();
+			return result;
 		}
 
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideRectMesh(const Collider& rect0, const Collider& mesh1)
+	bool CollisionDetection::CollideRectMesh(const RectCollider& rect0, const Transform& transform0,
+		const MeshCollider& mesh1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideCapsuleSphere(const Collider& capsule0, const Collider& sphere1)
+	bool CollisionDetection::CollideCapsuleSphere(const CapsuleCollider& capsule0, const Transform& transform0,
+		const SphereCollider& sphere1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollideSphereCapsule(sphere1, capsule0).Flip();
+		bool result = CollideSphereCapsule(sphere1, transform1, capsule0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideCapsulePlane(const Collider& capsule0, const Collider& plane1)
+	bool CollisionDetection::CollideCapsulePlane(const CapsuleCollider& capsule0, const Transform& transform0,
+		const PlaneCollider& plane1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollidePlaneCapsule(plane1, capsule0).Flip();
+		bool result = CollidePlaneCapsule(plane1, transform1, capsule0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideCapsuleRect(const Collider& capsule0, const Collider& rect1)
+	bool CollisionDetection::CollideCapsuleRect(const CapsuleCollider& capsule0, const Transform& transform0,
+		const RectCollider& rect1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollideRectCapsule(rect1, capsule0).Flip();
+		bool result = CollideRectCapsule(rect1, transform1, capsule0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideCapsuleCapsule(const Collider& capsule0, const Collider& capsule1)
+	bool CollisionDetection::CollideCapsuleCapsule(const CapsuleCollider& capsule0, const Transform& transform0,
+		const CapsuleCollider& capsule1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideCapsuleHull(const Collider& capsule0, const Collider& hull1)
+	bool CollisionDetection::CollideCapsuleHull(const CapsuleCollider& capsule0, const Transform& transform0,
+		const HullCollider& hull1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideCapsuleMesh(const Collider& capsule0, const Collider& mesh1)
+	bool CollisionDetection::CollideCapsuleMesh(const CapsuleCollider& capsule0, const Transform& transform0,
+		const MeshCollider& mesh1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideHullSphere(const Collider& hull0, const Collider& sphere1)
+	bool CollisionDetection::CollideHullSphere(const HullCollider& hull0, const Transform& transform0,
+		const SphereCollider& sphere1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollideSphereHull(sphere1, hull0).Flip();
+		bool result = CollideSphereHull(sphere1, transform1, hull0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideHullPlane(const Collider& hull0, const Collider& plane1)
+	bool CollisionDetection::CollideHullPlane(const HullCollider& hull0, const Transform& transform0,
+		const PlaneCollider& plane1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollidePlaneHull(plane1, hull0).Flip();
+		bool result = CollidePlaneHull(plane1, transform1, hull0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideHullRect(const Collider& hull0, const Collider& rect1)
+	bool CollisionDetection::CollideHullRect(const HullCollider& hull0, const Transform& transform0,
+		const RectCollider& rect1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollideRectHull(rect1, hull0).Flip();
+		bool result = CollideRectHull(rect1, transform1, hull0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideHullCapsule(const Collider& hull0, const Collider& capsule1)
+	bool CollisionDetection::CollideHullCapsule(const HullCollider& hull0, const Transform& transform0,
+		const CapsuleCollider& capsule1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollideCapsuleHull(capsule1, hull0).Flip();
+		bool result = CollideCapsuleHull(capsule1, transform1, hull0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideHullHull(const Collider& hull0, const Collider& hull1)
+	bool CollisionDetection::CollideHullHull(const HullCollider& hull0, const Transform& transform0,
+		const HullCollider& hull1, const Transform& transform1, Collision& outCollision)
 	{
 		Simplex simplex;
 
-		if (GJK(hull0, hull1, simplex))
+		const Mat4f& transform00 = transform0.GetMatrix();
+		const Mat4f& transform11 = transform1.GetMatrix();
+
+		if (GJK::GJK(hull0.GetHull(), transform00, hull1.GetHull(), transform11, simplex))
 		{
-			return EPA(hull0, hull1, simplex);
+			return GJK::EPA(hull0.GetHull(), transform00, hull1.GetHull(), transform11, simplex, outCollision);
 		}
 
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideHullMesh(const Collider& hull0, const Collider& mesh1)
+	bool CollisionDetection::CollideHullMesh(const HullCollider& hull0, const Transform& transform0,
+		const MeshCollider& mesh1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::CollideMeshSphere(const Collider& mesh0, const Collider& sphere1)
+	bool CollisionDetection::CollideMeshSphere(const MeshCollider& mesh0, const Transform& transform0,
+		const SphereCollider& sphere1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollideSphereMesh(sphere1, mesh0).Flip();
+		bool result = CollideSphereMesh(sphere1, transform1, mesh0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideMeshPlane(const Collider& mesh0, const Collider& plane1)
+	bool CollisionDetection::CollideMeshPlane(const MeshCollider& mesh0, const Transform& transform0,
+		const PlaneCollider& plane1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollidePlaneMesh(plane1, mesh0).Flip();
+		bool result = CollidePlaneMesh(plane1, transform1, mesh0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideMeshRect(const Collider& mesh0, const Collider& rect1)
+	bool CollisionDetection::CollideMeshRect(const MeshCollider& mesh0, const Transform& transform0,
+		const RectCollider& rect1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollideRectMesh(rect1, mesh0).Flip();
+		bool result = CollideRectMesh(rect1, transform1, mesh0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideMeshCapsule(const Collider& mesh0, const Collider& capsule1)
+	bool CollisionDetection::CollideMeshCapsule(const MeshCollider& mesh0, const Transform& transform0,
+		const CapsuleCollider& capsule1, const Transform& transform1, Collision& outCollision)
 	{ 
-		return CollideCapsuleMesh(capsule1, mesh0).Flip();
+		bool result = CollideCapsuleMesh(capsule1, transform1, mesh0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	};
 
-	Collision Physics::CollideMeshHull(const Collider& mesh0, const Collider& hull1)
+	bool CollisionDetection::CollideMeshHull(const MeshCollider& mesh0, const Transform& transform0,
+		const HullCollider& hull1, const Transform& transform1, Collision& outCollision)
 	{
-		return CollideHullMesh(hull1, mesh0).Flip();
+		bool result = CollideHullMesh(hull1, transform1, mesh0, transform0, outCollision);
+		outCollision.Flip();
+		return result;
 	}
 
-	Collision Physics::CollideMeshMesh(const Collider& mesh0, const Collider& mesh1)
+	bool CollisionDetection::CollideMeshMesh(const MeshCollider& mesh0, const Transform& transform0,
+		const MeshCollider& mesh1, const Transform& transform1, Collision& outCollision)
 	{
-		return Collision(); // No Collision
+		return false; // No Collision
 	}
 
-	Collision Physics::Collide(const Collider& collider0, const Collider& collider1)
+	bool CollisionDetection::Collide(const Collider& collider0, const Transform& transform0, 
+		const Collider& collider1, const Transform& transform1, Collision& outCollision)
 	{
+		using CollisionFunc = bool(*)(const Collider& collider0, const Transform& transform0, 
+			const Collider& collider1, const Transform& transform1, Collision& outCollision);
+
 		static CollisionFunc functionTable[36]
 		{
-			CollideSphereSphere,
-			CollideSpherePlane,
-			CollideSphereRect,
-			CollideSphereCapsule,
-			CollideSphereHull,
-			CollideSphereMesh,
+			(CollisionFunc) CollideSphereSphere,
+			(CollisionFunc) CollideSpherePlane,
+			(CollisionFunc) CollideSphereRect,
+			(CollisionFunc) CollideSphereCapsule,
+			(CollisionFunc) CollideSphereHull,
+			(CollisionFunc) CollideSphereMesh,
 
-			CollidePlaneSphere,
-			CollidePlanePlane,
-			CollidePlaneRect,
-			CollidePlaneCapsule,
-			CollidePlaneHull,
-			CollidePlaneMesh,
+			(CollisionFunc) CollidePlaneSphere,
+			(CollisionFunc) CollidePlanePlane,
+			(CollisionFunc) CollidePlaneRect,
+			(CollisionFunc) CollidePlaneCapsule,
+			(CollisionFunc) CollidePlaneHull,
+			(CollisionFunc) CollidePlaneMesh,
 
-			CollideRectSphere,
-			CollideRectPlane,
-			CollideRectRect,
-			CollideRectCapsule,
-			CollideRectHull,
-			CollideRectMesh,
+			(CollisionFunc) CollideRectSphere,
+			(CollisionFunc) CollideRectPlane,
+			(CollisionFunc) CollideRectRect,
+			(CollisionFunc) CollideRectCapsule,
+			(CollisionFunc) CollideRectHull,
+			(CollisionFunc) CollideRectMesh,
 
-			CollideCapsuleSphere,
-			CollideCapsulePlane,
-			CollideCapsuleRect,
-			CollideCapsuleCapsule,
-			CollideCapsuleHull,
-			CollideCapsuleMesh,
+			(CollisionFunc) CollideCapsuleSphere,
+			(CollisionFunc) CollideCapsulePlane,
+			(CollisionFunc) CollideCapsuleRect,
+			(CollisionFunc) CollideCapsuleCapsule,
+			(CollisionFunc) CollideCapsuleHull,
+			(CollisionFunc) CollideCapsuleMesh,
 
-			CollideHullSphere,
-			CollideHullPlane,
-			CollideHullRect,
-			CollideHullCapsule,
-			CollideHullHull,
-			CollideHullMesh,
+			(CollisionFunc) CollideHullSphere,
+			(CollisionFunc) CollideHullPlane,
+			(CollisionFunc) CollideHullRect,
+			(CollisionFunc) CollideHullCapsule,
+			(CollisionFunc) CollideHullHull,
+			(CollisionFunc) CollideHullMesh,
 
-			CollideMeshSphere,
-			CollideMeshPlane,
-			CollideMeshRect,
-			CollideMeshCapsule,
-			CollideMeshHull,
-			CollideMeshMesh
+			(CollisionFunc) CollideMeshSphere,
+			(CollisionFunc) CollideMeshPlane,
+			(CollisionFunc) CollideMeshRect,
+			(CollisionFunc) CollideMeshCapsule,
+			(CollisionFunc) CollideMeshHull,
+			(CollisionFunc) CollideMeshMesh
 		};
 
+		const ShapeType& type0 = collider0.GetShapeType();
+		const ShapeType& type1 = collider1.GetShapeType();
+
+		// @TODO make debug
 		// Improperly formed colliders
-		if (collider0.shape == SHAPE_NONE || collider1.shape == SHAPE_NONE)
+		if (type0 == SHAPE_NONE || type1 == SHAPE_NONE)
 		{
-			return Collision(); // No Collision
+			return false; // No Collision
 		}
 
-		uSize index = (uSize)collider1.shape + ((uSize)collider0.shape * 6);
+		uSize index = (uSize)type1 + ((uSize)type0 * 6);
 
-		return functionTable[index](collider0, collider1);
+		return functionTable[index](collider0, transform0, collider1, transform1, outCollision);
 	}
 }

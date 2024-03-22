@@ -15,10 +15,10 @@ namespace Quartz
 		points[count++] = point;
 	}
 
+	// @NOTE: Remember to call RecalcContactBasis() after flipping
 	Collision& Collision::Flip()
 	{
 		normal = -normal;
-		RecalcContactBasis();
 		return *this;
 	}
 

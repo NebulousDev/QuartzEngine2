@@ -100,21 +100,20 @@ namespace Quartz
 					}
 				}
 
-
-
-				collider0.transform = transform0;
-				collider1.transform = transform1;
-
-				if (collider0.isStatic && collider1.isStatic)
+				if (collider0.IsStatic() && collider1.IsStatic())
 				{
 					continue; // Ignore static-static collisions
 				}
 
-				Collision collision = Collide(collider0, collider1);
+				Collision collision; 
+				bool colliding = Collide(collider0, transform0, collider1, transform1, collision);
 				
-				if (collision.isColliding)
+				if (colliding)
 				{
+					collision.RecalcContactBasis();
+
 					CollisionData data = { entity0, entity1, &physics0, &physics1, &transform0, &transform1, collision };
+
 					mCollisions.PushBack(data);
 				}
 			}
@@ -217,9 +216,7 @@ namespace Quartz
 				normal, contactPointLocal0, contactPointLocal1, transform0, transform1, stepTime,
 				angularInertia0, angularInertia1);
 
-			//impulse *= -1;
-
-			if (!collider0.isStatic)
+			if (!collider0.IsStatic())
 			{
 				Vec3f impulsiveTorque0 = Cross(impulse, contactPointLocal0); // flipped?
 				Vec3f finalAngularVelocity0 = rigidBody0.invInertiaTensor * impulsiveTorque0;
@@ -234,7 +231,7 @@ namespace Quartz
 
 			impulse *= -1;
 
-			if (!collider1.isStatic)
+			if (!collider1.IsStatic())
 			{
 				Vec3f impulsiveTorque1 = Cross(impulse, contactPointLocal1); // flipped?
 				Vec3f finalAngularVelocity1 = rigidBody1.invInertiaTensor * impulsiveTorque1;
@@ -252,7 +249,7 @@ namespace Quartz
 			float invInertia = 1.0f / totalInertia;
 			float balanceLimit = 0.2f;
 
-			if (!collider0.isStatic)
+			if (!collider0.IsStatic())
 			{
 				//angularInertia0 += rigidBody0.invMass;
 
@@ -271,7 +268,7 @@ namespace Quartz
 				transform0.Move(normal * linearMovement0);
 			}
 
-			if (!collider1.isStatic)
+			if (!collider1.IsStatic())
 			{
 				//angularInertia1 += rigidBody0.invMass;
 
@@ -296,12 +293,14 @@ namespace Quartz
 	{
 		RigidBody& rigidBody	= event.component.rigidBody;
 		Collider& collider		= event.component.collider;
+		Transform& transform	= event.world.Get<TransformComponent>(event.entity);
 
-		Vec3f initInertia = InitalInertia(rigidBody, collider);
+		Vec3f initInertia = InitalInertia(rigidBody, collider, transform.scale);
 
 		if (!initInertia.IsZero())
 		{
-			rigidBody.invInertiaTensor = Mat3f().SetIdentity(InitalInertia(rigidBody, collider)).Inverse();
+			// @TODO: make sure this gets updated
+			rigidBody.invInertiaTensor = Mat3f().SetIdentity(InitalInertia(rigidBody, collider, transform.scale)).Inverse();
 		}
 
 		//rigidBody.invInertiaTensor = Mat3f().SetIdentity();
@@ -312,6 +311,12 @@ namespace Quartz
 		Engine::GetRuntime().RegisterOnEvent<ComponentAddedEvent<RigidBodyComponent>>(&Physics::OnRigidBodyAdded, this);
 	}
 
+	bool Physics::Collide(const Collider& collider0, const Transform& transform0, 
+		const Collider& collider1, const Transform& transform1, Collision& outCollision)
+	{
+		return collisionDetection.Collide(collider0, transform0, collider1, transform1, outCollision);
+	}
+
 	void Physics::Step(EntityWorld& world, double deltaTime)
 	{
 		RigidBodyView& rigidBodies = world.CreateView<RigidBodyComponent, TransformComponent>();
@@ -320,6 +325,7 @@ namespace Quartz
 		{
 			double stepTime = deltaTime / (double)PHYSICS_STEP_ITERATIONS;
 
+			// @TODO separate collisions and contact calculations
 			FindCollisions(world, rigidBodies, stepTime);
 			ResolveCollisions(world, rigidBodies, stepTime);
 			ApplyForces(world, rigidBodies, stepTime);

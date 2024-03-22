@@ -2,37 +2,35 @@
 
 namespace Quartz
 {
-	using InitalInertiaFunc = Vec3f(*)(const RigidBody& rigidBody, const Collider& collider);
-
-	Vec3f Physics::InitalInertiaSphere(const RigidBody& rigidBody, const Collider& sphere)
+	Vec3f Physics::InitalInertiaSphere(const RigidBody& rigidBody, const SphereCollider& sphere, const Vec3f& scale)
 	{
 		if (rigidBody.invMass != 0.0f)
 		{
-			return Vec3f((5.0f / 3.0f * rigidBody.invMass) * sphere.sphere.radius * sphere.transform.scale * 2);
+			return Vec3f((5.0f / 3.0f * rigidBody.invMass) * sphere.GetSphere().radius * scale * 2);
 		}
 
 		return Vec3f(0, 0, 0);
 	}
 
-	Vec3f Physics::InitalInertiaPlane(const RigidBody& rigidBody, const Collider& plane)
+	Vec3f Physics::InitalInertiaPlane(const RigidBody& rigidBody, const PlaneCollider& plane, const Vec3f& scale)
 	{
 		if (rigidBody.invMass != 0.0f)
 		{
 			return Vec3f((1.0f / 12.0f * rigidBody.invMass) *
-				(plane.plane.width * plane.plane.width +
-					plane.plane.height * plane.plane.height));
+				(plane.GetPlane().width * plane.GetPlane().width +
+					plane.GetPlane().height * plane.GetPlane().height));
 		}
 
 		return Vec3f(0, 0, 0);
 	}
 
-	Vec3f Physics::InitalInertiaRect(const RigidBody& rigidBody, const Collider& rect)
+	Vec3f Physics::InitalInertiaRect(const RigidBody& rigidBody, const RectCollider& rect, const Vec3f& scale)
 	{
 		if (rigidBody.invMass != 0.0f)
 		{
-			float width		= rect.rect.bounds.Width() * rect.transform.scale.x;
-			float height	= rect.rect.bounds.Height() * rect.transform.scale.y;
-			float depth		= rect.rect.bounds.Depth() * rect.transform.scale.z;
+			float width		= rect.GetRect().bounds.Width() * scale.x;
+			float height	= rect.GetRect().bounds.Height() * scale.y;
+			float depth		= rect.GetRect().bounds.Depth() * scale.z;
 
 			float ix = (1.0f / 12.0f * rigidBody.invMass) * (width * width + depth * depth);
 			float iy = (1.0f / 12.0f * rigidBody.invMass) * (depth * depth + height * height);
@@ -44,33 +42,35 @@ namespace Quartz
 		return Vec3f(0, 0, 0);
 	}
 
-	Vec3f Physics::InitalInertiaCapsule(const RigidBody& rigidBody, const Collider& capsule)
+	Vec3f Physics::InitalInertiaCapsule(const RigidBody& rigidBody, const CapsuleCollider& capsule, const Vec3f& scale)
 	{
 		return Vec3f(1.0f);
 	}
 
-	Vec3f Physics::InitalInertiaHull(const RigidBody& rigidBody, const Collider& hull)
+	Vec3f Physics::InitalInertiaHull(const RigidBody& rigidBody, const HullCollider& hull, const Vec3f& scale)
 	{
 		return Vec3f(1.0f);
 	}
 
-	Vec3f Physics::InitalInertiaMesh(const RigidBody& rigidBody, const Collider& mesh)
+	Vec3f Physics::InitalInertiaMesh(const RigidBody& rigidBody, const MeshCollider& mesh, const Vec3f& scale)
 	{
 		return Vec3f(1.0f);
 	}
 
-	Vec3f Physics::InitalInertia(const RigidBody& rigidBody, const Collider& collider)
+	Vec3f Physics::InitalInertia(const RigidBody& rigidBody, const Collider& collider, const Vec3f& scale)
 	{
+		using InitalInertiaFunc = Vec3f(*)(const RigidBody& rigidBody, const Collider& collider, const Vec3f& scale);
+
 		static InitalInertiaFunc functionTable[6]
 		{
-			InitalInertiaSphere,
-			InitalInertiaPlane,
-			InitalInertiaRect,
-			InitalInertiaCapsule,
-			InitalInertiaHull,
-			InitalInertiaMesh
+			(InitalInertiaFunc) InitalInertiaSphere,
+			(InitalInertiaFunc) InitalInertiaPlane,
+			(InitalInertiaFunc) InitalInertiaRect,
+			(InitalInertiaFunc) InitalInertiaCapsule,
+			(InitalInertiaFunc) InitalInertiaHull,
+			(InitalInertiaFunc) InitalInertiaMesh
 		};
 
-		return functionTable[(uSize)collider.shape](rigidBody, collider);
+		return functionTable[(uSize)collider.GetShapeType()](rigidBody, collider, scale);
 	}
 }

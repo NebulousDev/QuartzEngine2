@@ -1,174 +1,117 @@
 #pragma once
 
 #include "Math/Math.h"
-#include "Simplex.h"
+#include "Shapes.h"
 
 namespace Quartz
 {
-	enum ShapeType
+	class Collider
 	{
-		SHAPE_NONE		= -1,
-		SHAPE_SPHERE	= 0,
-		SHAPE_PLANE		= 1,
-		SHAPE_RECT		= 2,
-		SHAPE_CAPSULE	= 3,
-		SHAPE_HULL		= 4,
-		SHAPE_MESH		= 5
-	};
-
-	struct SphereShape
-	{
-		float radius;
-	};
-
-	struct PlaneShape
-	{
-		Vec3f normal;
-		float width;
-		float height;
-		float length;
-	};
-
-	struct RectShape
-	{
-		Bounds3f bounds;
-	};
-
-	struct CapsuleShape
-	{
-
-	};
-
-	struct HullShape
-	{
-		
-	};
-
-	struct MeshShape
-	{
-
-	};
-
-	struct Collider
-	{
+	protected:
 		union
 		{
-			SphereShape		sphere;
-			PlaneShape		plane;
-			RectShape		rect;
-			CapsuleShape	capsule;
-			HullShape		hull;
-			MeshShape		mesh;
+			ShapeSphere		sphere;
+			ShapePlane		plane;
+			ShapeRect		rect;
+			ShapeCapsule	capsule;
+			ShapeHull		hull;
+			ShapeMesh		mesh;
 
 			struct { char _shapeData[8 * sizeof(float)]; } shapeData;
 		};
 
-		Transform	transform;
 		ShapeType	shape;
-		Vec3f		center;
 		bool		isStatic;
 
+	public:
 		inline Collider() : 
 			shape(SHAPE_NONE), shapeData{} {};
+
 		inline Collider(const Collider& collider) :
-			shape(collider.shape), transform(collider.transform), 
-			shapeData(collider.shapeData), isStatic(collider.isStatic) { }
+			shape(collider.shape), shapeData(collider.shapeData), isStatic(collider.isStatic) { }
+
+		inline void SetStatic(bool isStatic) { this->isStatic = isStatic; }
+
+		template<typename ShapeType>
+		inline const ShapeType& GetShape() const { return (ShapeType)shapeData; }
+
+		inline const ShapeType& GetShapeType() const { return shape; }
+		inline bool				IsStatic() const { return isStatic; }
 	};
 
 	class SphereCollider : public Collider
 	{
 	public:
-		Collider::sphere;
-		Collider::transform;
-
-	public:
-		inline SphereCollider(Transform transform, float radius, bool isStatic = false)
+		inline SphereCollider(float radius, bool isStatic = false)
 		{ 
 			this->shape = SHAPE_SPHERE;
-			this->transform = transform;
 			this->sphere.radius = radius;
 			this->isStatic = isStatic;
-			this->center = Vec3f::ZERO;
 		};
+
+		inline const ShapeSphere& GetSphere() const { return sphere; }
 	};
 
 	class PlaneCollider : public Collider
 	{
 	public:
-		Collider::plane;
-		Collider::transform;
-
-	public:
-		inline PlaneCollider(Transform transform, Vec3f normal, float length, bool isStatic = false)
+		inline PlaneCollider(Vec3f normal, float length, bool isStatic = false)
 		{
 			this->shape = SHAPE_PLANE;
-			this->transform = transform;
 			this->plane.normal = normal;
 			this->plane.length = length;
 			this->isStatic = isStatic;
-			this->center = Vec3f::ZERO;
 		};
+
+		inline const ShapePlane& GetPlane() const { return plane; }
 	};
 
 	class RectCollider : public Collider
 	{
 	public:
-		Collider::rect;
-		Collider::transform;
-
-	public:
-		inline RectCollider(Transform transform, Bounds3f bounds, bool isStatic = false)
+		inline RectCollider(Bounds3f bounds, bool isStatic = false)
 		{
 			this->shape = SHAPE_RECT;
-			this->transform = transform;
 			this->rect.bounds = bounds;
 			this->isStatic = isStatic;
-			this->center = bounds.start + bounds.end * 0.5f;
 		};
+
+		inline const ShapeRect& GetRect() const { return rect; }
 	};
 
 	class CapsuleCollider : public Collider
 	{
 	public:
-		Collider::capsule;
-		Collider::transform;
-
-	public:
-		inline CapsuleCollider(Transform transform, bool isStatic = false)
+		inline CapsuleCollider(bool isStatic = false)
 		{
 			this->shape = SHAPE_CAPSULE;
-			this->transform = transform;
 			this->isStatic = isStatic;
 		};
+
+		inline const ShapeCapsule& GetCapsule() const { return capsule; }
 	};
 
-	class HullCollider : protected Collider
+	class HullCollider : public Collider
 	{
 	public:
-		Collider::hull;
-		Collider::transform;
-
-	public:
-		inline HullCollider(Transform transform, bool isStatic = false)
+		inline HullCollider(bool isStatic = false)
 		{
 			this->shape = SHAPE_HULL;
-			this->transform = transform;
 			this->isStatic = isStatic;
 		};
+
+		inline const ShapeHull& GetHull() const { return hull; }
 	};
 
-	class MeshCollider : protected Collider
+	class MeshCollider : public Collider
 	{
 	public:
-		Collider::mesh;
-		Collider::transform;
-
-	public:
-		inline MeshCollider(Transform transform, bool isStatic = false)
+		inline MeshCollider(bool isStatic = false)
 		{
 			this->shape = SHAPE_MESH;
-			this->transform = transform;
 			this->isStatic = isStatic;
 		};
+
+		inline const ShapeMesh& GetMesh() const { return mesh; }
 	};
 }

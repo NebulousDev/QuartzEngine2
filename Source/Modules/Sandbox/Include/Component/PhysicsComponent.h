@@ -7,9 +7,10 @@
 
 namespace Quartz
 {
-	struct RigidBodyComponent : public Component<RigidBodyComponent>
+	struct RigidBodyComponent : 
+		public Component<RigidBodyComponent>,
+		public RigidBody
 	{
-		Transform	transform;
 		RigidBody	rigidBody; // Move? ^
 		Collider	collider;
 
