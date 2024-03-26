@@ -216,18 +216,19 @@ namespace Quartz
 		MeshComponent renderable3("simplePlane", planeData);
 		MeshComponent renderable4("simplePlane2", planeData2);
 
-		RigidBody cubeRigidBody(1.0f, 0.2f, 1.0f);
+		RigidBody cubeRigidBody(1.0f, 0.7f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		//RectCollider cubeCollider(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
+		//SphereCollider cubeCollider(0.5f, false);
 		SphereCollider cubeCollider(0.5f, false);
 
-		RigidBody cubeRigidBody2(1.0f, 0.2f, 1.0f);
+		RigidBody cubeRigidBody2(1.0f, 0.7f, 1.0f);
 		//RectCollider cubeCollider2(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
 		SphereCollider cubeCollider2(0.5f, false);
 
-		RigidBody planeRigidBody(0.0f, 0.5f, 1.0f, { 0.0f, 0.0f, 0.0f });
+		RigidBody planeRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		PlaneCollider planeCollider({ 0.0f, 1.0f, 0.0f }, 0.0f, true);
 
-		RigidBody cameraRigidBody(0.0f, 0.5f, 1.0f, { 0.0f, 0.0f, 0.0f });
+		RigidBody cameraRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		SphereCollider cameraCollider(0.5f, true);
 
 		void QUARTZ_ENGINE_API ModuleInit()
@@ -287,7 +288,7 @@ namespace Quartz
 			//cameraPhysics.AddForce({ 0.0f, -9.81f, 0.0f });
 
 			gCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
-			//gCube2 = world.CreateEntity(transformCube2, renderable2, material1, cubePhysics2);
+			gCube2 = world.CreateEntity(transformCube2, renderable2, material1, cubePhysics2);
 			Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
 			Entity planeL = world.CreateEntity(transformPlaneL, renderable4, material1, planePhysics2);
 			Entity planeR = world.CreateEntity(transformPlaneR, renderable4, material1, planePhysics2);
@@ -304,7 +305,7 @@ namespace Quartz
 			pRenderer->SetCamera(gCamera);
 
 			runtime.SetTargetUps(350);
-			runtime.SetTargetTps(20);
+			runtime.SetTargetTps(30);
 
 			runtime.RegisterOnUpdate(
 				[](Runtime& runtime, double delta)

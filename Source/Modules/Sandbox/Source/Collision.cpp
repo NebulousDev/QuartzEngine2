@@ -19,6 +19,7 @@ namespace Quartz
 	Collision& Collision::Flip()
 	{
 		normal = -normal;
+		RecalcContactBasis();
 		return *this;
 	}
 

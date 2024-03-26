@@ -6,7 +6,8 @@ namespace Quartz
 	{
 		if (rigidBody.invMass != 0.0f)
 		{
-			return Vec3f((5.0f / 3.0f * rigidBody.invMass) * sphere.GetSphere().radius * scale * 2);
+			//return Vec3f((5.0f / 3.0f * rigidBody.invMass) * sphere.GetSphere().radius * scale * 2);
+			return Vec3f((2.0f / 5.0f) * (1.0f / rigidBody.invMass) * sphere.GetSphere().radius * scale.Maximum());
 		}
 
 		return Vec3f(0, 0, 0);

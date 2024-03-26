@@ -20,7 +20,7 @@ namespace Quartz
 
 		if (dist > 0.0f && dist < totalRadius) // PHYSICS_SMALLEST_DISTANCE?
 		{
-			Vec3f contactPoint = position0 + normal * 0.5;
+			Vec3f contactPoint = position1 + normal * 0.5f;
 			float depth = totalRadius - dist;
 
 			normal = normal * (1.0f / dist); // Quick normalize
