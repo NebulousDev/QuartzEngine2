@@ -305,19 +305,19 @@ namespace Quartz
 					Simplex contact0 = FurthestSimplex(shape0, -normal, transform0);
 					Simplex contact1 = FurthestSimplex(rect1, normal, points);
 
-					Collision collision(normal.Normalized(), dist);
-
-					if (contact1.Size() > contact0.Size())
-					{
-						contact0 = contact1;
-					}
-
-					for (uSize i = 0; i < contact0.Size(); i++)
-					{
-						collision.AddContact(contact0[i]);
-					}
-
-					outCollision = collision;
+					//Collision collision(normal.Normalized(), dist);
+					//
+					//if (contact1.Size() > contact0.Size())
+					//{
+					//	contact0 = contact1;
+					//}
+					//
+					//for (uSize i = 0; i < contact0.Size(); i++)
+					//{
+					//	collision.AddContact(contact0[i]);
+					//}
+					//
+					//outCollision = collision;
 
 					return true;
 				}

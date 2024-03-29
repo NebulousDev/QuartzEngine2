@@ -6,7 +6,6 @@ namespace Quartz
 	{
 		if (rigidBody.invMass != 0.0f)
 		{
-			//return Vec3f((5.0f / 3.0f * rigidBody.invMass) * sphere.GetSphere().radius * scale * 2);
 			return Vec3f((2.0f / 5.0f) * (1.0f / rigidBody.invMass) * sphere.GetSphere().radius * scale.Maximum());
 		}
 
@@ -17,7 +16,7 @@ namespace Quartz
 	{
 		if (rigidBody.invMass != 0.0f)
 		{
-			return Vec3f((1.0f / 12.0f * rigidBody.invMass) *
+			return Vec3f((1.0f / 12.0f) * (1.0f / rigidBody.invMass) *
 				(plane.GetPlane().width * plane.GetPlane().width +
 					plane.GetPlane().height * plane.GetPlane().height));
 		}
@@ -33,11 +32,13 @@ namespace Quartz
 			float height	= rect.GetRect().bounds.Height() * scale.y;
 			float depth		= rect.GetRect().bounds.Depth() * scale.z;
 
-			float ix = (1.0f / 12.0f * rigidBody.invMass) * (width * width + depth * depth);
-			float iy = (1.0f / 12.0f * rigidBody.invMass) * (depth * depth + height * height);
-			float iz = (1.0f / 12.0f * rigidBody.invMass) * (width * width + height * height);
+			float ix = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + depth * depth);
+			float iy = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (depth * depth + height * height);
+			float iz = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + height * height);
 
-			return Vec3f(ix, iy, iz);
+			//return Vec3f(ix, iy, iz);
+			return Vec3f(iy, iz, ix);
+			//return Vec3f(1.0f, 1.0f, 1.0f);
 		}
 		
 		return Vec3f(0, 0, 0);

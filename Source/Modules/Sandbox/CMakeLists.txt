@@ -11,7 +11,7 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/GJK.cpp"
 	"Source/Simplex.cpp"
 	"Source/Inertia.cpp"
-	"Source/Collision.cpp")
+	"Source/Collision.cpp" "Include/PhysicsTypes.h")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

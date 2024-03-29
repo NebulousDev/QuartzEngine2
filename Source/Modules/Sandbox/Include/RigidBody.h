@@ -15,6 +15,7 @@ namespace Quartz
 		Vec3f torque;
 		Vec3f linearVelocity;
 		Vec3f angularVelocity;
+		Vec3f inertiaVector;
 		Mat3f invInertiaTensor;
 		bool  asleep;
 
@@ -51,6 +52,14 @@ namespace Quartz
 		inline void AddAngularVelocity(const Vec3f& velocity)
 		{
 			this->angularVelocity += velocity;
+		}
+
+		inline void UpdateInertia(const Transform& transform)
+		{
+			if (!inertiaVector.IsZero())
+			{
+				invInertiaTensor = (Mat3f().SetRotation(transform.rotation) * Mat3f().SetIdentity(inertiaVector)).Inverse();
+			}
 		}
 	};
 }

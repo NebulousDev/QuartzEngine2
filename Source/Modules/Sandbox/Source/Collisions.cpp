@@ -25,8 +25,9 @@ namespace Quartz
 
 			normal = normal * (1.0f / dist); // Quick normalize
 
-			Collision collision(normal, depth);
-			collision.AddContact(contactPoint);
+			Collision collision;
+			Contact contact(contactPoint, depth, normal);
+			collision.AddContact(contact);
 
 			outCollision = collision;
 
@@ -50,7 +51,7 @@ namespace Quartz
 		float offset = Dot(normal, position1);
 		float dist = Dot(normal, position0) - offset;
 
-		if (dist * dist <= radius0 * radius0) // PHYSICS_SMALLEST_DISTANCE?
+		if (dist * dist <= radius0 * radius0)
 		{
 			float depth = -dist;
 
@@ -64,8 +65,9 @@ namespace Quartz
 
 			Vec3f contactPoint = position0 - normal * dist;
 
-			Collision collision(normal, depth);
-			collision.AddContact(contactPoint);
+			Collision collision;
+			Contact contact(contactPoint, depth, normal);
+			collision.AddContact(contact);
 
 			outCollision = collision;
 
@@ -148,8 +150,7 @@ namespace Quartz
 	{
 		const Vec3f& position0	= transform0.position;
 		const Vec3f& position1	= transform1.position;
-		const Vec3f rotNormal	= transform0.rotation * -plane0.GetPlane().normal;
-		const Vec3f planePoint	= rotNormal * plane0.GetPlane().length + position0;
+		const Vec3f normal		= transform0.rotation * plane0.GetPlane().normal;
 
 		const Mat4f& transform = transform1.GetMatrix();
 		const Bounds3f& bounds = rect1.GetRect().bounds;
@@ -166,27 +167,35 @@ namespace Quartz
 			transform * bounds.TopLeftBack()
 		};
 
-		float minDist = -FLT_MAX;
-		Vec3f minPoint;
+		Collision collision;
+		float minDist = FLT_MAX;
 
-		float offset = Dot(rotNormal, position0);
-		
 		for (uSize i = 0; i < 8; i++)
 		{
-			float dist = Dot(rotNormal, points[i]) - offset;
+			float dist = Dot(normal, (points[i] - position0));
 
-			if (dist > minDist)
+			if (dist < 0.0f && dist <= minDist)
 			{
 				minDist = dist;
-				minPoint = points[i];
+
+				if (collision.count < PHYSICS_MAX_CONTACT_POINTS)
+				{
+					collision.count++;
+				}
+
+				for (sSize j = collision.count - 1; j > 0; j--)
+				{
+					collision.contacts[j] = collision.contacts[j-1];
+				}
+
+				dist = -dist;
+
+				collision.contacts[0] = Contact(points[i], dist, -normal);
 			}
 		}
 
-		if (minDist > 0.0f) //PHYSICS_SMALLEST_DISTANCE?
+		if (minDist < 0.0f)
 		{
-			Collision collision(-rotNormal, minDist);
-			collision.AddContact(minPoint);
-
 			outCollision = collision;
 			return true;
 		}

@@ -147,8 +147,8 @@ namespace Quartz
 		TransformComponent transformCube2
 		(
 			{ 0.0f, 10.0f, 0.0f },
-			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
-			{ 1.0f, 1.0f, 1.0f }
+			Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
+			{ 1.0f, 3.0f, 1.0f }
 		);
 
 		TransformComponent transformTri
@@ -217,13 +217,12 @@ namespace Quartz
 		MeshComponent renderable4("simplePlane2", planeData2);
 
 		RigidBody cubeRigidBody(1.0f, 0.7f, 1.0f, { 0.0f, 0.0f, 0.0f });
-		//RectCollider cubeCollider(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
+		RectCollider cubeCollider(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
 		//SphereCollider cubeCollider(0.5f, false);
-		SphereCollider cubeCollider(0.5f, false);
 
 		RigidBody cubeRigidBody2(1.0f, 0.7f, 1.0f);
-		//RectCollider cubeCollider2(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
-		SphereCollider cubeCollider2(0.5f, false);
+		RectCollider cubeCollider2(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
+		//SphereCollider cubeCollider2(0.5f, false);
 
 		RigidBody planeRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		PlaneCollider planeCollider({ 0.0f, 1.0f, 0.0f }, 0.0f, true);
@@ -239,21 +238,7 @@ namespace Quartz
 			RigidBodyComponent planePhysics2(planeRigidBody, planeCollider);
 			RigidBodyComponent cameraPhysics(cameraRigidBody, cameraCollider);
 
-
 			LogInfo("Starting Sandbox");
-
-			//// TESTING ////
-
-			//FractalGrid<uSize> fg;
-			//
-			//uSize val = 300;
-			//
-			//fg.Place(0, 20, 22, val);
-			//
-			//fg.Remove(0, 20, 22);
-			//fg.Remove(6, 0, 0);
-
-			/////////////////
 
 			StartVulkan();
 
@@ -284,10 +269,7 @@ namespace Quartz
 
 			gPhysics.Initialize();
 
-			//cubePhysics2.AddForce({ 0.0f, -9.81f, 0.0f });
-			//cameraPhysics.AddForce({ 0.0f, -9.81f, 0.0f });
-
-			gCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
+			//gCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
 			gCube2 = world.CreateEntity(transformCube2, renderable2, material1, cubePhysics2);
 			Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
 			Entity planeL = world.CreateEntity(transformPlaneL, renderable4, material1, planePhysics2);
@@ -305,7 +287,7 @@ namespace Quartz
 			pRenderer->SetCamera(gCamera);
 
 			runtime.SetTargetUps(350);
-			runtime.SetTargetTps(30);
+			runtime.SetTargetTps(20);
 
 			runtime.RegisterOnUpdate(
 				[](Runtime& runtime, double delta)
@@ -450,7 +432,7 @@ namespace Quartz
 					);
 
 					RigidBodyComponent physics(cubeRigidBody2, cubeCollider2);
-					physics.AddForce(normal * 15.0f);
+					physics.AddForce(normal * 15000.0f);
 					physics.AddTorque({ 0.0f, 0.0f, 0.0f });
 
 					if (Engine::GetWorld().EntityCount() < 256)

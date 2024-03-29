@@ -4,10 +4,11 @@
 #include "Colliders.h"
 #include "CollisionDetection.h"
 #include "Entity/World.h"
+#include "PhysicsTypes.h"
 #include "Component/PhysicsComponent.h"
 #include "Component/TransformComponent.h"
 
-#define PHYSICS_STEP_ITERATIONS		16
+#define PHYSICS_STEP_ITERATIONS		8
 #define PHYSICS_SMALLEST_DISTANCE	0.0001f
 
 namespace Quartz
