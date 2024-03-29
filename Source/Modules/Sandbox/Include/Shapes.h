@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Simplex.h"
+#include "PhysicsTypes.h"
 #include "Math/Math.h"
 #include <float.h>
 
@@ -19,15 +20,15 @@ namespace Quartz
 
 	struct ShapeSphere
 	{
-		float radius;
+		floatp radius;
 	};
 
 	struct ShapePlane
 	{
-		Vec3f normal;
-		float width;
-		float height;
-		float length;
+		Vec3p normal;
+		floatp width;
+		floatp height;
+		floatp length;
 	};
 
 	struct ShapeRect
@@ -55,27 +56,27 @@ namespace Quartz
 		// @NOTE: In all functions, direction is assumed to be normalized
 
 		template<typename... Transforms>
-		Vec3f FurthestPoint(const ShapeSphere& sphere, const Vec3f& direction, const Transforms&... transforms)
+		Vec3p FurthestPoint(const ShapeSphere& sphere, const Vec3p& direction, const Transforms&... transforms)
 		{
 			return (transforms * ... * direction) * sphere.radius;
 		}
 
 		template<typename... Transforms>
-		Vec3f FurthestPoint(const ShapePlane& plane, const Vec3f& direction, const Transforms&... transforms)
+		Vec3p FurthestPoint(const ShapePlane& plane, const Vec3p& direction, const Transforms&... transforms)
 		{
-			return Vec3f::ZERO;
+			return Vec3p::ZERO;
 		}
 
 		template<typename... Transforms>
-		Vec3f FurthestPoint(const ShapeRect& rect, const Vec3f& direction, Vec3f(&points)[8], const Transforms&... transforms)
+		Vec3p FurthestPoint(const ShapeRect& rect, const Vec3p& direction, Vec3p(&points)[8], const Transforms&... transforms)
 		{
-			float maxDist = -FLT_MAX;
+			floatp maxDist = -FLT_MAX;
 			uSize maxPointIndex = 0;
 
 			for (uSize i = 0; i < 8; i++)
 			{
-				const Vec3f point = (transforms * ... * points[i]);
-				float dist = Dot(point, direction);
+				const Vec3p point = (transforms * ... * points[i]);
+				floatp dist = Dot(point, direction);
 
 				if (dist > maxDist)
 				{
@@ -88,9 +89,9 @@ namespace Quartz
 		}
 
 		template<typename... Transforms>
-		Vec3f FurthestPoint(const ShapeRect& rect, const Vec3f& direction, const Transforms&... transforms)
+		Vec3p FurthestPoint(const ShapeRect& rect, const Vec3p& direction, const Transforms&... transforms)
 		{
-			Vec3f points[8]
+			Vec3p points[8]
 			{
 				rect.bounds.BottomRightFront(),
 				rect.bounds.BottomLeftFront(),
@@ -106,25 +107,25 @@ namespace Quartz
 		}
 
 		template<typename... Transforms>
-		Vec3f FurthestPoint(const ShapeCapsule& capsule, const Vec3f& direction, const Transforms&... transforms)
+		Vec3p FurthestPoint(const ShapeCapsule& capsule, const Vec3p& direction, const Transforms&... transforms)
 		{
-			return Vec3f::ZERO;
+			return Vec3p::ZERO;
 		}
 
 		template<typename... Transforms>
-		Vec3f FurthestPoint(const ShapeHull& hull, const Vec3f& direction, const Transforms&... transforms)
+		Vec3p FurthestPoint(const ShapeHull& hull, const Vec3p& direction, const Transforms&... transforms)
 		{
-			return Vec3f::ZERO;
+			return Vec3p::ZERO;
 		}
 
 		template<typename... Transforms>
-		Vec3f FurthestPoint(const ShapeMesh& mesh, const Vec3f& direction, const Transforms&... transforms)
+		Vec3p FurthestPoint(const ShapeMesh& mesh, const Vec3p& direction, const Transforms&... transforms)
 		{
-			return Vec3f::ZERO;
+			return Vec3p::ZERO;
 		}
 
 		template<typename... Transforms>
-		Simplex FurthestSimplex(const ShapeSphere& sphere, const Vec3f& direction, const Transforms&... transforms)
+		Simplex FurthestSimplex(const ShapeSphere& sphere, const Vec3p& direction, const Transforms&... transforms)
 		{
 			Simplex simplex;
 			simplex.Push((transforms * ... * direction) * sphere.radius);
@@ -132,30 +133,30 @@ namespace Quartz
 		}
 
 		template<typename... Transforms>
-		Simplex FurthestSimplex(const ShapePlane& plane, const Vec3f& direction, const Transforms&... transforms)
+		Simplex FurthestSimplex(const ShapePlane& plane, const Vec3p& direction, const Transforms&... transforms)
 		{
 			return Simplex();
 		}
 
 		template<typename... Transforms>
-		Simplex FurthestSimplex(const ShapeRect& rect, const Vec3f& direction, Vec3f(&points)[8], const Transforms&... transforms)
+		Simplex FurthestSimplex(const ShapeRect& rect, const Vec3p& direction, Vec3p(&points)[8], const Transforms&... transforms)
 		{
 			Simplex simplex;
 
-			float maxDist0 = -FLT_MAX;
-			float maxDist1 = -FLT_MAX;
-			float maxDist2 = -FLT_MAX;
+			floatp maxDist0 = -FLT_MAX;
+			floatp maxDist1 = -FLT_MAX;
+			floatp maxDist2 = -FLT_MAX;
 
 			uSize maxPointIndex0 = {};
 			uSize maxPointIndex1 = {};
 			uSize maxPointIndex2 = {};
 
-			Vec3f normDir = direction.Normalized();
+			Vec3p normDir = direction.Normalized();
 
 			for (uSize i = 0; i < 8; i++)
 			{
-				const Vec3f point = (transforms * ... * points[i]);
-				float dist = Dot(point, normDir);
+				const Vec3p point = (transforms * ... * points[i]);
+				floatp dist = Dot(point, normDir);
 
 				if (dist > maxDist0)
 				{
@@ -208,9 +209,9 @@ namespace Quartz
 		}
 
 		template<typename... Transforms>
-		Simplex FurthestSimplex(const ShapeRect& rect, const Vec3f& direction, const Transforms&... transforms)
+		Simplex FurthestSimplex(const ShapeRect& rect, const Vec3p& direction, const Transforms&... transforms)
 		{
-			Vec3f points[8]
+			Vec3p points[8]
 			{
 				rect.bounds.BottomRightFront(),
 				rect.bounds.BottomLeftFront(),
@@ -226,19 +227,19 @@ namespace Quartz
 		}
 
 		template<typename... Transforms>
-		Simplex FurthestSimplex(const ShapeCapsule& capsule, const Vec3f& direction, const Transforms&... transforms)
+		Simplex FurthestSimplex(const ShapeCapsule& capsule, const Vec3p& direction, const Transforms&... transforms)
 		{
 			return Simplex();
 		}
 
 		template<typename... Transforms>
-		Simplex FurthestSimplex(const ShapeHull& hull, const Vec3f& direction, const Transforms&... transforms)
+		Simplex FurthestSimplex(const ShapeHull& hull, const Vec3p& direction, const Transforms&... transforms)
 		{
 			return Simplex();
 		}
 
 		template<typename... Transforms>
-		Simplex FurthestSimplex(const ShapeMesh& mesh, const Vec3f& direction, const Transforms&... transforms)
+		Simplex FurthestSimplex(const ShapeMesh& mesh, const Vec3p& direction, const Transforms&... transforms)
 		{
 			return Simplex();
 		}

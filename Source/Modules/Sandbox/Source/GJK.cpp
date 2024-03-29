@@ -8,19 +8,19 @@ namespace Quartz
 	GJK::Line::Line() :
 		points{} {}
 
-	GJK::Line::Line(const Vec3f& a, const Vec3f& b) :
+	GJK::Line::Line(const Vec3p& a, const Vec3p& b) :
 		points{ a, b } {}
 
 	GJK::Triangle::Triangle() :
 		points{} {}
 
-	GJK::Triangle::Triangle(const Vec3f& a, const Vec3f& b, const Vec3f& c) :
+	GJK::Triangle::Triangle(const Vec3p& a, const Vec3p& b, const Vec3p& c) :
 		points{ a, b, c } {}
 
 	GJK::Tetrahedron::Tetrahedron() :
 		points{} {};
 
-	GJK::Tetrahedron::Tetrahedron(const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d) :
+	GJK::Tetrahedron::Tetrahedron(const Vec3p& a, const Vec3p& b, const Vec3p& c, const Vec3p& d) :
 		points{ a, b, c, d } {};
 
 	GJK::Polytope::Polytope() :
@@ -33,10 +33,10 @@ namespace Quartz
 			return false;
 		}
 
-		Vec3f a = simplex[3];
-		Vec3f b = simplex[2];
-		Vec3f c = simplex[1];
-		Vec3f d = simplex[0];
+		const Vec3p a = simplex[3];
+		const Vec3p b = simplex[2];
+		const Vec3p c = simplex[1];
+		const Vec3p d = simplex[0];
 
 		AddTriangle(Triangle(a, c, b));
 		AddTriangle(Triangle(a, d, c));
@@ -59,16 +59,16 @@ namespace Quartz
 		mSize--;
 	}
 
-	Vec3f CalcTriangleNormal(const GJK::Triangle& tri)
+	Vec3p CalcTriangleNormal(const GJK::Triangle& tri)
 	{
-		constexpr Vec3f bias = Vec3f{ 1.0f, 0.0f, 0.0f };
+		constexpr Vec3p bias = Vec3p{ 1.0f, 0.0f, 0.0f };
 
-		Vec3f ab = tri.points[1] - tri.points[0];
-		Vec3f ac = tri.points[2] - tri.points[0];
+		const Vec3p ab = tri.points[1] - tri.points[0];
+		const Vec3p ac = tri.points[2] - tri.points[0];
 
-		Vec3f normal = Cross(ab, ac);
+		Vec3p normal = Cross(ab, ac);
 
-		if (normal == Vec3f::ZERO) // Not a triangle
+		if (normal == Vec3p::ZERO) // Not a triangle
 		{
 			if (tri.points[1] == tri.points[2]) // Line
 			{
@@ -81,7 +81,7 @@ namespace Quartz
 			}
 			else // Line, opposite directions
 			{
-				Vec3f bc = tri.points[2] - tri.points[1];
+				Vec3p bc = tri.points[2] - tri.points[1];
 				normal = Cross(bc, bc + bias);
 			}
 		}
@@ -89,23 +89,23 @@ namespace Quartz
 		return normal.Normalized();
 	}
 
-	float DistanceToPlane(const Vec3f& point, const Vec3f& planePoint, const Vec3f& normal)
+	floatp DistanceToPlane(const Vec3p& point, const Vec3p& planePoint, const Vec3p& normal)
 	{
-		Vec3f diff = point - planePoint;
+		const Vec3p diff = point - planePoint;
 		return fabsf(Dot(diff, normal));
 	}
 
-	void GJK::Polytope::ClosestTriangle(const Vec3f& point, Triangle& outTri, uSize& outIndex, float& outDist, Vec3f& outNormal) const
+	void GJK::Polytope::ClosestTriangle(const Vec3p& point, Triangle& outTri, uSize& outIndex, floatp& outDist, Vec3p& outNormal) const
 	{
 		Triangle closestTri		= {};
-		float closestDist		= FLT_MAX;
+		floatp closestDist		= FLT_MAX;
 		uSize closestIndex		= 0;
-		Vec3f closestNormal		= {};
+		Vec3p closestNormal		= {};
 
 		for (uSize i = 0; i < mSize; i++)
 		{
-			Vec3f normal = CalcTriangleNormal(mTris[i]);
-			float dist = DistanceToPlane(point, mTris[i].points[0], normal);
+			Vec3p normal = CalcTriangleNormal(mTris[i]);
+			floatp dist = DistanceToPlane(point, mTris[i].points[0], normal);
 
 			if (dist < closestDist)
 			{
@@ -122,7 +122,7 @@ namespace Quartz
 		outNormal	= closestNormal;
 	}
 
-	void GJK::Polytope::Extend(const Vec3f& point)
+	void GJK::Polytope::Extend(const Vec3p& point)
 	{
 		Line	lines[PHYSICS_EPA_MAX_EDGES];
 		uSize	lineCount = 0;
@@ -130,11 +130,11 @@ namespace Quartz
 
 		for (uSize i = 0; i < mSize; i++)
 		{
-			Vec3f a = mTris[i].points[0];
-			Vec3f b = mTris[i].points[1];
-			Vec3f c = mTris[i].points[2];
+			Vec3p a = mTris[i].points[0];
+			Vec3p b = mTris[i].points[1];
+			Vec3p c = mTris[i].points[2];
 
-			Vec3f normal = CalcTriangleNormal(mTris[i]);
+			Vec3p normal = CalcTriangleNormal(mTris[i]);
 
 			if (Dot(normal, point - a) > 0.0f)
 			{

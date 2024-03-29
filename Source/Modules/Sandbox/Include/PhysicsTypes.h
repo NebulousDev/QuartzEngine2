@@ -2,17 +2,19 @@
 
 #include "Math/Math.h"
 
-#define PHYSICS_USE_DOUBLE 0
+#define PHYSICS_USE_DOUBLE 1
 
 namespace Quartz
 {
 #if PHYSICS_USE_DOUBLE
-	using floatP = double;
-	using Vec3P = Vec3d;
-	using Mat3P = Mat3d;
+	using floatp = double;
+	using Vec3p = Vec3d;
+	using Mat3p = Mat3d;
+	using Quatp = Quatd;
 #else
-	using floatP = float;
-	using Vec3P = Vec3f;
-	using Mat3P = Mat3f;
+	using floatp = float;
+	using Vec3p = Vec3f;
+	using Mat3p = Mat3f;
+	using Quatp = Quatf;
 #endif
 }

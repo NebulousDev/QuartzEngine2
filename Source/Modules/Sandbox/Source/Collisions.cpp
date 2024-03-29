@@ -7,21 +7,21 @@ namespace Quartz
 	bool CollisionDetection::CollideSphereSphere(const SphereCollider& sphere0, const Transform& transform0, 
 		const SphereCollider& sphere1, const Transform& transform1, Collision& outCollision)
 	{
-		const Vec3f& position0	= transform0.position;
-		const Vec3f& position1	= transform1.position;
-		const float& scale0		= transform0.scale.Maximum();
-		const float& scale1		= transform1.scale.Maximum();
-		const float radius0		= sphere0.GetSphere().radius * scale0;
-		const float radius1		= sphere1.GetSphere().radius * scale1;
-		const float totalRadius = radius0 + radius1;
+		const Vec3p& position0	= transform0.position;
+		const Vec3p& position1	= transform1.position;
+		const floatp& scale0	= transform0.scale.Maximum();
+		const floatp& scale1	= transform1.scale.Maximum();
+		const floatp radius0	= sphere0.GetSphere().radius * scale0;
+		const floatp radius1	= sphere1.GetSphere().radius * scale1;
+		const floatp totalRadius = radius0 + radius1;
 
-		Vec3f normal = position0 - position1; // Sphere1 to Sphere0
-		float dist = normal.Magnitude();
+		Vec3p normal = position0 - position1; // Sphere1 to Sphere0
+		floatp dist = normal.Magnitude();
 
 		if (dist > 0.0f && dist < totalRadius) // PHYSICS_SMALLEST_DISTANCE?
 		{
-			Vec3f contactPoint = position1 + normal * 0.5f;
-			float depth = totalRadius - dist;
+			Vec3p contactPoint = position1 + normal * 0.5f;
+			floatp depth = totalRadius - dist;
 
 			normal = normal * (1.0f / dist); // Quick normalize
 
@@ -40,20 +40,20 @@ namespace Quartz
 	bool CollisionDetection::CollideSpherePlane(const SphereCollider& sphere0, const Transform& transform0,
 		const PlaneCollider& plane1, const Transform& transform1, Collision& outCollision)
 	{
-		const Vec3f& position0	= transform0.position;
-		const Vec3f& position1	= transform1.position;
-		const Quatf& rotation1	= transform1.rotation;
-		const float& scale0		= transform0.scale.Maximum();
-		const float radius0		= sphere0.GetSphere().radius * scale0;
+		const Vec3p& position0	= transform0.position;
+		const Vec3p& position1	= transform1.position;
+		const Quatp& rotation1	= transform1.rotation;
+		const floatp& scale0	= transform0.scale.Maximum();
+		const floatp radius0	= sphere0.GetSphere().radius * scale0;
 		
-		Vec3f normal = rotation1 * plane1.GetPlane().normal; // Should always be normal
+		Vec3p normal = rotation1 * plane1.GetPlane().normal; // Should always be normal
 
-		float offset = Dot(normal, position1);
-		float dist = Dot(normal, position0) - offset;
+		floatp offset = Dot(normal, position1);
+		floatp dist = Dot(normal, position0) - offset;
 
 		if (dist * dist <= radius0 * radius0)
 		{
-			float depth = -dist;
+			floatp depth = -dist;
 
 			if (dist < 0)
 			{
@@ -63,7 +63,7 @@ namespace Quartz
 
 			depth += radius0;
 
-			Vec3f contactPoint = position0 - normal * dist;
+			Vec3p contactPoint = position0 - normal * dist;
 
 			Collision collision;
 			Contact contact(contactPoint, depth, normal);
@@ -84,7 +84,7 @@ namespace Quartz
 		const Mat4f& transform11 = transform1.GetMatrix();
 		const Bounds3f& bounds = rect1.GetRect().bounds;
 
-		Vec3f points[8]
+		Vec3p points[8]
 		{
 			transform11 * bounds.BottomRightFront(),
 			transform11 * bounds.BottomLeftFront(),
@@ -148,14 +148,14 @@ namespace Quartz
 	bool CollisionDetection::CollidePlaneRect(const PlaneCollider& plane0, const Transform& transform0, 
 		const RectCollider& rect1, const Transform& transform1, Collision& outCollision)
 	{
-		const Vec3f& position0	= transform0.position;
-		const Vec3f& position1	= transform1.position;
-		const Vec3f normal		= transform0.rotation * plane0.GetPlane().normal;
+		const Vec3p& position0	= transform0.position;
+		const Vec3p& position1	= transform1.position;
+		const Vec3p normal		= Quatp(transform0.rotation) * plane0.GetPlane().normal;
 
 		const Mat4f& transform = transform1.GetMatrix();
 		const Bounds3f& bounds = rect1.GetRect().bounds;
 
-		Vec3f points[8]
+		Vec3p points[8]
 		{
 			transform * bounds.BottomRightFront(),
 			transform * bounds.BottomLeftFront(),
@@ -168,13 +168,13 @@ namespace Quartz
 		};
 
 		Collision collision;
-		float minDist = FLT_MAX;
+		floatp minDist = FLT_MAX;
 
 		for (uSize i = 0; i < 8; i++)
 		{
-			float dist = Dot(normal, (points[i] - position0));
+			floatp dist = Dot(normal, (points[i] - position0));
 
-			if (dist < 0.0f && dist <= minDist)
+			if (dist <= 0.001f && dist <= minDist)
 			{
 				minDist = dist;
 
@@ -187,10 +187,9 @@ namespace Quartz
 				{
 					collision.contacts[j] = collision.contacts[j-1];
 				}
-
-				dist = -dist;
-
-				collision.contacts[0] = Contact(points[i], dist, -normal);
+				
+				Vec3p contactPoint = points[i] + normal * dist;
+				collision.contacts[0] = Contact(contactPoint, -dist + 0.001f, -normal);
 			}
 		}
 
@@ -252,7 +251,7 @@ namespace Quartz
 		const Bounds3f& bounds0 = rect1.GetRect().bounds;
 		const Bounds3f& bounds1 = rect1.GetRect().bounds;
 
-		Vec3f points0[8]
+		Vec3p points0[8]
 		{
 			transform00 * bounds0.BottomRightFront(),
 			transform00 * bounds0.BottomLeftFront(),
@@ -264,7 +263,7 @@ namespace Quartz
 			transform00 * bounds0.TopLeftBack()
 		};
 
-		Vec3f points1[8]
+		Vec3p points1[8]
 		{
 			transform11 * bounds1.BottomRightFront(),
 			transform11 * bounds1.BottomLeftFront(),
@@ -299,7 +298,7 @@ namespace Quartz
 		const Mat4f& transform11 = transform1.GetMatrix();
 		const Bounds3f& bounds = rect0.GetRect().bounds;
 
-		Vec3f points[8]
+		Vec3p points[8]
 		{
 			transform00 * bounds.BottomRightFront(),
 			transform00 * bounds.BottomLeftFront(),

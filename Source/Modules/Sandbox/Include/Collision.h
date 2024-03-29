@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Simplex.h"
+#include "PhysicsTypes.h"
 #include "Math/Matrix.h"
 
 #define PHYSICS_MAX_CONTACT_POINTS 6
@@ -9,25 +10,25 @@ namespace Quartz
 {
 	struct Contact
 	{
-		Vec3f point;
-		float depth;
-		Vec3f normal;
-		Vec3f localPoint0;
-		Vec3f localPoint1;
-		Vec3f contactVelocity;
-		float targetVelocity;
-		Mat3f invContactBasis;
+		Vec3p	point;
+		floatp	depth;
+		Vec3p	normal;
+		Vec3p	localPoint0;
+		Vec3p	localPoint1;
+		Vec3p	contactVelocity;
+		floatp	targetVelocity;
+		Mat3p	invContactBasis;
 
 		Contact();
-		Contact(const Vec3f& point, float depth, const Vec3f& normal);
+		Contact(const Vec3p& point, floatp depth, const Vec3p& normal);
 
 		Contact& Flip();
-		void CalcLocalPoints(const Vec3f& position0, const Vec3f& position1);
-		void CalcContactVelocity(const Vec3f& lastAccel0, const Vec3f& lastAccel1, 
-			const Vec3f& angularVel0, const Vec3f& angularVel1, 
-			const Vec3f& linearVel0, const Vec3f& linearVel1, double stepTime);
-		void CalcTargetVelocity(const Vec3f& lastAccel0, const Vec3f& lastAccel1, 
-			float restitution0, float restitution1, double timeStep);
+		void CalcLocalPoints(const Vec3p& position0, const Vec3p& position1);
+		void CalcContactVelocity(const Vec3p& lastAccel0, const Vec3p& lastAccel1, 
+			const Vec3p& angularVel0, const Vec3p& angularVel1, 
+			const Vec3p& linearVel0, const Vec3p& linearVel1, double stepTime);
+		void CalcTargetVelocity(const Vec3p& lastAccel0, const Vec3p& lastAccel1, 
+			floatp restitution0, floatp restitution1, double timeStep);
 		void CalcContactBasis();
 	};
 

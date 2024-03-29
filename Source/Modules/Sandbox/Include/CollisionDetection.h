@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PhysicsTypes.h"
 #include "Collision.h"
 #include "Colliders.h"
 

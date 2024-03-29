@@ -18,26 +18,26 @@ namespace Quartz
 	{
 		struct Line
 		{
-			Vec3f points[2];
+			Vec3p points[2];
 
 			Line();
-			Line(const Vec3f& a, const Vec3f& b);
+			Line(const Vec3p& a, const Vec3p& b);
 		};
 
 		struct Triangle
 		{
-			Vec3f points[3];
+			Vec3p points[3];
 
 			Triangle();
-			Triangle(const Vec3f& a, const Vec3f& b, const Vec3f& c);
+			Triangle(const Vec3p& a, const Vec3p& b, const Vec3p& c);
 		};
 
 		struct Tetrahedron
 		{
-			Vec3f points[4];
+			Vec3p points[4];
 
 			Tetrahedron();
-			Tetrahedron(const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d);
+			Tetrahedron(const Vec3p& a, const Vec3p& b, const Vec3p& c, const Vec3p& d);
 		};
 
 		class Polytope
@@ -52,36 +52,36 @@ namespace Quartz
 			bool AddSimplex(const Simplex& simplex);
 			void AddTriangle(const Triangle& tri);
 			void RemoveTriangle(uSize index);
-			void ClosestTriangle(const Vec3f& point, Triangle& outTri,
-				uSize& outIndex, float& outDist, Vec3f& outNormal) const;
-			void Extend(const Vec3f& point);
+			void ClosestTriangle(const Vec3p& point, Triangle& outTri,
+				uSize& outIndex, floatp& outDist, Vec3p& outNormal) const;
+			void Extend(const Vec3p& point);
 		};
 
 		template<typename Shape0, typename Shape1>
-		Vec3f MinkowskiFurthestPoint(const Shape0& shape0, const Mat4f& transform0,
-			const Shape1& shape1, const Mat4f& transform1, const Vec3f direction)
+		Vec3p MinkowskiFurthestPoint(const Shape0& shape0, const Mat4f& transform0,
+			const Shape1& shape1, const Mat4f& transform1, const Vec3p direction)
 		{
-			const Vec3f point0 = FurthestPoint(shape0, direction, transform0);
-			const Vec3f point1 = FurthestPoint(shape1, -direction, transform1);
+			const Vec3p point0 = FurthestPoint(shape0, direction, transform0);
+			const Vec3p point1 = FurthestPoint(shape1, -direction, transform1);
 
 			return point0 - point1;
 		}
 
 		template<typename Shape>
-		Vec3f MinkowskiFurthestPointRect(const Shape& shape0, const Mat4f& transform0,
-			const ShapeRect& rect1, Vec3f(&points)[8], const Vec3f direction)
+		Vec3p MinkowskiFurthestPointRect(const Shape& shape0, const Mat4f& transform0,
+			const ShapeRect& rect1, Vec3p(&points)[8], const Vec3p direction)
 		{
-			const Vec3f point0 = FurthestPoint(shape0, direction, transform0);
-			const Vec3f point1 = FurthestPoint(rect1, -direction, points);
+			const Vec3p point0 = FurthestPoint(shape0, direction, transform0);
+			const Vec3p point1 = FurthestPoint(rect1, -direction, points);
 
 			return point0 - point1;
 		}
 
-		inline Vec3f MinkowskiFurthestPointRectRect(const ShapeRect& rect0, Vec3f(&points0)[8],
-			const ShapeRect& rect1, Vec3f(&points1)[8], const Vec3f direction)
+		inline Vec3p MinkowskiFurthestPointRectRect(const ShapeRect& rect0, Vec3p(&points0)[8],
+			const ShapeRect& rect1, Vec3p(&points1)[8], const Vec3p direction)
 		{
-			const Vec3f point0 = FurthestPoint(rect0, direction, points0);
-			const Vec3f point1 = FurthestPoint(rect1, -direction, points1);
+			const Vec3p point0 = FurthestPoint(rect0, direction, points0);
+			const Vec3p point1 = FurthestPoint(rect1, -direction, points1);
 
 			return point0 - point1;
 		}
@@ -92,8 +92,8 @@ namespace Quartz
 			Simplex simplex;
 
 			// Check any inital direction (x-axis) for the furthest point in minkowski difference.
-			Vec3f direction = Vec3f::X_AXIS;
-			Vec3f furthestPoint = MinkowskiFurthestPoint(shape0, transform0, shape1, transform1, direction);
+			Vec3p direction = Vec3p::X_AXIS;
+			Vec3p furthestPoint = MinkowskiFurthestPoint(shape0, transform0, shape1, transform1, direction);
 
 			// If the initial minkowski point is zero, 
 			// the colliders are touching but not overlapping. Do not collide.
@@ -135,13 +135,13 @@ namespace Quartz
 		}
 
 		template<typename Shape0>
-		bool GJKRect(const Shape0& shape0, const Mat4f& transform0, const ShapeRect& rect1, Vec3f(&points)[8], Simplex& outSimplex)
+		bool GJKRect(const Shape0& shape0, const Mat4f& transform0, const ShapeRect& rect1, Vec3p(&points)[8], Simplex& outSimplex)
 		{
 			Simplex simplex;
 
 			// Check any inital direction (x-axis) for the furthest point in minkowski difference.
-			Vec3f direction = Vec3f::X_AXIS;
-			Vec3f furthestPoint = MinkowskiFurthestPointRect(shape0, transform0, rect1, points, direction);
+			Vec3p direction = Vec3p::X_AXIS;
+			Vec3p furthestPoint = MinkowskiFurthestPointRect(shape0, transform0, rect1, points, direction);
 
 			// If the initial minkowski point is zero, 
 			// the colliders are touching but not overlapping. Do not collide.
@@ -182,13 +182,13 @@ namespace Quartz
 			return false; // Exceeded max iterations
 		}
 
-		inline bool GJKRectRect(const ShapeRect& rect0, Vec3f(&points0)[8], const ShapeRect& rect1, Vec3f(&points1)[8], Simplex& outSimplex)
+		inline bool GJKRectRect(const ShapeRect& rect0, Vec3p(&points0)[8], const ShapeRect& rect1, Vec3p(&points1)[8], Simplex& outSimplex)
 		{
 			Simplex simplex;
 
 			// Check any inital direction (x-axis) for the furthest point in minkowski difference.
-			Vec3f direction = Vec3f::X_AXIS;
-			Vec3f furthestPoint = MinkowskiFurthestPointRectRect(rect0, points0, rect1, points1, direction);
+			Vec3p direction = Vec3p::X_AXIS;
+			Vec3p furthestPoint = MinkowskiFurthestPointRectRect(rect0, points0, rect1, points1, direction);
 
 			// If the initial minkowski point is zero, 
 			// the colliders are touching but not overlapping. Do not collide.
@@ -232,7 +232,7 @@ namespace Quartz
 		template<typename Shape0, typename Shape1>
 		bool EPA(const Shape0& shape0, const Mat4f& transform0, const Shape1& shape1, const Mat4f& transform1, const Simplex& simplex, Collision& outCollision)
 		{
-			constexpr float tolerance = 0.01f;
+			constexpr floatp tolerance = 0.01f;
 
 			Polytope polytope;
 			polytope.AddSimplex(simplex);
@@ -242,16 +242,16 @@ namespace Quartz
 			{
 				Triangle	tri;
 				uSize		index;
-				float		dist;
-				Vec3f		normal;
+				floatp		dist;
+				Vec3p		normal;
 
 				// Find the triangle closest to the origin
-				polytope.ClosestTriangle(Vec3f::ZERO, tri, index, dist, normal);
+				polytope.ClosestTriangle(Vec3p::ZERO, tri, index, dist, normal);
 
 				//normal.Normalize();
 
 				// Get the furthest point in the normal direction
-				Vec3f furthestPoint = MinkowskiFurthestPoint(shape0, transform0, shape1, transform1, normal);
+				Vec3p furthestPoint = MinkowskiFurthestPoint(shape0, transform0, shape1, transform1, normal);
 
 				if (Dot(furthestPoint, normal) > dist + tolerance)
 				{
@@ -259,8 +259,8 @@ namespace Quartz
 				}
 				else
 				{
-					//Vec3f extent0 = FurthestPoint(collider0, normal);
-					//Vec3f extent1 = extent0 - normal.Normalized() * dist;
+					//Vec3p extent0 = FurthestPoint(collider0, normal);
+					//Vec3p extent1 = extent0 - normal.Normalized() * dist;
 
 					Simplex contact0 = FurthestSimplex(shape0, -normal, transform0);
 					Simplex contact1 = FurthestSimplex(shape1, normal, transform1);
@@ -275,9 +275,9 @@ namespace Quartz
 		}
 
 		template<typename Shape0>
-		bool EPARect(const Shape0& shape0, const Mat4f& transform0, const ShapeRect& rect1, Vec3f(&points)[8], const Simplex& simplex, Collision& outCollision)
+		bool EPARect(const Shape0& shape0, const Mat4f& transform0, const ShapeRect& rect1, Vec3p(&points)[8], const Simplex& simplex, Collision& outCollision)
 		{
-			constexpr float tolerance = 0.01f;
+			constexpr floatp tolerance = 0.01f;
 
 			Polytope polytope;
 			polytope.AddSimplex(simplex);
@@ -287,14 +287,14 @@ namespace Quartz
 			{
 				Triangle	tri;
 				uSize		index;
-				float		dist;
-				Vec3f		normal;
+				floatp		dist;
+				Vec3p		normal;
 
 				// Find the triangle closest to the origin
-				polytope.ClosestTriangle(Vec3f::ZERO, tri, index, dist, normal);
+				polytope.ClosestTriangle(Vec3p::ZERO, tri, index, dist, normal);
 
 				// Get the furthest point in the normal direction
-				Vec3f furthestPoint = MinkowskiFurthestPointRect(shape0, transform0, rect1, points, normal);
+				Vec3p furthestPoint = MinkowskiFurthestPointRect(shape0, transform0, rect1, points, normal);
 
 				if (Dot(furthestPoint, normal) > dist + tolerance)
 				{
@@ -326,9 +326,9 @@ namespace Quartz
 			return false;
 		}
 
-		inline bool EPARectRect(const ShapeRect& rect0, Vec3f(&points0)[8], const ShapeRect& rect1, Vec3f(&points1)[8], const Simplex& simplex, Collision& outCollision)
+		inline bool EPARectRect(const ShapeRect& rect0, Vec3p(&points0)[8], const ShapeRect& rect1, Vec3p(&points1)[8], const Simplex& simplex, Collision& outCollision)
 		{
-			constexpr float tolerance = 0.01f;
+			constexpr floatp tolerance = 0.01f;
 
 			Polytope polytope;
 			polytope.AddSimplex(simplex);
@@ -338,14 +338,14 @@ namespace Quartz
 			{
 				Triangle	tri;
 				uSize		index;
-				float		dist;
-				Vec3f		normal;
+				floatp		dist;
+				Vec3p		normal;
 
 				// Find the triangle closest to the origin
-				polytope.ClosestTriangle(Vec3f::ZERO, tri, index, dist, normal);
+				polytope.ClosestTriangle(Vec3p::ZERO, tri, index, dist, normal);
 
 				// Get the furthest point in the normal direction
-				Vec3f furthestPoint = MinkowskiFurthestPointRectRect(rect0, points0, rect1, points1, normal);
+				Vec3p furthestPoint = MinkowskiFurthestPointRectRect(rect0, points0, rect1, points1, normal);
 
 				if (Dot(furthestPoint, normal) > dist + tolerance)
 				{
@@ -353,8 +353,8 @@ namespace Quartz
 				}
 				else
 				{
-					//Vec3f extent0 = FurthestPoint(rect0, normal);
-					//Vec3f extent1 = extent0 - normal.Normalized() * dist;
+					//Vec3p extent0 = FurthestPoint(rect0, normal);
+					//Vec3p extent1 = extent0 - normal.Normalized() * dist;
 
 					Simplex contact0 = FurthestSimplex(rect0, -normal, points0);
 					Simplex contact1 = FurthestSimplex(rect1, normal, points1);
