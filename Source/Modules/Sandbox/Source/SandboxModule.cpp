@@ -162,35 +162,35 @@ namespace Quartz
 		(
 			{ 0.0f, 0.0f, 0.0f },
 			Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
-			{ 20.0f, 20.0f, 20.0f }
+			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneL
 		(
 			{ -10.0f, 0.0f, 0.0f },
 			Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(90.0f)),
-			{ 20.0f, 5.0f, 20.0f }
+			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneR
 		(
 			{ 10.0f, 0.0f, 0.0f },
 			Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(-90.0f)),// * Quatf({ 0.0f, 1.0f, 0.0f }, ToRadians(180.0f)),
-			{ 20.0f, 5.0f, 20.0f }
+			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneF
 		(
 			{ 0.0f, 0.0f, -10.0f },
 			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(-90.0f)),// * Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(-90.0f)),
-			{ 20.0f, 5.0f, 20.0f }
+			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneB
 		(
 			{ 0.0f, 0.0f, 10.0f },
 			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(90.0f)),// * Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(90.0f)),
-			{ 20.0f, 5.0f, 20.0f }
+			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		MaterialComponent material1
@@ -271,11 +271,17 @@ namespace Quartz
 
 			//gCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
 			gCube2 = world.CreateEntity(transformCube2, renderable2, material1, cubePhysics2);
-			Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
-			Entity planeL = world.CreateEntity(transformPlaneL, renderable4, material1, planePhysics2);
-			Entity planeR = world.CreateEntity(transformPlaneR, renderable4, material1, planePhysics2);
-			Entity planeF = world.CreateEntity(transformPlaneF, renderable4, material1, planePhysics2);
-			Entity planeB = world.CreateEntity(transformPlaneB, renderable4, material1, planePhysics2);
+			//Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
+			//Entity planeL = world.CreateEntity(transformPlaneL, renderable4, material1, planePhysics2);
+			//Entity planeR = world.CreateEntity(transformPlaneR, renderable4, material1, planePhysics2);
+			//Entity planeF = world.CreateEntity(transformPlaneF, renderable4, material1, planePhysics2);
+			//Entity planeB = world.CreateEntity(transformPlaneB, renderable4, material1, planePhysics2);
+
+			Entity plane = world.CreateEntity(transformPlane, material1, planePhysics);
+			Entity planeL = world.CreateEntity(transformPlaneL, material1, planePhysics2);
+			Entity planeR = world.CreateEntity(transformPlaneR, material1, planePhysics2);
+			Entity planeF = world.CreateEntity(transformPlaneF, material1, planePhysics2);
+			Entity planeB = world.CreateEntity(transformPlaneB,  material1, planePhysics2);
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
 			TransformComponent cameraTransform({ 0.0f, 2.0f, 4.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});

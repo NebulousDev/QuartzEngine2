@@ -14,6 +14,7 @@
 #include "Math/Math.h"
 
 #include "../TerrainRenderer.h"
+#include "../SkyRenderer.h"
 
 namespace Quartz
 {
@@ -41,6 +42,7 @@ namespace Quartz
 		//TransformComponent*	mpCameraTransformComponent;
 
 		VulkanTerrainRenderer	mTerrainRenderer;
+		VulkanSkyRenderer		mSkyRenderer;
 
 	public:
 		void Initialize(VulkanGraphics* pGraphics);

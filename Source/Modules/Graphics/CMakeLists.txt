@@ -24,7 +24,7 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Vulkan/VulkanPipelineCache.cpp"
 	"Source/Vulkan/VulkanShaderCache.cpp"
 	"Source/Component/CameraComponent.cpp"
-	"Source/TerrainRenderer.cpp")
+	"Source/TerrainRenderer.cpp" "Source/SkyRenderer.cpp" "Include/SkyRenderer.h")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

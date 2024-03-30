@@ -230,6 +230,11 @@ namespace Quartz
 		vkCmdSetScissor(mpCommandBuffer->vkCommandBuffer, 0, 1, &scissor);
 	}
 
+	void VulkanCommandRecorder::Draw(uInt32 instanceCount, uInt32 vertexCount, uInt32 vertexStart)
+	{
+		vkCmdDraw(mpCommandBuffer->vkCommandBuffer, vertexCount, instanceCount, vertexStart, 0);
+	}
+
 	void VulkanCommandRecorder::DrawIndexed(uInt32 instanceCount, uInt32 indexCount, uInt32 indexStart, uInt32 vertexOffset)
 	{
 		vkCmdDrawIndexed(mpCommandBuffer->vkCommandBuffer, indexCount, instanceCount, indexStart, vertexOffset, 0);

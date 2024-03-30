@@ -99,6 +99,7 @@ namespace Quartz
 
 		void SetViewport(const VkViewport& viewport, const VkRect2D scissor);
 
+		void Draw(uInt32 instanceCount, uInt32 vertexCount, uInt32 vertexStart);
 		void DrawIndexed(uInt32 instanceCount, uInt32 indexCount, uInt32 indexStart, uInt32 vertexOffset);
 
 		void CopyBuffer(VulkanBuffer* pSrcBuffer, VulkanBuffer* pDestBuffer, 

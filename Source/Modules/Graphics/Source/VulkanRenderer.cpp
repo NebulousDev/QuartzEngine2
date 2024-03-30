@@ -147,6 +147,16 @@ namespace Quartz
 		pResources->CreateCommandBuffers(pRenderPool, 3, mCommandBuffers);
 
 		mTerrainRenderer.Initialize(*pGraphics, mShaderCache, mPipelineCache);
+
+		AtmosphereProperties atmosphere = {};
+		atmosphere.rayleighScattering	= { 5.802f, 13.558f, 33.1f };
+		atmosphere.rayleighAbsorbtion	= 0;
+		atmosphere.mieScattering		= 3.996;
+		atmosphere.mieAbsorbtion		= 4.40;
+		atmosphere.ozoneScattering		= 0;
+		atmosphere.ozoneAbsorbtion		= { 0.650f, 1.881f, 0.085f };
+
+		mSkyRenderer.Initialize(*pGraphics, atmosphere, mShaderCache, mPipelineCache);
 	}
 
 	void VulkanRenderer::SetCamera(Entity cameraEntity)
@@ -257,11 +267,13 @@ namespace Quartz
 			binding.range	= renderable.perModelLocation.perModelEntry.sizeBytes;
 
 			VulkanUniformBufferBind pBufferBinds[] = { binding };
-
+			
 			recorder.BindUniforms(renderable.pPipeline, 0, pBufferBinds, 1, nullptr, 0);
 
 			recorder.DrawIndexed(1, renderable.indexCount, 0, 0); //renderable.meshLocation.indexEntry.offset / sizeof(uInt16)
 		}
+
+		mSkyRenderer.RecordDraws(recorder);
 	}
 
 	void VulkanRenderer::RenderScene(EntityWorld* pWorld)
