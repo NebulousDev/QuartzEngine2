@@ -140,15 +140,15 @@ namespace Quartz
 		TransformComponent transformCube
 		(
 			{ 0.0f, 2.0f, 0.0f },
-			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
-			{ 1.0f, 1.0f, 1.0f }
+			Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
+			{ 2.0f, 1.0f, 1.0f }
 		);
 
 		TransformComponent transformCube2
 		(
 			{ 0.0f, 10.0f, 0.0f },
-			Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
-			{ 1.0f, 3.0f, 1.0f }
+			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
+			{ 2.0f, 3.0f, 2.0f }
 		);
 
 		TransformComponent transformTri
@@ -216,11 +216,11 @@ namespace Quartz
 		MeshComponent renderable3("simplePlane", planeData);
 		MeshComponent renderable4("simplePlane2", planeData2);
 
-		RigidBody cubeRigidBody(1.0f, 0.7f, 1.0f, { 0.0f, 0.0f, 0.0f });
+		RigidBody cubeRigidBody(0.1f, 0.6f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		RectCollider cubeCollider(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
 		//SphereCollider cubeCollider(0.5f, false);
 
-		RigidBody cubeRigidBody2(1.0f, 0.7f, 1.0f);
+		RigidBody cubeRigidBody2(0.1f, 0.6f, 1.0f);
 		RectCollider cubeCollider2(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
 		//SphereCollider cubeCollider2(0.5f, false);
 
@@ -287,7 +287,7 @@ namespace Quartz
 			pRenderer->SetCamera(gCamera);
 
 			runtime.SetTargetUps(350);
-			runtime.SetTargetTps(20);
+			runtime.SetTargetTps(60);
 
 			runtime.RegisterOnUpdate(
 				[](Runtime& runtime, double delta)
@@ -428,11 +428,11 @@ namespace Quartz
 					(
 						cameraTransform.position + normal * 2.0f,
 						cameraTransform.rotation,
-						{ 1.0f, 1.0f, 1.0f }
+						{ 2.0f, 1.0f, 1.0f }
 					);
 
 					RigidBodyComponent physics(cubeRigidBody2, cubeCollider2);
-					physics.AddForce(normal * 15000.0f);
+					physics.AddForce(normal * 100000.0f);
 					physics.AddTorque({ 0.0f, 0.0f, 0.0f });
 
 					if (Engine::GetWorld().EntityCount() < 256)

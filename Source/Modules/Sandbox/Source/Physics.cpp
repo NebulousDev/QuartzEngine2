@@ -38,8 +38,15 @@ namespace Quartz
 			transform.rotation.Normalize();
 			rigidBody.torque = Vec3p::ZERO;
 
+			/* Drag */
+
+			rigidBody.linearVelocity *= pow(0.9, stepTime);
+			rigidBody.angularVelocity *= pow(0.1, stepTime);
+
 			//????
 			rigidBody.lastAcceleration = rigidBody.gravity * rigidBody.invMass; //linearAccel + angularAccel;
+
+			rigidBody.UpdateInertia(transform);
 		}
 	}
 
@@ -61,8 +68,7 @@ namespace Quartz
 
 				if (entity0 == entity1)
 				{
-					//break; // Ignore duplicates
-					continue;
+					continue; // Ignore self collision
 				}
 
 				RigidBodyComponent& physics0	= world.Get<RigidBodyComponent>(entity0);
@@ -179,6 +185,7 @@ namespace Quartz
 			const Vec3p deltaVelocity0 = Cross(angularMomentum0, contact.localPoint0);
 
 			linearInertia0 = rigidBody0.invMass;
+
 			angularInertia0 = Dot(deltaVelocity0, contact.normal);
 			totalInertia += angularInertia0 + linearInertia0;
 
@@ -189,6 +196,7 @@ namespace Quartz
 				const Vec3p deltaVelocity1 = Cross(angularMomentum1, contact.localPoint1);
 
 				linearInertia1 = rigidBody1.invMass;
+
 				angularInertia1 = Dot(deltaVelocity1, contact.normal);
 				totalInertia += angularInertia1 + linearInertia1;
 			}
@@ -213,10 +221,6 @@ namespace Quartz
 				const Vec3p rotation0 = angularVelocityImpulse0 * (angularMovement0 / angularInertia0);
 				outDeltaAngular0 = rotation0;
 			}
-			else
-			{
-				outDeltaAngular0 = 0;
-			}
 
 			outDeltaLinear0 = contact.normal * linearMovement0;
 		}
@@ -236,10 +240,6 @@ namespace Quartz
 				const Vec3p angularVelocityImpulse1 = rigidBody1.invInertiaTensor * Cross(contact.localPoint1, contact.normal);
 				const Vec3p rotation1 = angularVelocityImpulse1 * (angularMovement1 / angularInertia1);
 				outDeltaAngular1 = rotation1;
-			}
-			else
-			{
-				outDeltaAngular1 = 0;
 			}
 
 			outDeltaLinear1 = contact.normal * linearMovement1;
@@ -268,11 +268,9 @@ namespace Quartz
 			outDeltaAngularVel0 = angularVelocity0;
 		}
 
-		impulse *= -1;
-
 		if (!collider1.IsStatic() && rigidBody1.invMass != 0.0f)
 		{
-			const Vec3p linearVelocity1 = impulse * -rigidBody1.invMass; // negative invMass?
+			const Vec3p linearVelocity1 = impulse * -rigidBody1.invMass; // Flip impulse for second body
 			outDeltaLinearVel1 = linearVelocity1;
 
 			const Vec3p impulsiveTorque1 = Cross(impulse, contact.localPoint1); // @Note: flipped from body0
@@ -330,7 +328,7 @@ namespace Quartz
 			Transform& transform0 = *collisionData.pTransform0;
 			Transform& transform1 = *collisionData.pTransform1;
 
-			// Calculate contact data
+			/* Calculate contact data */
 
 			for (uSize i = 0; i < collision.count; i++) // @TODO: speed up
 			{
@@ -345,7 +343,7 @@ namespace Quartz
 					rigidBody0.restitution, rigidBody1.restitution, stepTime);
 			}
 
-			// Resolve penetrations
+			/* Resolve penetrations */
 
 			uSize posIteration = 0;
 			while (posIteration++ < PHYSICS_MAX_RESOLVE_ITERATIONS)
@@ -359,7 +357,7 @@ namespace Quartz
 
 				Contact& contact = collision.contacts[nextIndex];
 
-				// Calculate deltas
+				/* Calculate deltas */
 
 				Vec3p deltaAngular0, deltaAngular1;
 				Vec3p deltaLinear0, deltaLinear1;
@@ -367,7 +365,7 @@ namespace Quartz
 				CalculatePenetrationDeltas(collisionData, contact, 
 					deltaLinear0, deltaLinear1, deltaAngular0, deltaAngular1);
 
-				// Apply deltas
+				/* Apply deltas */
 
 				transform0.Move(Vec3f(deltaLinear0));
 				transform1.Move(Vec3f(deltaLinear1));
@@ -377,18 +375,18 @@ namespace Quartz
 				transform0.rotation.Normalize();
 				transform1.rotation.Normalize();
 
-				// Update inertia tensors
+				/* Update inertia tensors */
 
 				rigidBody0.UpdateInertia(transform0);
 				rigidBody1.UpdateInertia(transform1);
 
-				// Adjust remaining contacts
+				/* Adjust remaining contacts */
 
 				for (uSize j = 0; j < collision.count; j++) // @TODO: speed up
 				{
 					Contact& nextContact = collision.contacts[j];
 
-					// Adjust depths
+					/* Adjust depths */
 
 					Vec3p deltaPos0 = deltaLinear0 + Cross(deltaAngular0, contact.localPoint0);
 					Vec3p deltaPos1 = deltaLinear1 + Cross(deltaAngular1, contact.localPoint1);
@@ -398,7 +396,7 @@ namespace Quartz
 				}
 			}
 
-			// Resolve velocities
+			/* Resolve velocities */
 
 			uSize velIteration = 0;
 			while (velIteration++ < PHYSICS_MAX_VELOCITY_ITERATIONS)
@@ -412,7 +410,7 @@ namespace Quartz
 
 				Contact& contact = collision.contacts[nextIndex];
 
-				// Calculate deltas
+				/* Calculate deltas */
 
 				Vec3p deltaLinearVel0, deltaLinearVel1;
 				Vec3p deltaAngularVel0, deltaAngularVel1;
@@ -420,20 +418,20 @@ namespace Quartz
 				CalculateVelocityDeltas(collisionData, contact, 
 					deltaLinearVel0, deltaLinearVel1, deltaAngularVel0, deltaAngularVel1);
 
-				// Apply deltas
+				/* Apply deltas */
 
 				rigidBody0.AddLinearVelocity(deltaLinearVel0);
 				rigidBody1.AddLinearVelocity(deltaLinearVel1);
-				//rigidBody0.AddAngularVelocity(deltaAngularVel0);
-				//rigidBody1.AddAngularVelocity(deltaAngularVel1);
+				rigidBody0.AddAngularVelocity(deltaAngularVel0);
+				rigidBody1.AddAngularVelocity(deltaAngularVel1);
 
-				// Adjust remaining contacts
+				/* Adjust remaining contacts */
 
 				for (uSize j = 0; j < collision.count; j++) // @TODO: speed up
 				{
 					Contact& nextContact = collision.contacts[j];
 
-					// Adjust velocities
+					/* Adjust velocities */
 
 					Vec3p deltaVel0 = deltaLinearVel0 + Cross(deltaAngularVel0, contact.localPoint0);
 					Vec3p deltaVel1 = deltaLinearVel1 + Cross(deltaAngularVel1, contact.localPoint1);
@@ -443,6 +441,11 @@ namespace Quartz
 					nextContact.contactVelocity += deltaContactVel0;
 					nextContact.contactVelocity -= deltaContactVel1;
 
+					nextContact.CalcContactBasis();
+					nextContact.CalcLocalPoints(transform0.position, transform1.position);
+					nextContact.CalcContactVelocity(rigidBody0.lastAcceleration, rigidBody1.lastAcceleration,
+						rigidBody0.angularVelocity, rigidBody1.angularVelocity,
+						rigidBody0.linearVelocity, rigidBody1.linearVelocity, stepTime);
 					nextContact.CalcTargetVelocity(rigidBody0.lastAcceleration, rigidBody1.lastAcceleration, 
 						rigidBody0.restitution, rigidBody1.restitution, stepTime);
 				}

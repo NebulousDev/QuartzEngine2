@@ -28,31 +28,16 @@ namespace Quartz
 	{
 		if (rigidBody.invMass != 0.0f)
 		{
-			//floatp width	= rect.GetRect().bounds.Width() * scale.x;
-			//floatp height	= rect.GetRect().bounds.Height() * scale.y;
-			//floatp depth	= rect.GetRect().bounds.Depth() * scale.z;
+			floatp width	= rect.GetRect().bounds.Width(); //* scale.x;
+			floatp height	= rect.GetRect().bounds.Height(); //* scale.y;
+			floatp depth	= rect.GetRect().bounds.Depth(); //* scale.z;
 
-			floatp width = rect.GetRect().bounds.Width() * scale.x;
-			floatp height = rect.GetRect().bounds.Depth() * scale.z;
-			floatp depth = rect.GetRect().bounds.Height() * scale.y; 
-
-			//floatp ix = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + depth * depth);
-			//floatp iy = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (depth * depth + height * height);
-			//floatp iz = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + height * height);
-
-			floatp ix = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (height * height + depth * depth);
-			floatp iy = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + height * height);
-			floatp iz = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + depth * depth);
-
-			//floatp ix = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (depth * depth + height * height);
-			//floatp iy = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + depth * depth);
-			//floatp iz = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + height * height);
+			floatp ix = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (depth * depth + height * height);
+			floatp iy = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + depth * depth);
+			floatp iz = (1.0f / 12.0f) * (1.0f / rigidBody.invMass) * (width * width + height * height);
 
 			return Vec3p(ix, iy, iz);
-			//return Vec3p(iy, iz, ix);
-			//return Vec3p(ix, iz, iy);
-			//return Vec3p(ix, iz, iy);
-			//return Vec3p(1.0f, 1.0f, 1.0f);
+			//return Vec3p(1, 1, 1);
 		}
 		
 		return Vec3p(0, 0, 0);
