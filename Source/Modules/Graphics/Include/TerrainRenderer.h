@@ -11,6 +11,7 @@
 #include "Vulkan/VulkanCommandRecorder.h"
 #include "Vulkan/VulkanPipelineCache.h"
 #include "Vulkan/VulkanShaderCache.h"
+
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
 
@@ -63,7 +64,7 @@ namespace Quartz
 		Map<Vec2i, TerrainTile>		mActiveTileMap;
 		Stack<TerrainTile>			mLoadingTiles;
 
-		VulkanBuffer*				mpPerTileStagingBuffer;
+		VulkanBuffer*				mpPerTileStagingBuffer; //TODO: Should be buffered?
 		VulkanBuffer*				mpPerTileBuffer;
 		VulkanBufferWriter			mpPerTileWriter;
 		TerrainPerTileData*			mpPerTileDatas;

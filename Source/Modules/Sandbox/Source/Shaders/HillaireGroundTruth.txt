@@ -1,0 +1,61 @@
+/* Hillaire Functions */
+
+vec3 HillaireSkyVisibility(vec3 lightDir)
+{
+	return vec3(0);
+}
+
+vec3 HillaireSkyTransmittance(vec3 xa, vec3 xb)
+{
+	const float steps = 100.0;
+	float step = length(xb - xa) / steps;
+	float totalTrans = 0;
+
+	for(float i = 0; i < steps; i++)
+	{
+		//totalTrans += sigma(x) * step;
+	}
+
+	return exp(-totalTrans);
+}
+
+vec3 HillaireSkyShadowFactor(vec3 x, vec3 lightDir) // psudo-done
+{
+	vec3 vis = HillaireSkyVisibility(lightDir);
+	vec3 xPlusTAtmoLightDir = vec3(0); //TODO
+	vec3 trans = HillaireSkyTransmittance(x, xPlusTAtmoLightDir);
+	return vis * trans;
+}
+
+vec3 HillaireSkyLuminanceScatter(vec3 cameraPos, vec3 x, vec3 toCameraDir)
+{
+
+	return vec3(0);
+}
+
+vec3 HillaireSkyBaseLuminance(vec3 surfacePoint, vec3 toCameraDir)
+{
+	return vec3(0);
+}
+
+vec3 HillaireSkyLuminance(vec3 cameraPos, vec3 point)
+{
+	vec3 toCameraDir = cameraPos - point;
+	vec3 surfacePoint = vec3(0); //TODO
+
+	vec3 baseLum = HillaireSkyBaseLuminance(surfacePoint, toCameraDir);
+	vec3 trans = HillaireSkyTransmittance(cameraPos, toCameraDir);
+
+	float step = 0.1;
+	float max = length(surfacePoint - cameraPos);
+	vec3 totalLum = vec3(0);
+
+	for(float i = 0; i < max; i += step)
+	{
+		vec3 cMinusTV = cameraPos - i * toCameraDir;
+		vec3 scatLum = HillaireSkyLuminanceScatter(cameraPos, cMinusTV, toCameraDir) * step;
+		totalLum += scatLum;
+	}
+
+	return baseLum * trans + totalLum;
+}

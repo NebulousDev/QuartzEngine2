@@ -543,7 +543,7 @@ namespace Quartz
 		{
 			float tileScale		= mActiveTiles[i].scale;
 			Vec2i tilePos		= mActiveTiles[i].position * tileScale;
-			Vec3f worldPos		= Vec3f{ (float)tilePos.x, 0.0f, (float)tilePos.y } *globalTerrainScale;
+			Vec3f worldPos		= Vec3f{ (float)tilePos.x, 0.0f, (float)tilePos.y } * globalTerrainScale;
 			Vec3f worldScale	= Vec3f{ tileScale, tileScale, tileScale } * globalTerrainScale;
 
 			TransformComponent tileTransform(worldPos, { {0.0f, 0.0f, 0.0f}, 0.0f }, worldScale);

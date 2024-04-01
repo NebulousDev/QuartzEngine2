@@ -148,15 +148,30 @@ namespace Quartz
 
 		mTerrainRenderer.Initialize(*pGraphics, mShaderCache, mPipelineCache);
 
-		AtmosphereProperties atmosphere = {};
+		AtmosphereSun sun0 = {};
+		sun0.sunDir = { 0.0f, 1.1f, 1.0f };
+		sun0.sunIntensity = 1.0f;
+
+		AtmosphereSun sun1 = {};
+		sun1.sunDir = { 0.0f, 0.0f, 0.0f };
+		sun1.sunIntensity = 0.0f;
+
+		AtmosphereValues atmosphere = {};
 		atmosphere.rayleighScattering	= { 5.802f, 13.558f, 33.1f };
 		atmosphere.rayleighAbsorbtion	= 0;
 		atmosphere.mieScattering		= 3.996;
 		atmosphere.mieAbsorbtion		= 4.40;
 		atmosphere.ozoneScattering		= 0;
 		atmosphere.ozoneAbsorbtion		= { 0.650f, 1.881f, 0.085f };
+		atmosphere.suns[0]				= sun0;
+		atmosphere.suns[1]				= sun1;
 
-		mSkyRenderer.Initialize(*pGraphics, atmosphere, mShaderCache, mPipelineCache);
+		SkyRenderSettings settings = {};
+		settings.transmittanceLUTSize = { 256, 64 };
+		settings.scatterLUTSize = { 200, 200 };
+		settings.viewLUTSize = { 200, 200 };
+
+		mSkyRenderer.Initialize(*pGraphics, atmosphere, settings, mShaderCache, mPipelineCache);
 	}
 
 	void VulkanRenderer::SetCamera(Entity cameraEntity)
@@ -181,7 +196,7 @@ namespace Quartz
 		Mat4f proj;
 	};
 
-	void VulkanRenderer::UpdateAll(EntityWorld* pWorld)
+	void VulkanRenderer::UpdateAll(EntityWorld* pWorld, uSize frameIdx)
 	{
 		auto& renderableView = pWorld->CreateView<MeshComponent, TransformComponent>();
 		TransformComponent& cameraTransformComponent = pWorld->Get<TransformComponent>(mCameraEntity);
@@ -234,12 +249,14 @@ namespace Quartz
 
 		Vec2f centerPos = { -cameraTransformComponent.position.x, -cameraTransformComponent.position.z };
 		//mTerrainRenderer.Update(centerPos, *mpCameraComponent, *mpCameraTransformComponent);
+		mSkyRenderer.Update(cameraComponent, cameraTransformComponent, frameIdx);
 	}
 
 	void VulkanRenderer::RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx)
 	{
 		mBufferCache.RecordTransfers(recorder);
 		//mTerrainRenderer.RecordTransfers(recorder);
+		mSkyRenderer.RecordTransfers(recorder, frameIdx);
 	}
 
 	void VulkanRenderer::RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
@@ -273,15 +290,11 @@ namespace Quartz
 			recorder.DrawIndexed(1, renderable.indexCount, 0, 0); //renderable.meshLocation.indexEntry.offset / sizeof(uInt16)
 		}
 
-		mSkyRenderer.RecordDraws(recorder);
+		mSkyRenderer.RecordDraws(recorder, frameIdx);
 	}
 
-	void VulkanRenderer::RenderScene(EntityWorld* pWorld)
+	void VulkanRenderer::RenderScene(EntityWorld* pWorld, uSize frameIdx)
 	{
-		mSwapTimer.AdvanceFrame();
-
-		uInt32 frameIdx = mSwapTimer.GetFrameIndex();
-
 		VulkanCommandBuffer* pCommandBuffer = mCommandBuffers[frameIdx];
 		VulkanCommandRecorder recorder(pCommandBuffer);
 
@@ -384,8 +397,11 @@ namespace Quartz
 	{
 		EntityWorld& world = Engine::GetWorld();
 
-		UpdateAll(&world);
-		RenderScene(&world);
+		mSwapTimer.AdvanceFrame();
+		uInt32 frameIdx = mSwapTimer.GetFrameIndex();
+
+		UpdateAll(&world, frameIdx);
+		RenderScene(&world, frameIdx);
 	}
 
 	void VulkanRenderer::Register(Runtime& runtime)
