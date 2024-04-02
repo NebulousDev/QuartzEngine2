@@ -4,10 +4,10 @@
 const float PI = 3.14159265358;
 const float KM = 1000.0;
 
-const vec3 outerSphereCenter = vec3(0,0,0);
-const vec3 innerSphereCenter = vec3(0,0,0);
-const float outerSphereRadius = 6.460;
-const float innerSphereRadius = 6.360;
+const vec3 spaceCenter = vec3(0,0,0);
+const vec3 groundCenter = vec3(0,0,0);
+const float spaceRadius = 6.460;
+const float groundRadius = 6.360;
 
 /* Uniforms */
 
@@ -28,15 +28,17 @@ layout(set = 0, binding = 0) uniform AtmosphereUBO
 	float mieAbsorbtion;
 	float ozoneScattering;
 	vec3 ozoneAbsorbtion;
-	float _pad0_, _pad1_;
 	Sun suns[2];
-	
+
 	vec3 cameraPos;
 	vec3 viewDir;
 	float width;
 	float height;
 }
 atmosphere;
+
+layout(binding = 1) uniform sampler2D transmittanceLUT;
+layout(binding = 2) uniform sampler2D skyViewLUT;
 
 /* Intersection Functions */
 
@@ -55,128 +57,50 @@ float RaySphere(vec3 ro, vec3 rd, vec3 ttt, float rad)
 	return -b - sqrt(discr);
 }
 
-
-//float RaySphere(vec3 rayStart, vec3 rayDir, vec3 sphereCenter, float radius)
-//{
-//	const float a = dot(rayStart, rayDir);
-//	const vec3 toStart = rayStart - sphereCenter;
-//	const float b = 2.0 * dot(rayDir, toStart);
-//	const float c = dot(toStart, toStart) - (radius * radius);
-//	const float quad = (b * b) - (4.0 * a * c);
-//
-//	if(quad < 0.0) return -1.0;
-//	else return (-b - sqrt(quad)) / (2.0 * a);
-//}
-
-/* Atmosphere Property Functions */
-
-float RayleighPhase(float cosAngle)
-{
-	return (3 * (1 + cosAngle * cosAngle)) / (16.0 * PI);
-}
-
-float MiePhase(float cosAngle)
-{
-	// Cornette-Shanks
-	const float g = 0.8;
-	const float g2 = g * g;
-	const float coeff = 3.0 / (8.0 * PI);
-	const float num = (1.0 - g2) * (1.0 + cosAngle * cosAngle);
-	const float denom = (2 + g2) * pow((1 + g2 - 2 * g * cosAngle), (3.0 / 2.0));
-
-	return coeff * (num / denom);
-}
-
-const float isoPhase = 1.0 / (4.0 * PI);
-
-float RayleighDensity(float height)
-{
-	return exp(-height / 8.0); //8km?
-}
-
-float MieDensity(float height)
-{
-	return exp(-height / 1.2); //1.2km?
-}
-
-float OzoneDensity(float height)
-{
-	return max(0, 1.0 - (abs(height - 25.0) / 15.0));
-}
-
-void CalcScatterValues(vec3 pos, out vec3 outRayeigh, out float outMie, out vec3 outExtinction)
-{
-	const float height = (length(pos) - innerSphereRadius) * KM;
-
-	const float rayleighDensity = RayleighDensity(height);
-	const float mieDensity = MieDensity(height);
-	const float ozoneDensity = OzoneDensity(height);
-
-	const float rayleighAbsorb = atmosphere.rayleighAbsorbtion * rayleighDensity;
-	const float mieAbsorb = atmosphere.mieAbsorbtion * mieDensity;
-	const vec3 ozoneAbsorb = atmosphere.ozoneAbsorbtion * ozoneDensity;
-
-	outRayeigh = atmosphere.rayleighScattering * rayleighDensity;
-	outMie = atmosphere.mieScattering * mieDensity;
-	outExtinction = outRayeigh + rayleighAbsorb + outMie + mieAbsorb + ozoneAbsorb;
-}
-
 /* LUT Functions */
 
-vec3 Transmittance(vec3 pos, vec3 sunDir)
-{
-	const float distToGround = RaySphere(pos, sunDir, innerSphereCenter, innerSphereRadius);
-
-	if(distToGround > 0.0) // Sun is below the horizon?
-		return vec3(0);
-
-	const float distToSpace = RaySphere(pos, sunDir, outerSphereCenter, outerSphereRadius);
-
-	vec3 finalTransmittance = vec3(1.0);
-
-	float time = 0;
-	const float steps = 40.0;
-	for(float i = 0.0; i < steps; i += 1.0)
-	{
-		const float newTime = ((i + 0.3)/steps) * distToSpace; // +0.3??
-		const float deltaTime = newTime - time;
-		time = newTime;
-
-		vec3 newPos = pos + time * sunDir;
-
-		vec3 rayeigh; // why these?
-		float mie;
-		vec3 extinction;
-		CalcScatterValues(newPos, rayeigh, mie, extinction);
-
-		finalTransmittance *= exp(-extinction * deltaTime);
-	}
-
-	return finalTransmittance;
+float safeacos(const float x) {
+    return acos(clamp(x, -1.0, 1.0));
 }
 
-void Luminance2ndOrder()
+vec3 LookupTransmittance(vec3 pos, vec3 sunDir)
 {
-
+	float height = length(pos);
+    vec3 up = pos / height;
+	float sunCosZenithAngle = dot(sunDir, up);
+	vec2 uv = vec2(clamp(0.5 + 0.5*sunCosZenithAngle, 0.0, 1.0), 
+		max(0.0, min(1.0, (height - groundRadius)/(spaceRadius - groundRadius))));
+    return texture(transmittanceLUT, uv).rgb;
 }
 
-void MultipleScattering()
+vec3 LookupSkyView(vec3 cameraPos, vec3 rayDir, vec3 sunDir)
 {
-	const float steps = 8.0;
-	const float multiSteps = 20.0;
-	
-	vec3 totalLuminance = vec3(0);
-	vec3 fms = vec3(0);
-
-	for(float i = 0; i < steps; i++)
-	{
-		for(float j = 0; j < steps; i++)
-		{
-			
-		}
-	}
-
-
+	float height = length(cameraPos);
+    vec3 up = cameraPos / height;
+    
+    float horizonAngle = safeacos(sqrt(height * height - groundRadius * groundRadius) / height);
+    float altitudeAngle = horizonAngle - acos(dot(rayDir, up)); // Between -PI/2 and PI/2
+    float azimuthAngle; // Between 0 and 2*PI
+    if (abs(altitudeAngle) > (0.5*PI - .0001)) {
+        // Looking nearly straight up or down.
+        azimuthAngle = 0.0;
+    } else {
+        vec3 right = cross(sunDir, up);
+        vec3 forward = cross(up, right);
+        
+        vec3 projectedDir = normalize(rayDir - up*(dot(rayDir, up)));
+        float sinTheta = dot(projectedDir, right);
+        float cosTheta = dot(projectedDir, forward);
+        azimuthAngle = atan(sinTheta, cosTheta) + PI;
+    }
+    
+    // Non-linear mapping of altitude angle. See Section 5.3 of the paper.
+    float v = 0.5 + 0.5*sign(altitudeAngle)*sqrt(abs(altitudeAngle)*2.0/PI);
+    vec2 uv = vec2(azimuthAngle / (2.0*PI), v);
+    //uv *= skyLUTRes;
+    //uv /= iChannelResolution[1].xy;
+    
+    return texture(skyViewLUT, uv).rgb;
 }
 
 /* Other Functions */
@@ -202,155 +126,6 @@ vec3 SunWithBloom(vec3 rayDir, vec3 sunDir)
 	return vec3(gaussianBloom+invBloom);
 }
 
-
-
-const float mulScattSteps = 20.0;
-const int sqrtSamples = 8;
-
-vec3 getSphericalDir(float theta, float phi) {
-     float cosPhi = cos(phi);
-     float sinPhi = sin(phi);
-     float cosTheta = cos(theta);
-     float sinTheta = sin(theta);
-     return vec3(sinPhi*sinTheta, cosPhi, sinPhi*cosTheta);
-}
-
-float safeacos(const float x) {
-    return acos(clamp(x, -1.0, 1.0));
-}
-
-// Calculates Equation (5) and (7) from the paper.
-void MulScattValues(vec3 pos, vec3 sunDir, out vec3 lumTotal, out vec3 fms)
-{
-    lumTotal = vec3(0.0);
-    fms = vec3(0.0);
-    
-    float invSamples = 1.0/float(sqrtSamples*sqrtSamples);
-    for (int i = 0; i < sqrtSamples; i++) {
-        for (int j = 0; j < sqrtSamples; j++) {
-            // This integral is symmetric about theta = 0 (or theta = PI), so we
-            // only need to integrate from zero to PI, not zero to 2*PI.
-            float theta = PI * (float(i) + 0.5) / float(sqrtSamples);
-            float phi = safeacos(1.0 - 2.0*(float(j) + 0.5) / float(sqrtSamples));
-            vec3 rayDir = getSphericalDir(theta, phi);
-            
-            float atmoDist = RaySphere(pos, rayDir, vec3(0), outerSphereRadius);
-            float groundDist = RaySphere(pos, rayDir, vec3(0), innerSphereRadius);
-            float tMax = atmoDist;
-            if (groundDist > 0.0) {
-                tMax = groundDist;
-            }
-            
-            float cosTheta = dot(rayDir, sunDir);
-    
-            float miePhaseValue = MiePhase(cosTheta);
-            float rayleighPhaseValue = RayleighPhase(-cosTheta);
-            
-            vec3 lum = vec3(0.0), lumFactor = vec3(0.0), transmittance = vec3(1.0);
-            float t = 0.0;
-            for (float stepI = 0.0; stepI < mulScattSteps; stepI += 1.0) {
-                float newT = ((stepI + 0.3)/mulScattSteps)*tMax;
-                float dt = newT - t;
-                t = newT;
-
-                vec3 newPos = pos + t*rayDir;
-
-                vec3 rayleighScattering, extinction;
-                float mieScattering;
-                CalcScatterValues(newPos, rayleighScattering, mieScattering, extinction);
-
-                vec3 sampleTransmittance = exp(-dt*extinction);
-                
-                // Integrate within each segment.
-                vec3 scatteringNoPhase = rayleighScattering + mieScattering;
-                vec3 scatteringF = (scatteringNoPhase - scatteringNoPhase * sampleTransmittance) / extinction;
-                lumFactor += transmittance*scatteringF;
-                
-                // This is slightly different from the paper, but I think the paper has a mistake?
-                // In equation (6), I think S(x,w_s) should be S(x-tv,w_s).
-                //vec3 sunTransmittance = getValFromTLUT(iChannel0, iChannelResolution[0].xy, newPos, sunDir);
-				vec3 sunTransmittance = Transmittance(newPos, sunDir);
-				
-                vec3 rayleighInScattering = rayleighScattering*rayleighPhaseValue;
-                float mieInScattering = mieScattering*miePhaseValue;
-                vec3 inScattering = (rayleighInScattering + mieInScattering)*sunTransmittance;
-
-                // Integrated scattering within path segment.
-                vec3 scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / extinction;
-
-                lum += scatteringIntegral*transmittance;
-                transmittance *= sampleTransmittance;
-            }
-            
-            if (groundDist > 0.0) {
-                vec3 hitPos = pos + groundDist*rayDir;
-                if (dot(pos, sunDir) > 0.0) {
-                    hitPos = normalize(hitPos)*innerSphereRadius;
-                    //lum += transmittance*groundAlbedo*getValFromTLUT(iChannel0, iChannelResolution[0].xy, hitPos, sunDir);
-					lum += transmittance * vec3(0.3) * Transmittance(hitPos, sunDir);
-                }
-            }
-            
-            fms += lumFactor*invSamples;
-            lumTotal += lum*invSamples;
-        }
-    }
-}
-
-const int numScatteringSteps = 32;
-vec3 RaymarchScattering(vec3 pos, vec3 rayDir,  vec3 sunDir, float numSteps)
-{
-    float cosTheta = dot(rayDir, sunDir);
-    
-	float atmoDist = RaySphere(pos, rayDir, vec3(0), outerSphereRadius);
-	float groundDist = RaySphere(pos, rayDir, vec3(0), innerSphereRadius);
-	float tMax = atmoDist;
-	if (groundDist > 0.0) {
-		tMax = groundDist;
-	}
-
-	float miePhaseValue = MiePhase(cosTheta);
-	float rayleighPhaseValue = RayleighPhase(-cosTheta);
-    
-    vec3 lum = vec3(0.0);
-    vec3 transmittance = vec3(1.0);
-    float t = 0.0;
-    for (float i = 0.0; i < numSteps; i += 1.0) {
-        float newT = ((i + 0.3)/numSteps)*tMax;
-        float dt = newT - t;
-        t = newT;
-        
-        vec3 newPos = pos + t*rayDir;
-        
-        vec3 rayleighScattering, extinction;
-        float mieScattering;
-        CalcScatterValues(newPos, rayleighScattering, mieScattering, extinction);
-        
-        vec3 sampleTransmittance = exp(-dt*extinction);
-
-        vec3 sunTransmittance = Transmittance(newPos, sunDir);
-
-		vec3 lum2 = vec3(0);
-		vec3 fms = vec3(0);
-		MulScattValues(rayDir, sunDir, lum2, fms);
-		lum2 /= (1.0 - fms);
-		
-        vec3 psiMS = lum2;
-        
-        vec3 rayleighInScattering = rayleighScattering*(rayleighPhaseValue*sunTransmittance + psiMS);
-        vec3 mieInScattering = mieScattering*(miePhaseValue*sunTransmittance + psiMS);
-        vec3 inScattering = (rayleighInScattering + mieInScattering);
-
-        // Integrated scattering within path segment.
-        vec3 scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / extinction;
-
-        lum += scatteringIntegral*transmittance;
-        
-        transmittance *= sampleTransmittance;
-    }
-    return lum;
-}
-
 vec3 jodieReinhardTonemap(vec3 c){
     // From: https://www.shadertoy.com/view/tdSXzD
     float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -362,22 +137,39 @@ vec3 jodieReinhardTonemap(vec3 c){
 
 void main()
 {
-	float aspect = atmosphere.width / atmosphere.height;
+	float aspect = atmosphere.height / atmosphere.width; //atmosphere.width / atmosphere.height;
 
-	float cameraY = innerSphereRadius + 0.0002;
-	vec3 cameraPos = vec3(0.0,cameraY,0.0);
+	vec3 camDir = normalize(-atmosphere.viewDir);
+	vec3 camRight = normalize(cross(camDir, vec3(0.0, 1.0, 0.0)));
+    vec3 camUp = normalize(cross(camRight, camDir));
+
+	float camFOVWidth = PI/3.5;
+    float camWidthScale = 2.0*tan(camFOVWidth/2.0);
+    float camHeightScale = camWidthScale*aspect;
+
+	vec3 cameraPos = vec3(0.0, groundRadius, 0.0) + atmosphere.cameraPos / KM;
 	vec2 coords = 2.0 * inUV - vec2(1.0);
-	vec3 rayDir = normalize(vec3(coords.x * aspect, coords.y, 1.0));
+	vec3 rayDir = -normalize(camDir + camRight * coords.x * camWidthScale + camUp * coords.y * camHeightScale);
 
-	vec3 sunDir = normalize(atmosphere.suns[0].dir);
+	vec3 sunDir = normalize(-atmosphere.suns[0].dir);
 	vec3 sun = SunWithBloom(rayDir, sunDir);
 	sun = smoothstep(0.002, 1.0, sun);
-	sun *= Transmittance(cameraPos, sunDir);
 
-	vec3 lum = vec3(0);
-	//vec3 lum = RaymarchScattering(cameraPos, rayDir, sunDir, 35);
+	if(length(sun) > 0.0)
+	{
+		if(RaySphere(cameraPos, rayDir, groundCenter, groundRadius) >= 0.0)
+		{
+			sun *= 0;
+		}
+		else
+		{
+			sun *= LookupTransmittance(cameraPos, sunDir);
+		}
+	}
 
-	lum += sun;
+	vec3 lum = LookupSkyView(cameraPos, rayDir, sunDir);
+
+	//lum += sun;
 
 	lum *= 20.0;
 	lum /= (smoothstep(0.0, 0.2, clamp(sunDir.y, 0.0, 1.0))*2.0 + 0.15);

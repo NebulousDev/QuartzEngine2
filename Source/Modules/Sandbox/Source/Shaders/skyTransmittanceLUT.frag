@@ -58,28 +58,28 @@ float RaySphere(vec3 ro, vec3 rd, vec3 ttt, float rad)
 
 /* Atmosphere Property Functions */
 
-float RayleighDensity(float height)
+float CalcRayleighDensity(float height)
 {
-	return exp(-height / 8.0); //8km?
+	return exp(-height / 8.0);
 }
 
-float MieDensity(float height)
+float CalcMieDensity(float height)
 {
-	return exp(-height / 1.2); //1.2km?
+	return exp(-height / 1.2);
 }
 
-float OzoneDensity(float height)
+float CalcOzoneDensity(float height)
 {
 	return max(0.0, 1.0 - (abs(height - 25.0) / 15.0));
 }
 
 void CalcScatterValues(vec3 pos, out vec3 outRayeigh, out float outMie, out vec3 outExtinction)
 {
-	const float height = (length(pos) - groundRadius) * KM;
+	const float height = (length(pos) - groundRadius) * KM; //needs to be reworked
 
-	const float rayleighDensity = RayleighDensity(height);
-	const float mieDensity = MieDensity(height);
-	const float ozoneDensity = OzoneDensity(height);
+	const float rayleighDensity = CalcRayleighDensity(height);
+	const float mieDensity = CalcMieDensity(height);
+	const float ozoneDensity = CalcOzoneDensity(height);
 
 	const float rayleighAbsorb = atmosphere.rayleighAbsorbtion * rayleighDensity;
 	const float mieAbsorb = atmosphere.mieAbsorbtion * mieDensity;
@@ -125,8 +125,6 @@ vec3 Transmittance(vec3 pos, vec3 sunDir)
 }
 
 /* Main Functions */
-
-const vec2 tLUTRes = vec2(256.0, 64.0);
 
 float safeacos(const float x)
 {

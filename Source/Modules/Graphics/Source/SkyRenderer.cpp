@@ -66,7 +66,7 @@ namespace Quartz
 		VkImageMemoryBarrier vkImageMemoryBarrier = {};
 		vkImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		vkImageMemoryBarrier.srcAccessMask						= 0;
-		vkImageMemoryBarrier.dstAccessMask						= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		vkImageMemoryBarrier.dstAccessMask						= VK_ACCESS_SHADER_READ_BIT;
 		vkImageMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
 		vkImageMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		vkImageMemoryBarrier.image								= pImage->vkImage;
@@ -78,7 +78,7 @@ namespace Quartz
 
 		VulkanPipelineBarrierInfo barrierInfo = {};
 		barrierInfo.srcStage					= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		barrierInfo.dstStage					= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		barrierInfo.dstStage					= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		barrierInfo.dependencyFlags				= 0;
 		barrierInfo.memoryBarrierCount			= 0;
 		barrierInfo.pMemoryBarriers				= nullptr;
@@ -100,7 +100,7 @@ namespace Quartz
 			barrierInfo.pImageMemoryBarriers);
 	}
 
-#define LUT_FORMAT VK_FORMAT_R8G8B8A8_UNORM
+#define LUT_FORMAT VK_FORMAT_R16G16B16A16_SFLOAT
 
 	void VulkanSkyRenderer::Initialize(VulkanGraphics& graphics, const AtmosphereValues& atmosphere, const SkyRenderSettings& settings, 
 		VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache)
@@ -223,6 +223,29 @@ namespace Quartz
 			mpSkyViewLUTView[i] = resources.CreateImageView(&device, viewViewInfo);
 		}
 
+		/* Create Samplers */
+
+		VkSamplerCreateInfo lutSamplerInfo{};
+		lutSamplerInfo.sType					= VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		lutSamplerInfo.magFilter				= VK_FILTER_LINEAR;
+		lutSamplerInfo.minFilter				= VK_FILTER_LINEAR;
+		lutSamplerInfo.addressModeU				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		lutSamplerInfo.addressModeV				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		lutSamplerInfo.addressModeW				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		lutSamplerInfo.anisotropyEnable			= VK_FALSE;
+		lutSamplerInfo.maxAnisotropy			= 1;
+		lutSamplerInfo.borderColor				= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		lutSamplerInfo.unnormalizedCoordinates	= VK_FALSE;
+		lutSamplerInfo.compareEnable			= VK_FALSE;
+		lutSamplerInfo.compareOp				= VK_COMPARE_OP_ALWAYS;
+		lutSamplerInfo.mipmapMode				= VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		lutSamplerInfo.mipLodBias				= 0.0f;
+		lutSamplerInfo.minLod					= 0.0f;
+		lutSamplerInfo.maxLod					= 0.0f;
+
+		// @TODO
+		vkCreateSampler(device.vkDevice, &lutSamplerInfo, VK_NULL_HANDLE, &mVkLUTSampler);
+
 		/* Create Semaphores */
 
 		for (uSize i = 0; i < 3; i++)
@@ -236,11 +259,6 @@ namespace Quartz
 			semaphoreInfo.sType				= VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 			semaphoreInfo.flags				= 0;
 			semaphoreInfo.pNext				= &vkSemaphoreType;
-
-			VkFenceCreateInfo fenceInfo = {};
-			fenceInfo.sType					= VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			fenceInfo.flags					= VK_FENCE_CREATE_SIGNALED_BIT; // Start signaled
-			fenceInfo.pNext					= nullptr;
 
 			vkCreateSemaphore(device.vkDevice, &semaphoreInfo, nullptr, &mSkyTransmittanceLUTcomplete[i]);
 			vkCreateSemaphore(device.vkDevice, &semaphoreInfo, nullptr, &mSkyScatterLUTcomplete[i]);
@@ -290,10 +308,15 @@ namespace Quartz
 			{ pFullscreenVertexShader, pSkyRenderFragmentShader }, attachments, {}, {});
 	}
 
+	Quatf sunRotation;
+
 	void VulkanSkyRenderer::Update(CameraComponent& camera, TransformComponent& cameraTransform, uSize frameIdx)
 	{
+		mAtmosphere.suns[0].sunDir = sunRotation * mAtmosphere.suns[0].sunDir;
+		sunRotation = Quatf().SetAxisAngle(Vec3f(1.0f, 0.0f, 0.0f), ToRadians(-1.0f * 0.005f));
+		sunRotation.Normalize();
+
 		CopyAtmospherePerFrameData(mAtmosphere, cameraTransform.position, cameraTransform.GetForward(), camera.width, camera.height);
-		RenderLUTs(frameIdx);
 	}
 
 	void VulkanSkyRenderer::RecordTransfers(VulkanCommandRecorder& transferRecorder, uSize frameIdx)
@@ -301,19 +324,33 @@ namespace Quartz
 		transferRecorder.CopyBuffer(mpSkyPerFrameStagingBuffer, mpSkyPerFrameBuffer, mpSkyPerFrameBuffer->sizeBytes, 0, 0);
 	}
 
-	void VulkanSkyRenderer::RenderLUTs(uSize frameIdx)
+	void VulkanSkyRenderer::RenderLUTs(VulkanCommandRecorder& recorder, uSize frameIdx)
 	{
-		VulkanDevice& device = *mpGraphics->pPrimaryDevice;
+		// @TODO: Turn off blending in pipeline (and culling)
 
-		VulkanCommandRecorder& immediateRecorder = mImmediateRecorders[frameIdx];
-		VulkanCommandBuffer* pImmediateCommandBuffer = mImmediateCommandBuffers[frameIdx];
-		VkFence& vkImmediateFence = mImmediateFences[frameIdx];
+		/* Setup Structs */
 
-		vkWaitForFences(device.vkDevice, 1, &vkImmediateFence, true, UINT64_MAX);
-		vkResetFences(device.vkDevice, 1, &vkImmediateFence);
+		VkViewport vkViewport = {};
+		vkViewport.x		= 0;
+		vkViewport.y		= 0;
+		vkViewport.width	= 0;
+		vkViewport.height	= 0;
+		vkViewport.minDepth = 0.0f;
+		vkViewport.maxDepth = 1.0f;
 
-		immediateRecorder.Reset();
-		immediateRecorder.BeginRecording();
+		VkRect2D vkScissor = {};
+		vkScissor.offset.x		= 0;
+		vkScissor.offset.y		= 0;
+		vkScissor.extent.width	= 0;
+		vkScissor.extent.height = 0;
+
+		VulkanUniformBufferBind perFrameBinding = {};
+		perFrameBinding.binding		= 0;
+		perFrameBinding.pBuffer		= mpSkyPerFrameBuffer;
+		perFrameBinding.offset		= 0;
+		perFrameBinding.range		= mpSkyPerFrameBuffer->sizeBytes;
+
+		VulkanUniformBufferBind pBufferBinds[] = { perFrameBinding };
 
 		VulkanRenderingAttachmentInfo transmittanceLUTAttachmentInfo = {};
 		transmittanceLUTAttachmentInfo.pImageView		= mpSkyTransmittanceLUTView[frameIdx];
@@ -322,60 +359,124 @@ namespace Quartz
 		transmittanceLUTAttachmentInfo.storeOp			= VK_ATTACHMENT_STORE_OP_STORE;
 		transmittanceLUTAttachmentInfo.clearValue		= { 0.0f, 0.0f, 0.0f };
 
-		VulkanRenderingAttachmentInfo pColorAttachmentInfos[] = { transmittanceLUTAttachmentInfo };
+		VulkanRenderingAttachmentInfo scatterLUTAttachmentInfo = {};
+		scatterLUTAttachmentInfo.pImageView				= mpSkyScatterLUTView[frameIdx];
+		scatterLUTAttachmentInfo.imageLayout			= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		scatterLUTAttachmentInfo.loadOp					= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		scatterLUTAttachmentInfo.storeOp				= VK_ATTACHMENT_STORE_OP_STORE;
+		scatterLUTAttachmentInfo.clearValue				= { 0.0f, 0.0f, 0.0f };
 
-		VulkanRenderingBeginInfo renderingBeginInfo = {};
-		renderingBeginInfo.pColorAttachments	= pColorAttachmentInfos;
-		renderingBeginInfo.colorAttachmentCount	= 1;
-		renderingBeginInfo.pDepthAttachment		= nullptr;
-		renderingBeginInfo.pStencilAttachment	= nullptr;
-		renderingBeginInfo.renderArea			= { { 0, 0 }, { mSettings.transmittanceLUTSize.x, mSettings.transmittanceLUTSize.y } };
+		VulkanRenderingAttachmentInfo viewLUTAttachmentInfo = {};
+		viewLUTAttachmentInfo.pImageView				= mpSkyViewLUTView[frameIdx];
+		viewLUTAttachmentInfo.imageLayout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		viewLUTAttachmentInfo.loadOp					= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		viewLUTAttachmentInfo.storeOp					= VK_ATTACHMENT_STORE_OP_STORE;
+		viewLUTAttachmentInfo.clearValue				= { 0.0f, 0.0f, 0.0f };
 
-		immediateRecorder.BeginRendering(renderingBeginInfo);
+		VulkanUniformImageBind transmittanceLUTBinding = {};
+		transmittanceLUTBinding.binding		= 1;
+		transmittanceLUTBinding.vkSampler	= mVkLUTSampler;
+		transmittanceLUTBinding.pImageView	= mpSkyTransmittanceLUTView[frameIdx];
+		transmittanceLUTBinding.vkLayout	= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		VkViewport vkViewport = {};
-		vkViewport.x		= 0;
-		vkViewport.y		= mSettings.transmittanceLUTSize.y;
-		vkViewport.width	= mSettings.transmittanceLUTSize.x;
-		vkViewport.height	= -(float)mSettings.transmittanceLUTSize.y;
-		vkViewport.minDepth = 0.0f;
-		vkViewport.maxDepth = 1.0f;
+		VulkanUniformImageBind scatterLUTBinding = {};
+		scatterLUTBinding.binding			= 1;
+		scatterLUTBinding.vkSampler			= mVkLUTSampler;
+		scatterLUTBinding.pImageView		= mpSkyScatterLUTView[frameIdx];
+		scatterLUTBinding.vkLayout			= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		VkRect2D vkScissor = {};
-		vkScissor.offset.x		= 0;
-		vkScissor.offset.y		= 0;
-		vkScissor.extent.width	= mSettings.transmittanceLUTSize.x;
-		vkScissor.extent.height = mSettings.transmittanceLUTSize.y;
+		VulkanUniformImageBind viewLUTBinding = {};
+		viewLUTBinding.binding				= 1;
+		viewLUTBinding.vkSampler			= mVkLUTSampler;
+		viewLUTBinding.pImageView			= mpSkyViewLUTView[frameIdx];
+		viewLUTBinding.vkLayout				= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		immediateRecorder.SetViewport(vkViewport, vkScissor);
+		VulkanRenderingBeginInfo lutBeginInfo = {};
+		lutBeginInfo.pColorAttachments		= nullptr;
+		lutBeginInfo.colorAttachmentCount	= 1;
+		lutBeginInfo.pDepthAttachment		= nullptr;
+		lutBeginInfo.pStencilAttachment		= nullptr;
+		lutBeginInfo.renderArea				= {};
 
-		immediateRecorder.SetGraphicsPipeline(mpSkyTransmittanceLUTPipeline);
+		/* Render Transmittance LUT */
 
-		VulkanUniformBufferBind binding = {};
-		binding.binding		= 0;
-		binding.pBuffer		= mpSkyPerFrameBuffer;
-		binding.offset		= 0;
-		binding.range		= mpSkyPerFrameBuffer->sizeBytes;
+		VulkanRenderingAttachmentInfo pTransmittanceAttachmentInfos[] = { transmittanceLUTAttachmentInfo };
 
-		VulkanUniformBufferBind pBufferBinds[] = { binding };
+		lutBeginInfo.pColorAttachments	= pTransmittanceAttachmentInfos;
+		lutBeginInfo.renderArea			= { { 0, 0 }, { mSettings.transmittanceLUTSize.x, mSettings.transmittanceLUTSize.y } };
 
-		immediateRecorder.BindUniforms(mpSkyRenderPipeline, 0, pBufferBinds, 1, nullptr, 0);
+		vkViewport.x					= 0;
+		vkViewport.y					= mSettings.transmittanceLUTSize.y;
+		vkViewport.width				= mSettings.transmittanceLUTSize.x;
+		vkViewport.height				= -(float)mSettings.transmittanceLUTSize.y;
 
-		immediateRecorder.Draw(1, 3, 0);
+		vkScissor.extent.width			= mSettings.transmittanceLUTSize.x;
+		vkScissor.extent.height			= mSettings.transmittanceLUTSize.y;
 
-		immediateRecorder.EndRendering();
+		recorder.BeginRendering(lutBeginInfo);
+		recorder.SetViewport(vkViewport, vkScissor);
+		recorder.SetGraphicsPipeline(mpSkyTransmittanceLUTPipeline);
+		recorder.BindUniforms(mpSkyTransmittanceLUTPipeline, 0, pBufferBinds, 1, nullptr, 0);
+		recorder.Draw(1, 3, 0);
+		recorder.EndRendering();
 
-		immediateRecorder.EndRecording();
+		/* Render Scatter LUT */
 
-		/* Submit Command Buffers */
+		VulkanRenderingAttachmentInfo pScatterAttachmentInfos[] = { scatterLUTAttachmentInfo };
+		lutBeginInfo.pColorAttachments	= pScatterAttachmentInfos;
+		lutBeginInfo.renderArea			= { { 0, 0 }, { mSettings.scatterLUTSize.x, mSettings.scatterLUTSize.y } };
+		
+		vkViewport.x					= 0;
+		vkViewport.y					= mSettings.scatterLUTSize.y;
+		vkViewport.width				= mSettings.scatterLUTSize.x;
+		vkViewport.height				= -(float)mSettings.scatterLUTSize.y;
+		
+		vkScissor.extent.width			= mSettings.scatterLUTSize.x;
+		vkScissor.extent.height			= mSettings.scatterLUTSize.y;
+		 
+		recorder.BeginRendering(lutBeginInfo);
+		recorder.SetViewport(vkViewport, vkScissor);
+		recorder.SetGraphicsPipeline(mpSkyScatterLUTPipeline);
+		
+		VulkanUniformImageBind pScatterLUTImageBinds[] = { transmittanceLUTBinding };
+		
+		recorder.BindUniforms(mpSkyScatterLUTPipeline, 0, pBufferBinds, 1, pScatterLUTImageBinds, 1);
+		recorder.Draw(1, 3, 0);
+		recorder.EndRendering();
 
-		VulkanSubmission renderSubmition = {};
-		renderSubmition.commandBuffers = { pImmediateCommandBuffer };
-		renderSubmition.waitSemaphores = {};
-		renderSubmition.waitStages = {};
-		renderSubmition.signalSemaphores = { mSkyTransmittanceLUTcomplete[frameIdx] };
+		/* Render View LUT */
 
-		mpGraphics->Submit(renderSubmition, device.queues.graphics, vkImmediateFence);
+		VulkanRenderingAttachmentInfo pViewAttachmentInfos[] = { viewLUTAttachmentInfo };
+		lutBeginInfo.pColorAttachments	= pViewAttachmentInfos;
+		lutBeginInfo.renderArea			= { { 0, 0 }, { mSettings.viewLUTSize.x, mSettings.viewLUTSize.y } };
+
+		vkViewport.x					= 0;
+		vkViewport.y					= mSettings.viewLUTSize.y;
+		vkViewport.width				= mSettings.viewLUTSize.x;
+		vkViewport.height				= -(float)mSettings.viewLUTSize.y;
+
+		vkScissor.extent.width			= mSettings.viewLUTSize.x;
+		vkScissor.extent.height			= mSettings.viewLUTSize.y;
+
+		recorder.BeginRendering(lutBeginInfo);
+		recorder.SetViewport(vkViewport, vkScissor);
+		recorder.SetGraphicsPipeline(mpSkyViewLUTPipeline);
+
+		scatterLUTBinding.binding = 2;
+		VulkanUniformImageBind pViewLUTImageBinds[] = { transmittanceLUTBinding, scatterLUTBinding };
+
+		recorder.BindUniforms(mpSkyViewLUTPipeline, 0, pBufferBinds, 1, pViewLUTImageBinds, 2);
+		recorder.Draw(1, 3, 0);
+		recorder.EndRendering();
+
+		PrepareImageForSampling(recorder, mpSkyTransmittanceLUT[frameIdx]);
+		PrepareImageForSampling(recorder, mpSkyScatterLUT[frameIdx]);
+		PrepareImageForSampling(recorder, mpSkyViewLUT[frameIdx]);
+	}
+
+	void VulkanSkyRenderer::PreRender(VulkanCommandRecorder& renderRecorder, uSize frameIdx)
+	{
+		RenderLUTs(renderRecorder, frameIdx);
 	}
 
 	void VulkanSkyRenderer::RecordDraws(VulkanCommandRecorder& renderRecorder, uSize frameIdx)
@@ -388,11 +489,29 @@ namespace Quartz
 		binding.offset	= 0;
 		binding.range	= mpSkyPerFrameBuffer->sizeBytes;
 
+		VulkanUniformImageBind transmittanceLUTBinding = {};
+		transmittanceLUTBinding.binding		= 1;
+		transmittanceLUTBinding.vkSampler	= mVkLUTSampler;
+		transmittanceLUTBinding.pImageView	= mpSkyTransmittanceLUTView[frameIdx];
+		transmittanceLUTBinding.vkLayout	= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VulkanUniformImageBind viewLUTBinding = {};
+		viewLUTBinding.binding				= 2;
+		viewLUTBinding.vkSampler			= mVkLUTSampler;
+		viewLUTBinding.pImageView			= mpSkyViewLUTView[frameIdx];
+		viewLUTBinding.vkLayout				= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
 		VulkanUniformBufferBind pBufferBinds[] = { binding };
+		VulkanUniformImageBind pImageBinds[] = { transmittanceLUTBinding, viewLUTBinding };
 			
-		renderRecorder.BindUniforms(mpSkyRenderPipeline, 0, pBufferBinds, 1, nullptr, 0);
+		renderRecorder.BindUniforms(mpSkyRenderPipeline, 0, pBufferBinds, 1, pImageBinds, 2);
 
 		renderRecorder.Draw(1, 3, 0);
+	}
+
+	VkSemaphore VulkanSkyRenderer::GetLUTsCompleteSemaphore(uSize frameIdx)
+	{
+		return mSkyTransmittanceLUTcomplete[frameIdx];
 	}
 }
 

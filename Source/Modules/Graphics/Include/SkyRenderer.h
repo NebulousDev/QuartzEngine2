@@ -93,6 +93,8 @@ namespace Quartz
 
 		VulkanGraphicsPipeline* mpSkyRenderPipeline;
 
+		VkSampler				mVkLUTSampler;
+
 		VulkanCommandPool*		mpImmediateCommandPool;
 		VulkanCommandBuffer*	mImmediateCommandBuffers[3];
 		VulkanCommandRecorder	mImmediateRecorders[3];
@@ -111,7 +113,10 @@ namespace Quartz
 		void Update(CameraComponent& camera, TransformComponent& cameraTransform, uSize frameIdx);
 
 		void RecordTransfers(VulkanCommandRecorder& transferRecorder, uSize frameIdx);
-		void RenderLUTs(uSize frameIdx);
+		void RenderLUTs(VulkanCommandRecorder& recorder, uSize frameIdx);
+		void PreRender(VulkanCommandRecorder& renderRecorder, uSize frameIdx);
 		void RecordDraws(VulkanCommandRecorder& renderRecorder, uSize frameIdx);
+
+		VkSemaphore GetLUTsCompleteSemaphore(uSize frameIdx);
 	};
 }

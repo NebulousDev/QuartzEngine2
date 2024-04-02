@@ -149,7 +149,7 @@ namespace Quartz
 		mTerrainRenderer.Initialize(*pGraphics, mShaderCache, mPipelineCache);
 
 		AtmosphereSun sun0 = {};
-		sun0.sunDir = { 0.0f, 1.1f, 1.0f };
+		sun0.sunDir = { 0.0f, 0.01f, 1.0f };
 		sun0.sunIntensity = 1.0f;
 
 		AtmosphereSun sun1 = {};
@@ -168,7 +168,7 @@ namespace Quartz
 
 		SkyRenderSettings settings = {};
 		settings.transmittanceLUTSize = { 256, 64 };
-		settings.scatterLUTSize = { 200, 200 };
+		settings.scatterLUTSize = { 32, 32 };
 		settings.viewLUTSize = { 200, 200 };
 
 		mSkyRenderer.Initialize(*pGraphics, atmosphere, settings, mShaderCache, mPipelineCache);
@@ -300,15 +300,17 @@ namespace Quartz
 
 		VulkanSubmission renderSubmition	= {};
 		renderSubmition.commandBuffers		= { mCommandBuffers[frameIdx] };
-		renderSubmition.waitSemaphores		= { mSwapTimer.GetCurrentAcquiredSemaphore() };
+		renderSubmition.waitSemaphores		= { mSwapTimer.GetCurrentAcquiredSemaphore()}; //, mSkyRenderer.GetLUTsCompleteSemaphore(frameIdx) };
 		renderSubmition.waitStages			= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		renderSubmition.signalSemaphores	= { mSwapTimer.GetCurrentCompleteSemaphore() };
 
 		recorder.Reset();
-		
+
 		recorder.BeginRecording();
 
 		RecordTransfers(recorder, frameIdx);
+
+		mSkyRenderer.PreRender(recorder, frameIdx);
 
 		VkViewport vkViewport = {};
 		vkViewport.x		= 0;
