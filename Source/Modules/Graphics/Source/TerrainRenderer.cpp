@@ -538,7 +538,7 @@ namespace Quartz
 
 	void VulkanTerrainRenderer::Update(const Vec2f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform)
 	{
-		constexpr const float globalTerrainScale = 5.0f;
+		constexpr const float globalTerrainScale = 50.0f;
 
 		UpdateGrid(gridPos / globalTerrainScale);
 

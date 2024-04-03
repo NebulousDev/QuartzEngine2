@@ -220,7 +220,8 @@ void main()
 		adjV = coord*coord;
 	}
 
-	vec3 cameraPos = vec3(0.0, groundRadius, 0.0) + atmosphere.cameraPos / KM;
+	float camHeight = groundRadius + atmosphere.cameraPos.y / (10.0 * KM);
+	vec3 cameraPos = vec3(0.0, camHeight, 0.0);
 
     float height = length(cameraPos);
     vec3 up = cameraPos / height;

@@ -73,6 +73,9 @@ namespace Quartz
 		bool moveLeft		= false;
 		bool moveRight		= false;
 
+		bool moveSpeed		= false;
+		bool superMoveSpeed = false;
+
 		bool captured		= false;
 
 		ModelData triData
@@ -139,14 +142,14 @@ namespace Quartz
 
 		TransformComponent transformCube
 		(
-			{ 0.0f, 2.0f, 0.0f },
+			{ 0.0f, 52.0f, 0.0f },
 			Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
 			{ 2.0f, 1.0f, 1.0f }
 		);
 
 		TransformComponent transformCube2
 		(
-			{ 0.0f, 10.0f, 0.0f },
+			{ 0.0f, 60.0f, 0.0f },
 			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
 			{ 2.0f, 3.0f, 2.0f }
 		);
@@ -160,35 +163,35 @@ namespace Quartz
 
 		TransformComponent transformPlane
 		(
-			{ 0.0f, 0.0f, 0.0f },
+			{ 0.0f, 50.0f, 0.0f },
 			Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
 			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneL
 		(
-			{ -10.0f, 0.0f, 0.0f },
+			{ -10.0f, 50.0f, 0.0f },
 			Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(90.0f)),
 			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneR
 		(
-			{ 10.0f, 0.0f, 0.0f },
+			{ 10.0f, 50.0f, 0.0f },
 			Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(-90.0f)),// * Quatf({ 0.0f, 1.0f, 0.0f }, ToRadians(180.0f)),
 			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneF
 		(
-			{ 0.0f, 0.0f, -10.0f },
+			{ 0.0f, 50.0f, -10.0f },
 			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(-90.0f)),// * Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(-90.0f)),
 			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneB
 		(
-			{ 0.0f, 0.0f, 10.0f },
+			{ 0.0f, 50.0f, 10.0f },
 			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(90.0f)),// * Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(90.0f)),
 			{ 20.0f, 1.0f, 20.0f }
 		);
@@ -271,20 +274,20 @@ namespace Quartz
 
 			//gCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
 			gCube2 = world.CreateEntity(transformCube2, renderable2, material1, cubePhysics2);
-			//Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
+			Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
 			//Entity planeL = world.CreateEntity(transformPlaneL, renderable4, material1, planePhysics2);
 			//Entity planeR = world.CreateEntity(transformPlaneR, renderable4, material1, planePhysics2);
 			//Entity planeF = world.CreateEntity(transformPlaneF, renderable4, material1, planePhysics2);
 			//Entity planeB = world.CreateEntity(transformPlaneB, renderable4, material1, planePhysics2);
 
-			Entity plane = world.CreateEntity(transformPlane, material1, planePhysics);
+			//Entity plane = world.CreateEntity(transformPlane, material1, planePhysics);
 			Entity planeL = world.CreateEntity(transformPlaneL, material1, planePhysics2);
 			Entity planeR = world.CreateEntity(transformPlaneR, material1, planePhysics2);
 			Entity planeF = world.CreateEntity(transformPlaneF, material1, planePhysics2);
 			Entity planeB = world.CreateEntity(transformPlaneB,  material1, planePhysics2);
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ 0.0f, 2.0f, 4.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
+			TransformComponent cameraTransform({ 0.0f, 52.0f, 4.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
 			gCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
 
 			uSize maxInFlightCount = 3;
@@ -312,13 +315,7 @@ namespace Quartz
 					TransformComponent& cameraTransform = Engine::GetWorld().Get<TransformComponent>(gCamera);
 					RigidBodyComponent& cameraRigidBody = Engine::GetWorld().Get<RigidBodyComponent>(gCamera);
 
-					//TransformComponent& cubeTransform = Engine::GetWorld().Get<TransformComponent>(gCube);
-					//RigidBodyComponent& cubeRigidBody = Engine::GetWorld().Get<RigidBodyComponent>(gCube);
-
-					//TransformComponent& cube2Transform = Engine::GetWorld().Get<TransformComponent>(gCube2);
-					//RigidBodyComponent& cube2RigidBody = Engine::GetWorld().Get<RigidBodyComponent>(gCube2);
-
-					float speed = 2.0f;
+					float speed = superMoveSpeed ? 200.0f : (moveSpeed ? 20.0f : 2.0f);
 
 					if (moveForward)
 						cameraTransform.position -= cameraTransform.GetForward() * speed * delta;
@@ -331,6 +328,8 @@ namespace Quartz
 
 					if (moveRight)
 						cameraTransform.position += cameraTransform.GetRight() * speed * delta;
+
+					cameraTransform.rotation.Normalize();
 
 					/// PHYSICS
 
@@ -358,8 +357,11 @@ namespace Quartz
 			input.MapKeyboardButton("MoveRight",	INPUT_KEYBOARD_ANY, 32 /* D */, INPUT_ACTION_ANY);
 			input.MapKeyboardButton("MoveRight",	INPUT_KEYBOARD_ANY, 77 /* > */, INPUT_ACTION_ANY);
 
+			input.MapKeyboardButton("MoveSpeed",		INPUT_KEYBOARD_ANY, 42 /* SHIFT */, INPUT_ACTION_ANY);
+			input.MapKeyboardButton("SuperMoveSpeed",	INPUT_KEYBOARD_ANY, 34 /* G */,		INPUT_ACTION_ANY);
+
 			input.MapKeyboardButton("Interact",		INPUT_KEYBOARD_ANY, 18 /* E */, INPUT_ACTION_RELEASED);
-			input.MapKeyboardButton("Push",			INPUT_KEYBOARD_ANY, 33 /* > */, INPUT_ACTION_RELEASED);
+			input.MapKeyboardButton("Push",			INPUT_KEYBOARD_ANY, 33 /* F */, INPUT_ACTION_RELEASED);
 
 			input.RegisterOnAxisInput("MouseLook",
 				[](Vec2f direction, InputActions actions)
@@ -394,6 +396,14 @@ namespace Quartz
 
 			input.RegisterOnButtonInput("MoveForward",
 				[](float value, InputActions actions) { moveForward = actions & INPUT_ACTION_DOWN; }
+			);
+
+			input.RegisterOnButtonInput("MoveSpeed",
+				[](float value, InputActions actions) { moveSpeed = actions & INPUT_ACTION_DOWN; }
+			);
+
+			input.RegisterOnButtonInput("SuperMoveSpeed",
+				[](float value, InputActions actions) { superMoveSpeed = actions & INPUT_ACTION_DOWN; }
 			);
 
 			input.RegisterOnButtonInput("MoveBackward",

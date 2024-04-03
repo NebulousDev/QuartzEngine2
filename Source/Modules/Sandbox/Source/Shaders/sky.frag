@@ -146,7 +146,8 @@ void main()
     float camWidthScale = 2.0*tan(camFOVWidth/2.0);
     float camHeightScale = camWidthScale*aspect;
 
-	vec3 cameraPos = vec3(0.0, groundRadius, 0.0) + atmosphere.cameraPos / KM;
+	float camHeight = groundRadius + atmosphere.cameraPos.y / (10.0 * KM);
+	vec3 cameraPos = vec3(0.0, camHeight, 0.0);
 	vec2 coords = 2.0 * inUV - vec2(1.0);
 	vec3 rayDir = -normalize(camDir + camRight * coords.x * camWidthScale + camUp * coords.y * camHeightScale);
 
@@ -169,6 +170,8 @@ void main()
 	//
 	
 	vec3 lum = LookupSkyView(cameraPos, rayDir, sunDir);
+
+	//lum *= LookupTransmittance(cameraPos, sunDir);
 
 	//lum += sun;
 

@@ -317,7 +317,7 @@ namespace Quartz
 	void VulkanSkyRenderer::Update(CameraComponent& camera, TransformComponent& cameraTransform, uSize frameIdx)
 	{
 		mAtmosphere.suns[0].sunDir = sunRotation * mAtmosphere.suns[0].sunDir;
-		sunRotation = Quatf().SetAxisAngle(Vec3f(1.0f, 0.0f, 0.0f), ToRadians(-1.0f * 0.005f));
+		sunRotation = Quatf().SetAxisAngle(Vec3f(1.0f, 0.0f, 0.0f), ToRadians(-1.0f * 0.001f));
 		sunRotation.Normalize();
 
 		CopyAtmospherePerFrameData(mAtmosphere, cameraTransform.position, cameraTransform.GetForward(), camera.width, camera.height);

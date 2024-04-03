@@ -95,7 +95,7 @@ namespace Quartz
 		mTerrainRenderer.Initialize(graphics, mShaderCache, mPipelineCache, maxInFlightCount);
 
 		AtmosphereSun sun0 = {};
-		sun0.sunDir = { 0.0f, 0.5f, 1.0f };
+		sun0.sunDir = { 0.0f, -0.2f, -1.0f };
 		sun0.sunIntensity = 1.0f;
 
 		AtmosphereSun sun1 = {};
@@ -139,16 +139,16 @@ namespace Quartz
 
 		mSceneRenderer.Update(world, mBufferCache, mShaderCache, mPipelineCache, cameraComponent, cameraTransformComponent, frameIdx);
 
-		Vec2f centerPos = { -cameraTransformComponent.position.x, -cameraTransformComponent.position.z };
-		//mTerrainRenderer.Update(centerPos, *mpCameraComponent, *mpCameraTransformComponent);
+		Vec2f centerPos = { cameraTransformComponent.position.x, cameraTransformComponent.position.z };
+		mTerrainRenderer.Update(centerPos, cameraComponent, cameraTransformComponent);
 		mSkyRenderer.Update(cameraComponent, cameraTransformComponent, frameIdx);
 	}
 
 	void VulkanRenderer::RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx)
 	{
-		//mTerrainRenderer.RecordTransfers(recorder);
-		mSceneRenderer.RecordTransfers(recorder, mBufferCache, frameIdx);
 		mSkyRenderer.RecordTransfers(recorder, frameIdx);
+		mTerrainRenderer.RecordTransfers(recorder);
+		mSceneRenderer.RecordTransfers(recorder, mBufferCache, frameIdx);
 	}
 
 	void VulkanRenderer::RecordPreDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
@@ -158,9 +158,9 @@ namespace Quartz
 
 	void VulkanRenderer::RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
 	{
-		//mTerrainRenderer.RecordDraws(recorder);
+		mSkyRenderer.RecordDraws(recorder, frameIdx);
+		mTerrainRenderer.RecordDraws(recorder);
 		mSceneRenderer.RecordDraws(recorder, frameIdx);
-		//mSkyRenderer.RecordDraws(recorder, frameIdx);
 	}
 
 	void VulkanRenderer::RecordPostDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
