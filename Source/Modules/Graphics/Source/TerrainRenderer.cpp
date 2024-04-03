@@ -527,10 +527,12 @@ namespace Quartz
 		Array<VkVertexInputAttributeDescription> vertexAttributes;
 		vertexAttributes.PushBack(positionAttrib);
 
-		mpTerrainRenderPipeline = pipelineCache.FindOrCreateGraphicsPipeline(
+		VulkanGraphicsPipelineInfo pipelineInfo = pipelineCache.MakeDefaultGraphicsPipelineInfo(
 			{ pTerrainVertexShader, pTerrainFragmentShader },
 			attachments, vertexAttributes, vertexBindings
 		);
+
+		mpTerrainRenderPipeline = pipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
 	}
 
 	void VulkanTerrainRenderer::Update(const Vec2f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform)

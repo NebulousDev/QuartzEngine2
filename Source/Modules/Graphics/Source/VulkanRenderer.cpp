@@ -99,10 +99,13 @@ namespace Quartz
 		vertexAttributes.PushBack(positionAttrib);
 		vertexAttributes.PushBack(normalAttrib);
 
-		mpDefaultPipeline = mPipelineCache.FindOrCreateGraphicsPipeline(
+		VulkanGraphicsPipelineInfo pipelineInfo = 
+			mPipelineCache.MakeDefaultGraphicsPipelineInfo(
 			{ pVertexShader, pFragmentShader },
 			attachments, vertexAttributes, vertexBindings
 		);
+
+		mpDefaultPipeline = mPipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
 
 		if (!mpDefaultPipeline)
 		{
@@ -149,7 +152,7 @@ namespace Quartz
 		mTerrainRenderer.Initialize(*pGraphics, mShaderCache, mPipelineCache);
 
 		AtmosphereSun sun0 = {};
-		sun0.sunDir = { 0.0f, 0.01f, 1.0f };
+		sun0.sunDir = { 0.0f, 0.5f, 1.0f };
 		sun0.sunIntensity = 1.0f;
 
 		AtmosphereSun sun1 = {};
@@ -230,14 +233,14 @@ namespace Quartz
 				VulkanShader* pVertexShader		= mShaderCache.FindOrCreateShader(materialComponent.vertexURI, VK_SHADER_STAGE_VERTEX_BIT);
 				VulkanShader* pFragmentShader	= mShaderCache.FindOrCreateShader(materialComponent.fragmentURI, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-				VulkanGraphicsPipeline* pPipeline = mPipelineCache.FindOrCreateGraphicsPipeline(
+				VulkanGraphicsPipelineInfo pipelineInfo = mPipelineCache.MakeDefaultGraphicsPipelineInfo(
 					{ pVertexShader, pFragmentShader },
 					mpDefaultPipeline->pipelineInfo.attachments,
 					mpDefaultPipeline->pipelineInfo.vertexAttributes,
 					mpDefaultPipeline->pipelineInfo.vertexBindings
 				);
 
-				renderable.pPipeline = pPipeline;
+				renderable.pPipeline = mPipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
 			}
 			else
 			{

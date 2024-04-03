@@ -2,7 +2,7 @@
 
 namespace Quartz
 {
-    VulkanGraphicsPipelineInfo VulkanPipelineCache::MakeGraphicsPipelineInfo(
+    VulkanGraphicsPipelineInfo VulkanPipelineCache::MakeDefaultGraphicsPipelineInfo(
 		const Array<VulkanShader*>& shaders,
 		const Array<VulkanAttachment>& attachments,
 		const Array<VkVertexInputAttributeDescription>& vertexAttributes,
@@ -17,8 +17,8 @@ namespace Quartz
 		pipelineInfo.attachments			= attachments;
 		pipelineInfo.vkTopology				= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		pipelineInfo.vkPolygonMode			= VK_POLYGON_MODE_FILL;
-		pipelineInfo.vkCullMode				= VK_CULL_MODE_NONE;
-		pipelineInfo.vkFrontFace			= VK_FRONT_FACE_CLOCKWISE;
+		pipelineInfo.vkCullMode				= VK_CULL_MODE_BACK_BIT;
+		pipelineInfo.vkFrontFace			= VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		pipelineInfo.lineWidth				= 1.0f;
 		pipelineInfo.multisamples			= VK_SAMPLE_COUNT_1_BIT;
 		pipelineInfo.depth.enableTesting	= true;
@@ -63,12 +63,8 @@ namespace Quartz
     }
 
     VulkanGraphicsPipeline* VulkanPipelineCache::FindOrCreateGraphicsPipeline(
-		const Array<VulkanShader*>& shaders,
-		const Array<VulkanAttachment>& attachments,
-		const Array<VkVertexInputAttributeDescription>& vertexAttributes,
-		const Array<VkVertexInputBindingDescription>& vertexBindings)
+		const VulkanGraphicsPipelineInfo& pipelineInfo)
     {   
-		VulkanGraphicsPipelineInfo		pipelineInfo = MakeGraphicsPipelineInfo(shaders, attachments, vertexAttributes, vertexBindings);
 		VulkanGraphicsPipelineInfo*		pFoundPipelineInfo = nullptr;
 		uSize							pipelineIndex = -1;
 
@@ -76,44 +72,44 @@ namespace Quartz
 		{
 			pipelineIndex++;
 
-			if (shaders.Size() != info.shaders.Size())
+			if (pipelineInfo.shaders.Size() != info.shaders.Size())
 				continue;
 
-			for (uSize i = 0; i < shaders.Size(); i++)
+			for (uSize i = 0; i < pipelineInfo.shaders.Size(); i++)
 			{
-				if (shaders[i]->vkShader != info.shaders[i]->vkShader)
+				if (pipelineInfo.shaders[i]->vkShader != info.shaders[i]->vkShader)
 					goto breakContinue;
 			}
 
-			if (attachments.Size() != info.attachments.Size())
+			if (pipelineInfo.attachments.Size() != info.attachments.Size())
 				continue;
 
-			for (uSize i = 0; i < attachments.Size(); i++)
+			for (uSize i = 0; i < pipelineInfo.attachments.Size(); i++)
 			{
-				if (attachments[i].vkFormat != info.attachments[i].vkFormat)
+				if (pipelineInfo.attachments[i].vkFormat != info.attachments[i].vkFormat)
 					goto breakContinue;
 
-				if (attachments[i].type != info.attachments[i].type)
+				if (pipelineInfo.attachments[i].type != info.attachments[i].type)
 					goto breakContinue;
 			}
 
-			if (vertexAttributes.Size() != info.vertexAttributes.Size())
+			if (pipelineInfo.vertexAttributes.Size() != info.vertexAttributes.Size())
 				continue;
 
-			for (uSize i = 0; i < vertexAttributes.Size(); i++)
+			for (uSize i = 0; i < pipelineInfo.vertexAttributes.Size(); i++)
 			{
-				uSize result = memcmp(&vertexAttributes[i], &info.vertexAttributes[i], sizeof(VkVertexInputAttributeDescription));
+				uSize result = memcmp(&pipelineInfo.vertexAttributes[i], &info.vertexAttributes[i], sizeof(VkVertexInputAttributeDescription));
 
 				if (result != 0)
 					continue;
 			}
 
-			if (vertexBindings.Size() != info.vertexBindings.Size())
+			if (pipelineInfo.vertexBindings.Size() != info.vertexBindings.Size())
 				continue;
 
-			for (uSize i = 0; i < vertexBindings.Size(); i++)
+			for (uSize i = 0; i < pipelineInfo.vertexBindings.Size(); i++)
 			{
-				uSize result = memcmp(&vertexBindings[i], &info.vertexBindings[i], sizeof(VkVertexInputBindingDescription));
+				uSize result = memcmp(&pipelineInfo.vertexBindings[i], &info.vertexBindings[i], sizeof(VkVertexInputBindingDescription));
 
 				if (result != 0)
 					goto breakContinue;

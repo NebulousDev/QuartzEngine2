@@ -15,21 +15,18 @@ namespace Quartz
 		Array<VulkanGraphicsPipeline*>		mPipelines;
 		Array<VulkanGraphicsPipelineInfo>	mPipelineInfos;
 
-		VulkanGraphicsPipelineInfo MakeGraphicsPipelineInfo(
-			const Array<VulkanShader*>& shaders,
-			const Array<VulkanAttachment>& attachments,
-			const Array<VkVertexInputAttributeDescription>& vertexAttributes,
-			const Array<VkVertexInputBindingDescription>& vertexBindings);
-
 	public:
 		VulkanPipelineCache();
 		VulkanPipelineCache(VulkanDevice* pDevice, VulkanResourceManager* pResources);
 
-		VulkanGraphicsPipeline* FindOrCreateGraphicsPipeline(
+		VulkanGraphicsPipelineInfo MakeDefaultGraphicsPipelineInfo(
 			const Array<VulkanShader*>& shaders,
 			const Array<VulkanAttachment>& attachments,
 			const Array<VkVertexInputAttributeDescription>& vertexAttributes,
 			const Array<VkVertexInputBindingDescription>& vertexBindings);
+
+		VulkanGraphicsPipeline* FindOrCreateGraphicsPipeline(
+			const VulkanGraphicsPipelineInfo& pipelineInfo);
 
 	};
 }

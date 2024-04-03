@@ -265,7 +265,7 @@ namespace Quartz
 			vkCreateSemaphore(device.vkDevice, &semaphoreInfo, nullptr, &mSkyViewLUTcomplete[i]);
 		}
 
-		/* Create Shader Pipelines */
+		/* Create Shaders */
 
 		VulkanShader* pFullscreenVertexShader				= shaderCache.FindOrCreateShader("Shaders/fullscreen.vert", VK_SHADER_STAGE_VERTEX_BIT);
 		VulkanShader* pSkyTransmittanceLUTFragmentShader	= shaderCache.FindOrCreateShader("Shaders/skyTransmittanceLUT.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -273,29 +273,22 @@ namespace Quartz
 		VulkanShader* pSkyViewLUTFragmentShader				= shaderCache.FindOrCreateShader("Shaders/skyViewLUT.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 		VulkanShader* pSkyRenderFragmentShader				= shaderCache.FindOrCreateShader("Shaders/sky.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 
+		/* Create Shader Pipelines */
+
 		Array<VulkanAttachment> transmittanceAttachments =
 		{
 			{ "TransmittanceLUT", VULKAN_ATTACHMENT_TYPE_COLOR, LUT_FORMAT }
 		};
-
-		mpSkyTransmittanceLUTPipeline = pipelineCache.FindOrCreateGraphicsPipeline(
-			{ pFullscreenVertexShader, pSkyTransmittanceLUTFragmentShader }, transmittanceAttachments, {}, {});
 
 		Array<VulkanAttachment> scatterAttachments =
 		{
 			{ "ScatterLUT", VULKAN_ATTACHMENT_TYPE_COLOR, LUT_FORMAT }
 		};
 
-		mpSkyScatterLUTPipeline = pipelineCache.FindOrCreateGraphicsPipeline(
-			{ pFullscreenVertexShader, pSkyScatterLUTFragmentShader }, scatterAttachments, {}, {});
-
 		Array<VulkanAttachment> viewAttachments =
 		{
 			{ "ViewLUT", VULKAN_ATTACHMENT_TYPE_COLOR, LUT_FORMAT }
 		};
-
-		mpSkyViewLUTPipeline = pipelineCache.FindOrCreateGraphicsPipeline(
-			{ pFullscreenVertexShader, pSkyViewLUTFragmentShader }, viewAttachments, {}, {});
 
 		Array<VulkanAttachment> attachments =
 		{
@@ -303,9 +296,40 @@ namespace Quartz
 			{ "Depth-Stencil",		VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
 		};
 
-		// All geometry will be generated in the vertex shader
-		mpSkyRenderPipeline = pipelineCache.FindOrCreateGraphicsPipeline(
-			{ pFullscreenVertexShader, pSkyRenderFragmentShader }, attachments, {}, {});
+		VulkanGraphicsPipelineInfo skyTransmittanceLUTPipelineInfo = 
+			pipelineCache.MakeDefaultGraphicsPipelineInfo(
+			{ pFullscreenVertexShader, pSkyTransmittanceLUTFragmentShader }, transmittanceAttachments, {}, {});
+		skyTransmittanceLUTPipelineInfo.depth.enableTesting				= false;
+		skyTransmittanceLUTPipelineInfo.depth.enableWrite				= false;
+		skyTransmittanceLUTPipelineInfo.stencil.enableTesting			= false;
+		skyTransmittanceLUTPipelineInfo.blendAttachments[0].blendEnable = false;
+
+		VulkanGraphicsPipelineInfo skyScatterLUTPipelineInfo =
+			pipelineCache.MakeDefaultGraphicsPipelineInfo(
+				{ pFullscreenVertexShader, pSkyScatterLUTFragmentShader }, scatterAttachments, {}, {});
+		skyScatterLUTPipelineInfo.depth.enableTesting					= false;
+		skyScatterLUTPipelineInfo.depth.enableWrite						= false;
+		skyScatterLUTPipelineInfo.stencil.enableTesting					= false;
+		skyScatterLUTPipelineInfo.blendAttachments[0].blendEnable		= false;
+
+		VulkanGraphicsPipelineInfo skyViewLUTPipelineInfo =
+			pipelineCache.MakeDefaultGraphicsPipelineInfo(
+				{ pFullscreenVertexShader, pSkyViewLUTFragmentShader }, viewAttachments, {}, {});
+		skyViewLUTPipelineInfo.depth.enableTesting						= false;
+		skyViewLUTPipelineInfo.depth.enableWrite						= false;
+		skyViewLUTPipelineInfo.stencil.enableTesting					= false;
+		skyViewLUTPipelineInfo.blendAttachments[0].blendEnable			= false;
+
+		VulkanGraphicsPipelineInfo skyRenderPipelineInfo =
+			pipelineCache.MakeDefaultGraphicsPipelineInfo(
+				{ pFullscreenVertexShader, pSkyRenderFragmentShader }, attachments, {}, {});
+		skyRenderPipelineInfo.depth.enableTesting						= false;
+		skyRenderPipelineInfo.stencil.enableTesting						= false;
+
+		mpSkyTransmittanceLUTPipeline = pipelineCache.FindOrCreateGraphicsPipeline(skyTransmittanceLUTPipelineInfo);
+		mpSkyScatterLUTPipeline = pipelineCache.FindOrCreateGraphicsPipeline(skyScatterLUTPipelineInfo);
+		mpSkyViewLUTPipeline = pipelineCache.FindOrCreateGraphicsPipeline(skyViewLUTPipelineInfo);
+		mpSkyRenderPipeline = pipelineCache.FindOrCreateGraphicsPipeline(skyRenderPipelineInfo);
 	}
 
 	Quatf sunRotation;
@@ -489,22 +513,22 @@ namespace Quartz
 		binding.offset	= 0;
 		binding.range	= mpSkyPerFrameBuffer->sizeBytes;
 
-		VulkanUniformImageBind transmittanceLUTBinding = {};
-		transmittanceLUTBinding.binding		= 1;
-		transmittanceLUTBinding.vkSampler	= mVkLUTSampler;
-		transmittanceLUTBinding.pImageView	= mpSkyTransmittanceLUTView[frameIdx];
-		transmittanceLUTBinding.vkLayout	= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
 		VulkanUniformImageBind viewLUTBinding = {};
-		viewLUTBinding.binding				= 2;
+		viewLUTBinding.binding				= 1;
 		viewLUTBinding.vkSampler			= mVkLUTSampler;
 		viewLUTBinding.pImageView			= mpSkyViewLUTView[frameIdx];
 		viewLUTBinding.vkLayout				= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+		VulkanUniformImageBind transmittanceLUTBinding = {};
+		transmittanceLUTBinding.binding		= 2;
+		transmittanceLUTBinding.vkSampler	= mVkLUTSampler;
+		transmittanceLUTBinding.pImageView	= mpSkyTransmittanceLUTView[frameIdx];
+		transmittanceLUTBinding.vkLayout	= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
 		VulkanUniformBufferBind pBufferBinds[] = { binding };
-		VulkanUniformImageBind pImageBinds[] = { transmittanceLUTBinding, viewLUTBinding };
+		VulkanUniformImageBind pImageBinds[] = { viewLUTBinding, transmittanceLUTBinding };
 			
-		renderRecorder.BindUniforms(mpSkyRenderPipeline, 0, pBufferBinds, 1, pImageBinds, 2);
+		renderRecorder.BindUniforms(mpSkyRenderPipeline, 0, pBufferBinds, 1, pImageBinds, 1);
 
 		renderRecorder.Draw(1, 3, 0);
 	}

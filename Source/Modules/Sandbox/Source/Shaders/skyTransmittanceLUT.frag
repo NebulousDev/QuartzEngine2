@@ -41,19 +41,25 @@ atmosphere;
 
 /* Intersection Functions */
 
-float RaySphere(vec3 ro, vec3 rd, vec3 ttt, float rad)
+float RaySphere(vec3 rayPos, vec3 rayDir, vec3 center, float radius)
 {
-	float b = dot(ro, rd);
-	float c = dot(ro, ro) - rad*rad;	
+	vec3 subPos = rayPos - center;
+
+	float b = dot(subPos, rayDir);
+	float c = dot(subPos, subPos) - radius * radius;
+
 	if (c > 0.0f && b > 0.0)
-		return -1.0;	
-	float discr = b*b - c;	
-	if (discr < 0.0)
-		return -1.0;	
-	// Special case: inside sphere, use far discriminant
-	if (discr > b*b)
-		return (-b + sqrt(discr));	
-	return -b - sqrt(discr);
+		return -1.0;
+
+	float quad = b*b - c;
+
+	if (quad < 0.0)
+		return -1.0;
+
+	if (quad > b*b)
+		return (-b + sqrt(quad));	
+	else
+		return -b - sqrt(quad);
 }
 
 /* Atmosphere Property Functions */

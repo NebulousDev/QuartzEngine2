@@ -37,24 +37,30 @@ layout(set = 0, binding = 0) uniform AtmosphereUBO
 }
 atmosphere;
 
-layout(binding = 1) uniform sampler2D transmittanceLUT;
-layout(binding = 2) uniform sampler2D skyViewLUT;
+layout(binding = 1) uniform sampler2D skyViewLUT;
+layout(binding = 2) uniform sampler2D transmittanceLUT;
 
 /* Intersection Functions */
 
-float RaySphere(vec3 ro, vec3 rd, vec3 ttt, float rad)
+float RaySphere(vec3 rayPos, vec3 rayDir, vec3 center, float radius)
 {
-	float b = dot(ro, rd);
-	float c = dot(ro, ro) - rad*rad;	
+	vec3 subPos = rayPos - center;
+
+	float b = dot(subPos, rayDir);
+	float c = dot(subPos, subPos) - radius * radius;
+
 	if (c > 0.0f && b > 0.0)
-		return -1.0;	
-	float discr = b*b - c;	
-	if (discr < 0.0)
-		return -1.0;	
-	// Special case: inside sphere, use far discriminant
-	if (discr > b*b)
-		return (-b + sqrt(discr));	
-	return -b - sqrt(discr);
+		return -1.0;
+
+	float quad = b*b - c;
+
+	if (quad < 0.0)
+		return -1.0;
+
+	if (quad > b*b)
+		return (-b + sqrt(quad));	
+	else
+		return -b - sqrt(quad);
 }
 
 /* LUT Functions */
@@ -97,34 +103,27 @@ vec3 LookupSkyView(vec3 cameraPos, vec3 rayDir, vec3 sunDir)
     // Non-linear mapping of altitude angle. See Section 5.3 of the paper.
     float v = 0.5 + 0.5*sign(altitudeAngle)*sqrt(abs(altitudeAngle)*2.0/PI);
     vec2 uv = vec2(azimuthAngle / (2.0*PI), v);
-    //uv *= skyLUTRes;
-    //uv /= iChannelResolution[1].xy;
     
     return texture(skyViewLUT, uv).rgb;
 }
 
 /* Other Functions */
 
-float SunAltitude(float time)
-{
-	return 0;
-}
-
-vec3 SunWithBloom(vec3 rayDir, vec3 sunDir)
-{
-	const float sunAngleWidth = 1.0 * (PI / 180.0);
-	const float minSunCosTheta = cos(sunAngleWidth);
-	const float cosTheta = dot(rayDir, sunDir);
-
-	if (cosTheta >= minSunCosTheta) 
-		return vec3(1.0);
-		
-	const float offset = minSunCosTheta - cosTheta;
-	const float gaussianBloom = exp(-offset * 50000.0) * 0.5;
-	const float invBloom = 1.0 / (0.02 + offset * 30.0) * 0.01;
-
-	return vec3(gaussianBloom+invBloom);
-}
+//vec3 SunWithBloom(vec3 rayDir, vec3 sunDir)
+//{
+//	const float sunAngleWidth = 1.0 * (PI / 180.0);
+//	const float minSunCosTheta = cos(sunAngleWidth);
+//	const float cosTheta = dot(rayDir, sunDir);
+//
+//	if (cosTheta >= minSunCosTheta) 
+//		return vec3(1.0);
+//		
+//	const float offset = minSunCosTheta - cosTheta;
+//	const float gaussianBloom = exp(-offset * 50000.0) * 0.5;
+//	const float invBloom = 1.0 / (0.02 + offset * 30.0) * 0.01;
+//
+//	return vec3(gaussianBloom+invBloom);
+//}
 
 vec3 jodieReinhardTonemap(vec3 c){
     // From: https://www.shadertoy.com/view/tdSXzD
@@ -137,7 +136,7 @@ vec3 jodieReinhardTonemap(vec3 c){
 
 void main()
 {
-	float aspect = atmosphere.height / atmosphere.width; //atmosphere.width / atmosphere.height;
+	float aspect = atmosphere.height / atmosphere.width;
 
 	vec3 camDir = normalize(-atmosphere.viewDir);
 	vec3 camRight = normalize(cross(camDir, vec3(0.0, 1.0, 0.0)));
@@ -152,26 +151,28 @@ void main()
 	vec3 rayDir = -normalize(camDir + camRight * coords.x * camWidthScale + camUp * coords.y * camHeightScale);
 
 	vec3 sunDir = normalize(-atmosphere.suns[0].dir);
-	vec3 sun = SunWithBloom(rayDir, sunDir);
-	sun = smoothstep(0.002, 1.0, sun);
 
-	if(length(sun) > 0.0)
-	{
-		if(RaySphere(cameraPos, rayDir, groundCenter, groundRadius) >= 0.0)
-		{
-			sun *= 0;
-		}
-		else
-		{
-			sun *= LookupTransmittance(cameraPos, sunDir);
-		}
-	}
-
+	//vec3 sun = SunWithBloom(rayDir, sunDir);
+	//sun = smoothstep(0.002, 1.0, sun);
+	//
+	//if(length(sun) > 0.0)
+	//{
+	//	if(RaySphere(cameraPos, rayDir, groundCenter, groundRadius) >= 0.0)
+	//	{
+	//		sun *= 0;
+	//	}
+	//	else
+	//	{
+	//		sun *= LookupTransmittance(cameraPos, sunDir);
+	//	}
+	//}
+	//
+	
 	vec3 lum = LookupSkyView(cameraPos, rayDir, sunDir);
 
 	//lum += sun;
 
-	lum *= 20.0;
+	lum *= 5.0;
 	lum /= (smoothstep(0.0, 0.2, clamp(sunDir.y, 0.0, 1.0))*2.0 + 0.15);
 
 	lum = jodieReinhardTonemap(lum);
