@@ -546,6 +546,24 @@ namespace Quartz
 				attributes.PushBack(attribute);
 			}
 		}
+
+		// Sort attribs by location
+		for (uSize i = 0; i < attributes.Size() - 1; i++)
+		{
+			uSize minIdx = i;
+			for (uSize j = i + 1; j < attributes.Size(); j++)
+			{
+				if (attributes[j].location < attributes[minIdx].location)
+				{
+					minIdx = j;
+				}
+
+				if (minIdx != i)
+				{
+					Swap(attributes[i], attributes[j]);
+				}
+			}
+		}
 	}
 
 	uInt32 SpirvObjectSize(const SpirvObject& object, SpirvReflection& reflection)

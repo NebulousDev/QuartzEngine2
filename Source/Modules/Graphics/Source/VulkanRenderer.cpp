@@ -117,8 +117,8 @@ namespace Quartz
 		settings.scatterLUTSize = { 32, 32 };
 		settings.viewLUTSize = { 200, 200 };
 
-		mSkyRenderer.Initialize(graphics, atmosphere, settings, mShaderCache, mPipelineCache, maxInFlightCount);
 		mSceneRenderer.Initialize(graphics, mShaderCache, mPipelineCache, maxInFlightCount);
+		mSkyRenderer.Initialize(graphics, atmosphere, settings, mShaderCache, mPipelineCache, maxInFlightCount);
 	}
 
 	void VulkanRenderer::SetCamera(Entity cameraEntity)
@@ -136,6 +136,8 @@ namespace Quartz
 	{
 		TransformComponent& cameraTransformComponent = world.Get<TransformComponent>(mCameraEntity);
 		CameraComponent& cameraComponent = world.Get<CameraComponent>(mCameraEntity);
+
+		mSceneRenderer.Update(world, mBufferCache, mShaderCache, mPipelineCache, cameraComponent, cameraTransformComponent, frameIdx);
 
 		Vec2f centerPos = { -cameraTransformComponent.position.x, -cameraTransformComponent.position.z };
 		//mTerrainRenderer.Update(centerPos, *mpCameraComponent, *mpCameraTransformComponent);
@@ -158,7 +160,7 @@ namespace Quartz
 	{
 		//mTerrainRenderer.RecordDraws(recorder);
 		mSceneRenderer.RecordDraws(recorder, frameIdx);
-		mSkyRenderer.RecordDraws(recorder, frameIdx);
+		//mSkyRenderer.RecordDraws(recorder, frameIdx);
 	}
 
 	void VulkanRenderer::RecordPostDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)

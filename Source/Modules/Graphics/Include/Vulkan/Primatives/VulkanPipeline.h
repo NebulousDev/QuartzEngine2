@@ -12,6 +12,7 @@ namespace Quartz
 {
 	struct VulkanShader;
 
+	#pragma pack(push,1)
 	struct VulkanGraphicsPipelineInfo
 	{
 		Array<VulkanShader*>						shaders;
@@ -50,6 +51,7 @@ namespace Quartz
 		bool										useDynamicViewport;
 		bool										useDynamicRendering;
 	};
+	#pragma pack(pop)
 
 	struct VulkanGraphicsPipeline
 	{

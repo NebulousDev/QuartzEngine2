@@ -37,7 +37,7 @@ namespace Quartz
 			VulkanPipelineCache& pipelineCache, uSize maxInFlightCount);
 
 		void Update(EntityWorld& world, VulkanBufferCache& bufferCache, 
-			VulkanShaderCache shaderCache, VulkanPipelineCache pipelineCache,
+			VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache,
 			CameraComponent& camera, TransformComponent& cameraTransform, uSize frameIdx);
 
 		void RecordTransfers(VulkanCommandRecorder& transferRecorder, VulkanBufferCache& bufferCache, uSize frameIdx);

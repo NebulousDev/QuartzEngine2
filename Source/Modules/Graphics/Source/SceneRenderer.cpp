@@ -70,6 +70,9 @@ namespace Quartz
 			pipelineCache.MakeGraphicsPipelineInfo(
 				{ pVertexShader, pFragmentShader }, attachments);
 
+		pipelineInfo.vkFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		pipelineInfo.vkCullMode = VK_CULL_MODE_NONE;
+
 		mpDefaultPipeline = pipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
 
 		if (!mpDefaultPipeline)
@@ -79,7 +82,7 @@ namespace Quartz
 	}
 
 	void VulkanSceneRenderer::Update(EntityWorld& world, VulkanBufferCache& bufferCache,
-		VulkanShaderCache shaderCache, VulkanPipelineCache pipelineCache,
+		VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache,
 		CameraComponent& camera, TransformComponent& cameraTransform, uSize frameIdx)
 	{
 		auto& renderableView = world.CreateView<MeshComponent, TransformComponent>();
@@ -118,13 +121,16 @@ namespace Quartz
 				};
 
 				VulkanGraphicsPipelineInfo pipelineInfo = pipelineCache.MakeGraphicsPipelineInfo(
-					{ pVertexShader, pFragmentShader }, attachments);// TODO
+					{ pVertexShader, pFragmentShader }, attachments);
+
+				pipelineInfo.vkFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+				pipelineInfo.vkCullMode = VK_CULL_MODE_NONE;
 
 				renderable.pPipeline = pipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
 			}
 			else
 			{
-				//renderable.pPipeline = mpDefaultPipeline;
+				renderable.pPipeline = mpDefaultPipeline;
 			}
 
 			mRenderables.PushBack(renderable);

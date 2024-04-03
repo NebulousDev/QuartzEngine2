@@ -158,10 +158,10 @@ namespace Quartz
 			}
 
 			uSize offsetStart	= offsetof(VulkanGraphicsPipelineInfo, vkTopology);
-			uSize offsetEnd		= offsetof(VulkanGraphicsPipelineInfo, useDynamicRendering) + 1; // +1 bool
+			uSize offsetEnd		= offsetof(VulkanGraphicsPipelineInfo, useDynamicRendering); + 1; // +1 bool
 			uSize size			= offsetEnd - offsetStart;
 
-			uSize result = memcmp(((uInt8*)&info) + offsetStart, ((uInt8*)&pipelineInfo) + offsetStart, size);
+			sSize result = memcmp(((uInt8*)&info) + offsetStart, ((uInt8*)&pipelineInfo) + offsetStart, size);
 
 			if (result != 0)
 				continue;
