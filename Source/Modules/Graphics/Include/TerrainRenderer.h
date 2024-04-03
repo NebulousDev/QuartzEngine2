@@ -70,9 +70,9 @@ namespace Quartz
 		TerrainPerTileData*			mpPerTileDatas;
 
 		VulkanCommandPool*			mpImmediateCommandPool;
-		VulkanCommandBuffer*		mImmediateCommandBuffers[3];
-		VulkanCommandRecorder		mImmediateRecorders[3];
-		VkFence						mImmediateFences[3];
+		VulkanCommandBuffer*		mImmediateCommandBuffers[VULKAN_GRAPHICS_MAX_IN_FLIGHT]; // @TODO may have it's own max
+		VulkanCommandRecorder		mImmediateRecorders[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VkFence						mImmediateFences[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
 		uSize						mImmediateIdx;
 
 		VulkanGraphicsPipeline*		mpTerrainRenderPipeline;
@@ -95,7 +95,8 @@ namespace Quartz
 		TerrainTileTextures	GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed, uSize resolution);
 
 	public:
-		void Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache);
+		void Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, 
+			VulkanPipelineCache& pipelineCache, uSize maxInFlightCount);
 
 		void Update(const Vec2f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform);
 

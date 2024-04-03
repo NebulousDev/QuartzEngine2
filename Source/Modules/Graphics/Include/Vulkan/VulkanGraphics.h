@@ -9,6 +9,8 @@
 
 #include "Entity/World.h"
 
+#define VULKAN_GRAPHICS_MAX_IN_FLIGHT 8
+
 namespace Quartz
 {
 	struct VulkanSubmission

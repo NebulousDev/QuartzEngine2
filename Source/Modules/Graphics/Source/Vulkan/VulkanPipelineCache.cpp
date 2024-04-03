@@ -2,7 +2,7 @@
 
 namespace Quartz
 {
-    VulkanGraphicsPipelineInfo VulkanPipelineCache::MakeDefaultGraphicsPipelineInfo(
+    VulkanGraphicsPipelineInfo VulkanPipelineCache::MakeGraphicsPipelineInfo(
 		const Array<VulkanShader*>& shaders,
 		const Array<VulkanAttachment>& attachments,
 		const Array<VkVertexInputAttributeDescription>& vertexAttributes,
@@ -49,6 +49,48 @@ namespace Quartz
 
         return pipelineInfo;
     }
+
+	// NOTE: This will use the SPIRV format guess and may not be correct
+	//       Also assumes one input buffer with vertex input rate at binding=0
+	VulkanGraphicsPipelineInfo VulkanPipelineCache::MakeGraphicsPipelineInfo(
+		const Array<VulkanShader*>& shaders,
+		const Array<VulkanAttachment>& attachments)
+	{
+		Array<VkVertexInputAttributeDescription> vertexAttributes;
+		Array<VkVertexInputBindingDescription> vertexBindings;
+
+		uSize totalSize = 0;
+
+		// @TODO: make a metadata file for these properties
+		for (VulkanShader* pShader : shaders)
+		{
+			if (!(pShader->vkStage & VK_SHADER_STAGE_VERTEX_BIT))
+			{
+				continue; // Look for the vertex shader only
+			}
+
+			for (SpirvAttribute attrib : pShader->attributes)
+			{
+				VkVertexInputAttributeDescription vkAttributeDesc = {};
+				vkAttributeDesc.binding		= attrib.binding;
+				vkAttributeDesc.format		= attrib.formatGuess;
+				vkAttributeDesc.location	= attrib.location;
+				vkAttributeDesc.offset		= totalSize;
+
+				vertexAttributes.PushBack(vkAttributeDesc);
+				totalSize += attrib.size;
+			}
+		}
+
+		VkVertexInputBindingDescription vertexBufferAttachment = {};
+		vertexBufferAttachment.binding		= 0;
+		vertexBufferAttachment.stride		= totalSize;
+		vertexBufferAttachment.inputRate	= VK_VERTEX_INPUT_RATE_VERTEX;
+
+		vertexBindings.PushBack(vertexBufferAttachment);
+
+		return MakeGraphicsPipelineInfo(shaders, attachments, vertexAttributes, vertexBindings);
+	}
 
 	VulkanPipelineCache::VulkanPipelineCache() :
 		mpDevice(nullptr), mpResourceManager(nullptr)

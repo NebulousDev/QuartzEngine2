@@ -512,13 +512,13 @@ namespace Quartz
 				SpirvObject& valueObject = reflection.objects[pointerObject.pointerType.typeId];
 
 				SpirvUniform uniform;
-				uniform.name = object.name;
-				uniform.set = object.decoration.set;
-				uniform.binding = object.decoration.binding;
-				uniform.sizeBytes = SpirvObjectSize(valueObject, reflection);
-				uniform.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // TODO: NOTE DYNAMIC!!
-				uniform.shaderStage = reflection.shaderStage;
-				uniform.isBlock = true; // @TODO: only because of Vulkan 
+				uniform.name			= object.name;
+				uniform.set				= object.decoration.set;
+				uniform.binding			= object.decoration.binding;
+				uniform.sizeBytes		= SpirvObjectSize(valueObject, reflection);
+				uniform.descriptorType	= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // TODO: NOTE DYNAMIC!!
+				uniform.shaderStage		= reflection.shaderStage;
+				uniform.isBlock			= true; // @TODO: only because of Vulkan 
 
 				uniforms.PushBack(uniform);
 			}
@@ -537,9 +537,11 @@ namespace Quartz
 				SpirvObject& valueObject = reflection.objects[pointerObject.pointerType.typeId];
 
 				SpirvAttribute attribute;
-				attribute.name = object.name;
-				attribute.location = object.decoration.location;
-				attribute.binding = object.decoration.binding;
+				attribute.name			= object.name;
+				attribute.location		= object.decoration.location;
+				attribute.binding		= object.decoration.binding;
+				attribute.formatGuess	= SpirvGuessFormat(valueObject, reflection);
+				attribute.size			= SpirvObjectSize(valueObject, reflection);
 
 				attributes.PushBack(attribute);
 			}
@@ -641,6 +643,97 @@ namespace Quartz
 
 			default:
 				return 0;
+		}
+	}
+
+	VkFormat SpirvGuessFormat(const SpirvObject& object, SpirvReflection& reflection)
+	{
+		switch (object.type)
+		{
+			case SPIRV_TYPE_UNKNOWN:
+			{
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_VOID:
+			{
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_BOOL:
+			{
+				return VK_FORMAT_R8_UINT; // probably?
+			}
+			case SPIRV_TYPE_INT:
+			{
+				return VK_FORMAT_R32_UINT;
+			}
+			case SPIRV_TYPE_FLOAT:
+			{
+				return VK_FORMAT_R32_SFLOAT;
+			}
+			case SPIRV_TYPE_VECTOR:
+			{
+				switch (object.vectorType.count)
+				{
+					case 2: return VK_FORMAT_R32G32_SFLOAT;
+					case 3: return VK_FORMAT_R32G32B32_SFLOAT;
+					case 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+				default:
+					return VK_FORMAT_UNDEFINED;
+				}
+			}
+			case SPIRV_TYPE_MATRIX:
+			{
+				switch (object.matrixType.columnCount)
+				{
+					// I assume the type is how the data is aligned?
+					case 2: return VK_FORMAT_R32G32_SFLOAT;
+					case 3: return VK_FORMAT_R32G32B32_SFLOAT;
+					case 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+				default:
+					return VK_FORMAT_UNDEFINED;
+				}
+			}
+			case SPIRV_TYPE_IMAGE:
+			{
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_SAMPLER:
+			{
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_SAMPLED_IMAGE:
+			{
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_ARRAY:
+			{
+				SpirvObject& typeObject = reflection.objects[object.arrayType.typeId];
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_RUNTIME_ARRAY:
+			{
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_STRUCT:
+			{
+				//@TODO:
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_OPAQUE:
+			{
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_POINTER:
+			{
+				return VK_FORMAT_UNDEFINED;
+			}
+			case SPIRV_TYPE_FUNCTION:
+			{
+				return VK_FORMAT_UNDEFINED;
+			}
+
+			default:
+				return VK_FORMAT_UNDEFINED;
 		}
 	}
 }

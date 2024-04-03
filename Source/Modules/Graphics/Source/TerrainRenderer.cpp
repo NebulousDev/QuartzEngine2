@@ -468,7 +468,8 @@ namespace Quartz
 		return textures;
 	}
 
-	void VulkanTerrainRenderer::Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache)
+	void VulkanTerrainRenderer::Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, 
+		VulkanPipelineCache& pipelineCache, uSize maxInFlightCount)
 	{
 		mpGraphics = &graphics;
 
@@ -486,7 +487,7 @@ namespace Quartz
 		vkImmediateFenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 		vkImmediateFenceInfo.pNext = nullptr;
 
-		for (uSize i = 0; i < 3; i++)
+		for (uSize i = 0; i < maxInFlightCount; i++)
 		{
 			mImmediateRecorders[i] = VulkanCommandRecorder(mImmediateCommandBuffers[i]);
 			vkCreateFence(graphics.pPrimaryDevice->vkDevice, &vkImmediateFenceInfo, VK_NULL_HANDLE, &mImmediateFences[i]);
@@ -527,7 +528,7 @@ namespace Quartz
 		Array<VkVertexInputAttributeDescription> vertexAttributes;
 		vertexAttributes.PushBack(positionAttrib);
 
-		VulkanGraphicsPipelineInfo pipelineInfo = pipelineCache.MakeDefaultGraphicsPipelineInfo(
+		VulkanGraphicsPipelineInfo pipelineInfo = pipelineCache.MakeGraphicsPipelineInfo(
 			{ pTerrainVertexShader, pTerrainFragmentShader },
 			attachments, vertexAttributes, vertexBindings
 		);

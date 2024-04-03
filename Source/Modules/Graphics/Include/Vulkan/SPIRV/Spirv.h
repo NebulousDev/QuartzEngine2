@@ -202,7 +202,8 @@ namespace Quartz
 		String		name;
 		uInt32		location;
 		uInt32		binding;
-		VkFormat	format;
+		VkFormat	formatGuess;
+		uInt32		size;
 	};
 
 	bool SpirvParseReflection(SpirvReflection* pReflection, const Array<uInt8>& spirvCode);
@@ -211,6 +212,7 @@ namespace Quartz
 
 	void SpirvExtractAttributes(Array<SpirvAttribute>& attributes, SpirvReflection& reflection);
 
+	VkFormat SpirvGuessFormat(const SpirvObject& object, SpirvReflection& reflection);
 	uInt32 SpirvObjectSize(const SpirvObject& object, SpirvReflection& reflection);
 
 	VkShaderStageFlagBits SpvExecutionModelToVkShaderStageFlags(SpvExecutionModel executionModel);

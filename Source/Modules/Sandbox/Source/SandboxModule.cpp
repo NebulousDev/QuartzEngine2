@@ -287,9 +287,11 @@ namespace Quartz
 			TransformComponent cameraTransform({ 0.0f, 2.0f, 4.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
 			gCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
 
+			uSize maxInFlightCount = 3;
+
 			VulkanRenderer* pRenderer = new VulkanRenderer();
 			pRenderer->Register(runtime);
-			pRenderer->Initialize(&gfx);
+			pRenderer->Initialize(gfx, maxInFlightCount);
 			pRenderer->SetCamera(gCamera);
 
 			runtime.SetTargetUps(350);

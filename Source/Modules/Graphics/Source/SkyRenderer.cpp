@@ -103,7 +103,7 @@ namespace Quartz
 #define LUT_FORMAT VK_FORMAT_R16G16B16A16_SFLOAT
 
 	void VulkanSkyRenderer::Initialize(VulkanGraphics& graphics, const AtmosphereValues& atmosphere, const SkyRenderSettings& settings, 
-		VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache)
+		VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache, uSize maxInFlightCount)
 	{
 		VulkanResourceManager& resources = *graphics.pResourceManager;
 		VulkanDevice& device = *graphics.pPrimaryDevice;
@@ -111,26 +111,6 @@ namespace Quartz
 		mpGraphics = &graphics;
 		mAtmosphere = atmosphere;
 		mSettings = settings;
-
-		/* Create Command Buffers */
-
-		VulkanCommandPoolInfo skyCommandPoolInfo = {};
-		skyCommandPoolInfo.queueFamilyIndex			= graphics.pPrimaryDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
-		skyCommandPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-		mpImmediateCommandPool = graphics.pResourceManager->CreateCommandPool(graphics.pPrimaryDevice, skyCommandPoolInfo);
-		graphics.pResourceManager->CreateCommandBuffers(mpImmediateCommandPool, 3, mImmediateCommandBuffers);
-
-		VkFenceCreateInfo vkImmediateFenceInfo = {};
-		vkImmediateFenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		vkImmediateFenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-		vkImmediateFenceInfo.pNext = nullptr;
-
-		for (uSize i = 0; i < 3; i++)
-		{
-			mImmediateRecorders[i] = VulkanCommandRecorder(mImmediateCommandBuffers[i]);
-			vkCreateFence(graphics.pPrimaryDevice->vkDevice, &vkImmediateFenceInfo, VK_NULL_HANDLE, &mImmediateFences[i]);
-		}
 
 		/* Create Uniform Buffers */
 
@@ -152,7 +132,7 @@ namespace Quartz
 
 		/* Create LUT Images */
 
-		for (uSize i = 0; i < 3; i++)
+		for (uSize i = 0; i < maxInFlightCount; i++)
 		{
 			VulkanImageInfo transmittanceImageInfo = {};
 			transmittanceImageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
@@ -248,7 +228,7 @@ namespace Quartz
 
 		/* Create Semaphores */
 
-		for (uSize i = 0; i < 3; i++)
+		for (uSize i = 0; i < maxInFlightCount; i++)
 		{
 			VkSemaphoreTypeCreateInfo vkSemaphoreType = {};
 			vkSemaphoreType.sType			= VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -297,7 +277,7 @@ namespace Quartz
 		};
 
 		VulkanGraphicsPipelineInfo skyTransmittanceLUTPipelineInfo = 
-			pipelineCache.MakeDefaultGraphicsPipelineInfo(
+			pipelineCache.MakeGraphicsPipelineInfo(
 			{ pFullscreenVertexShader, pSkyTransmittanceLUTFragmentShader }, transmittanceAttachments, {}, {});
 		skyTransmittanceLUTPipelineInfo.depth.enableTesting				= false;
 		skyTransmittanceLUTPipelineInfo.depth.enableWrite				= false;
@@ -305,7 +285,7 @@ namespace Quartz
 		skyTransmittanceLUTPipelineInfo.blendAttachments[0].blendEnable = false;
 
 		VulkanGraphicsPipelineInfo skyScatterLUTPipelineInfo =
-			pipelineCache.MakeDefaultGraphicsPipelineInfo(
+			pipelineCache.MakeGraphicsPipelineInfo(
 				{ pFullscreenVertexShader, pSkyScatterLUTFragmentShader }, scatterAttachments, {}, {});
 		skyScatterLUTPipelineInfo.depth.enableTesting					= false;
 		skyScatterLUTPipelineInfo.depth.enableWrite						= false;
@@ -313,7 +293,7 @@ namespace Quartz
 		skyScatterLUTPipelineInfo.blendAttachments[0].blendEnable		= false;
 
 		VulkanGraphicsPipelineInfo skyViewLUTPipelineInfo =
-			pipelineCache.MakeDefaultGraphicsPipelineInfo(
+			pipelineCache.MakeGraphicsPipelineInfo(
 				{ pFullscreenVertexShader, pSkyViewLUTFragmentShader }, viewAttachments, {}, {});
 		skyViewLUTPipelineInfo.depth.enableTesting						= false;
 		skyViewLUTPipelineInfo.depth.enableWrite						= false;
@@ -321,7 +301,7 @@ namespace Quartz
 		skyViewLUTPipelineInfo.blendAttachments[0].blendEnable			= false;
 
 		VulkanGraphicsPipelineInfo skyRenderPipelineInfo =
-			pipelineCache.MakeDefaultGraphicsPipelineInfo(
+			pipelineCache.MakeGraphicsPipelineInfo(
 				{ pFullscreenVertexShader, pSkyRenderFragmentShader }, attachments, {}, {});
 		skyRenderPipelineInfo.depth.enableTesting						= false;
 		skyRenderPipelineInfo.stencil.enableTesting						= false;
@@ -498,7 +478,7 @@ namespace Quartz
 		PrepareImageForSampling(recorder, mpSkyViewLUT[frameIdx]);
 	}
 
-	void VulkanSkyRenderer::PreRender(VulkanCommandRecorder& renderRecorder, uSize frameIdx)
+	void VulkanSkyRenderer::RecordPreDraws(VulkanCommandRecorder& renderRecorder, uSize frameIdx)
 	{
 		RenderLUTs(renderRecorder, frameIdx);
 	}

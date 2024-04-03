@@ -2,6 +2,7 @@
 
 #include "GfxAPI.h"
 #include "Math/Math.h"
+
 #include "Vulkan/VulkanGraphics.h"
 #include "Vulkan/VulkanCommandRecorder.h"
 #include "Vulkan/VulkanPipelineCache.h"
@@ -75,17 +76,17 @@ namespace Quartz
 		VulkanBufferWriter		mpSkyPerFrameWriter;
 		AtmospherePerFrameData*	mpSkyPerFrameData;
 
-		VulkanImage*			mpSkyTransmittanceLUT[3];
-		VulkanImage*			mpSkyScatterLUT[3];
-		VulkanImage*			mpSkyViewLUT[3];
+		VulkanImage*			mpSkyTransmittanceLUT[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VulkanImage*			mpSkyScatterLUT[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VulkanImage*			mpSkyViewLUT[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
 
-		VulkanImageView*		mpSkyTransmittanceLUTView[3];
-		VulkanImageView*		mpSkyScatterLUTView[3];
-		VulkanImageView*		mpSkyViewLUTView[3];
+		VulkanImageView*		mpSkyTransmittanceLUTView[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VulkanImageView*		mpSkyScatterLUTView[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VulkanImageView*		mpSkyViewLUTView[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
 
-		VkSemaphore				mSkyTransmittanceLUTcomplete[3];
-		VkSemaphore				mSkyScatterLUTcomplete[3];
-		VkSemaphore				mSkyViewLUTcomplete[3];
+		VkSemaphore				mSkyTransmittanceLUTcomplete[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VkSemaphore				mSkyScatterLUTcomplete[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VkSemaphore				mSkyViewLUTcomplete[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
 
 		VulkanGraphicsPipeline* mpSkyTransmittanceLUTPipeline;
 		VulkanGraphicsPipeline* mpSkyScatterLUTPipeline;
@@ -95,11 +96,6 @@ namespace Quartz
 
 		VkSampler				mVkLUTSampler;
 
-		VulkanCommandPool*		mpImmediateCommandPool;
-		VulkanCommandBuffer*	mImmediateCommandBuffers[3];
-		VulkanCommandRecorder	mImmediateRecorders[3];
-		VkFence					mImmediateFences[3];
-
 		void CopyAtmospherePerFrameData(const AtmosphereValues& atmosphere, 
 			const Vec3f& cameraPos, const Vec3f viewDir, float width, float height);
 
@@ -108,13 +104,13 @@ namespace Quartz
 
 	public:
 		void Initialize(VulkanGraphics& graphics, const AtmosphereValues& atmosphere, const SkyRenderSettings& settings, 
-			VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache);
+			VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache, uSize maxInFlightCount);
 
 		void Update(CameraComponent& camera, TransformComponent& cameraTransform, uSize frameIdx);
 
 		void RecordTransfers(VulkanCommandRecorder& transferRecorder, uSize frameIdx);
 		void RenderLUTs(VulkanCommandRecorder& recorder, uSize frameIdx);
-		void PreRender(VulkanCommandRecorder& renderRecorder, uSize frameIdx);
+		void RecordPreDraws(VulkanCommandRecorder& renderRecorder, uSize frameIdx);
 		void RecordDraws(VulkanCommandRecorder& renderRecorder, uSize frameIdx);
 
 		VkSemaphore GetLUTsCompleteSemaphore(uSize frameIdx);

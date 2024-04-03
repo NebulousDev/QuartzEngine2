@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../GfxAPI.h"
+#include "Math/Math.h"
 #include "Runtime/Runtime.h"
 
 #include "VulkanGraphics.h"
@@ -8,11 +9,7 @@
 #include "VulkanSwapchainTimer.h"
 #include "VulkanBufferWriter.h"
 
-#include "Component/CameraComponent.h"
-#include "Component/TransformComponent.h"
-
-#include "Math/Math.h"
-
+#include "../SceneRenderer.h"
 #include "../TerrainRenderer.h"
 #include "../SkyRenderer.h"
 
@@ -21,40 +18,44 @@ namespace Quartz
 	class QUARTZ_GRAPHICS_API VulkanRenderer
 	{
 	private:
-		VulkanGraphics*			mpGraphics;
-		VulkanSwapchain*		mpSwapchain;
-		VulkanBufferCache		mBufferCache;
-		VulkanShaderCache		mShaderCache;
-		VulkanPipelineCache		mPipelineCache;
-		VulkanSwapchainTimer	mSwapTimer;
+		VulkanGraphics*				mpGraphics;
+		VulkanSwapchain*			mpSwapchain;
+		VulkanSwapchainTimer		mSwapTimer;
 
-		VulkanGraphicsPipeline* mpDefaultPipeline;
+		VulkanBufferCache			mBufferCache;
+		VulkanShaderCache			mShaderCache;
+		VulkanPipelineCache			mPipelineCache;
 
-		Array<VulkanRenderable>	mRenderables;
-		Array<VulkanRenderable>	mRenderablesSorted;
+		uSize						mMaxInFlightCount;
+		VulkanCommandBuffer*		mCommandBuffers[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VulkanImage*				mDepthImages[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VulkanImageView*			mDepthImageViews[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
 
-		VulkanCommandBuffer*	mCommandBuffers[3];
-		VulkanImage*			mDepthImages[3];
-		VulkanImageView*		mDepthImageViews[3];
+		Entity						mCameraEntity;
 
-		Entity					mCameraEntity;
-		//CameraComponent*		mpCameraComponent;
-		//TransformComponent*	mpCameraTransformComponent;
-
-		VulkanTerrainRenderer	mTerrainRenderer;
-		VulkanSkyRenderer		mSkyRenderer;
+		VulkanSceneRenderer			mSceneRenderer;
+		VulkanTerrainRenderer		mTerrainRenderer;
+		VulkanSkyRenderer			mSkyRenderer;
 
 	public:
-		void Initialize(VulkanGraphics* pGraphics);
+		void Initialize(VulkanGraphics& graphics, uSize maxInFlightCount);
 
 		void SetCamera(Entity cameraEntity);
 
-		void UpdateAll(EntityWorld* pWorld, uSize frameIdx);
+		void UpdateAll(EntityWorld& world, uSize frameIdx);
 		void RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx);
+		void RecordPreDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
 		void RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
-		void RenderScene(EntityWorld* pWorld, uSize frameIdx);
+		void RecordPostDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
+
+		void RenderScene(EntityWorld& world, uSize frameIdx);
 
 		void RenderUpdate(Runtime& runtime, double delta);
 		void Register(Runtime& runtime);
+
+		uSize GetMaxInFlightCount() const { return mMaxInFlightCount; }
+		VulkanBufferCache& GetBufferCache() { return mBufferCache; }
+		VulkanShaderCache& GetShaderCache() { return mShaderCache; }
+		VulkanPipelineCache& GetPipelineCache() { return mPipelineCache; }
 	};
 }

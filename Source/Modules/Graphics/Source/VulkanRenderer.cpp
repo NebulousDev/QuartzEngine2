@@ -22,16 +22,19 @@ namespace Quartz
 	VulkanImageView* pPerlinImageView = nullptr;
 	VkSampler perlinSampler;
 
-	void VulkanRenderer::Initialize(VulkanGraphics* pGraphics)
+	void VulkanRenderer::Initialize(VulkanGraphics& graphics, uSize maxInFlightCount)
 	{
-		VulkanResourceManager*	pResources	= pGraphics->pResourceManager;
-		VulkanDevice*			pDevice		= pGraphics->pPrimaryDevice;
+		VulkanResourceManager*	pResources	= graphics.pResourceManager;
+		VulkanDevice*			pDevice		= graphics.pPrimaryDevice;
 
-		mpGraphics		= pGraphics;
+		mpGraphics		= &graphics;
 		mPipelineCache	= VulkanPipelineCache(pDevice, pResources);
 		mShaderCache	= VulkanShaderCache(pDevice, pResources);
-		mpSwapchain		= pResources->CreateSwapchain(pGraphics->pPrimaryDevice, *pGraphics->pSurface, 3);
+		mpSwapchain		= pResources->CreateSwapchain(pDevice, *graphics.pSurface, maxInFlightCount);
 		mSwapTimer		= VulkanSwapchainTimer(mpSwapchain);
+
+		assert(maxInFlightCount < VULKAN_GRAPHICS_MAX_IN_FLIGHT);
+		mMaxInFlightCount = maxInFlightCount;
 
 		VulkanRenderSettings renderSettings = {};
 		renderSettings.useUniqueMeshBuffers				= false;
@@ -52,74 +55,14 @@ namespace Quartz
 
 		mBufferCache.Initialize(pDevice, pResources, renderSettings);
 
-		VulkanShader* pVertexShader = mShaderCache.FindOrCreateShader("Shaders/default.vert", VK_SHADER_STAGE_VERTEX_BIT);
-		VulkanShader* pFragmentShader = mShaderCache.FindOrCreateShader("Shaders/default.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
-
-		Array<VulkanAttachment> attachments =
-		{
-			{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
-			{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
-		};
-
-		VkVertexInputBindingDescription vertexBufferAttachment = {};
-		vertexBufferAttachment.binding		= 0;
-		vertexBufferAttachment.stride		= 6 * sizeof(float);
-		vertexBufferAttachment.inputRate	= VK_VERTEX_INPUT_RATE_VERTEX;
-
-		Array<VkVertexInputBindingDescription> vertexBindings;
-
-		vertexBindings.PushBack(vertexBufferAttachment);
-
-		VkVertexInputAttributeDescription positionAttrib = {};
-		positionAttrib.binding				= 0;
-		positionAttrib.location				= 0;
-		positionAttrib.format				= VK_FORMAT_R32G32B32_SFLOAT;
-		positionAttrib.offset				= 0;
-
-		VkVertexInputAttributeDescription normalAttrib = {};
-		normalAttrib.binding				= 0;
-		normalAttrib.location				= 1;
-		normalAttrib.format					= VK_FORMAT_R32G32B32_SFLOAT;
-		normalAttrib.offset					= 3 * sizeof(float);
-
-		VkVertexInputAttributeDescription tangentAttrib = {};
-		tangentAttrib.binding				= 0;
-		tangentAttrib.location				= 2;
-		tangentAttrib.format				= VK_FORMAT_R32G32B32_SFLOAT;
-		tangentAttrib.offset				= 6 * sizeof(float);
-
-		VkVertexInputAttributeDescription texCoordAttrib = {};
-		texCoordAttrib.binding				= 0;
-		texCoordAttrib.location				= 3;
-		texCoordAttrib.format				= VK_FORMAT_R32G32_SFLOAT;
-		texCoordAttrib.offset				= 9 * sizeof(float);
-
-		Array<VkVertexInputAttributeDescription> vertexAttributes;
-
-		vertexAttributes.PushBack(positionAttrib);
-		vertexAttributes.PushBack(normalAttrib);
-
-		VulkanGraphicsPipelineInfo pipelineInfo = 
-			mPipelineCache.MakeDefaultGraphicsPipelineInfo(
-			{ pVertexShader, pFragmentShader },
-			attachments, vertexAttributes, vertexBindings
-		);
-
-		mpDefaultPipeline = mPipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
-
-		if (!mpDefaultPipeline)
-		{
-			LogFatal("Failed to create Pipeline!");
-		}
-
-		for (uSize i = 0; i < 3; i++)
+		for (uSize i = 0; i < maxInFlightCount; i++)
 		{
 			VulkanImageInfo depthImageInfo = {};
 			depthImageInfo.vkFormat		= VK_FORMAT_D24_UNORM_S8_UINT;
 			depthImageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
 			depthImageInfo.vkUsageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-			depthImageInfo.width		= pGraphics->pSurface->width;
-			depthImageInfo.height		= pGraphics->pSurface->height;
+			depthImageInfo.width		= graphics.pSurface->width;
+			depthImageInfo.height		= graphics.pSurface->height;
 			depthImageInfo.depth		= 1;
 			depthImageInfo.layers		= 1;
 			depthImageInfo.mips			= 1;
@@ -142,14 +85,14 @@ namespace Quartz
 		}
 
 		VulkanCommandPoolInfo renderPoolInfo = {};
-		renderPoolInfo.queueFamilyIndex			= pGraphics->pPrimaryDevice->pPhysicalDevice-> primaryQueueFamilyIndices.graphics;
+		renderPoolInfo.queueFamilyIndex			= pDevice->pPhysicalDevice-> primaryQueueFamilyIndices.graphics;
 		renderPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		VulkanCommandPool* pRenderPool = pResources->CreateCommandPool(pGraphics->pPrimaryDevice, renderPoolInfo);
+		VulkanCommandPool* pRenderPool = pResources->CreateCommandPool(graphics.pPrimaryDevice, renderPoolInfo);
 
-		pResources->CreateCommandBuffers(pRenderPool, 3, mCommandBuffers);
+		pResources->CreateCommandBuffers(pRenderPool, maxInFlightCount, mCommandBuffers);
 
-		mTerrainRenderer.Initialize(*pGraphics, mShaderCache, mPipelineCache);
+		mTerrainRenderer.Initialize(graphics, mShaderCache, mPipelineCache, maxInFlightCount);
 
 		AtmosphereSun sun0 = {};
 		sun0.sunDir = { 0.0f, 0.5f, 1.0f };
@@ -174,7 +117,8 @@ namespace Quartz
 		settings.scatterLUTSize = { 32, 32 };
 		settings.viewLUTSize = { 200, 200 };
 
-		mSkyRenderer.Initialize(*pGraphics, atmosphere, settings, mShaderCache, mPipelineCache);
+		mSkyRenderer.Initialize(graphics, atmosphere, settings, mShaderCache, mPipelineCache, maxInFlightCount);
+		mSceneRenderer.Initialize(graphics, mShaderCache, mPipelineCache, maxInFlightCount);
 	}
 
 	void VulkanRenderer::SetCamera(Entity cameraEntity)
@@ -185,70 +129,13 @@ namespace Quartz
 			return; // Error
 		}
 
-		mCameraEntity				= cameraEntity;
-
-		// @TODO: Allow this to be a thing again?
-		//mpCameraComponent			= &Engine::GetWorld().Get<CameraComponent>(cameraEntity);
-		//mpCameraTransformComponent	= &Engine::GetWorld().Get<TransformComponent>(cameraEntity);
+		mCameraEntity = cameraEntity;
 	}
 
-	struct PerModelUBO
+	void VulkanRenderer::UpdateAll(EntityWorld& world, uSize frameIdx)
 	{
-		Mat4f model;
-		Mat4f view;
-		Mat4f proj;
-	};
-
-	void VulkanRenderer::UpdateAll(EntityWorld* pWorld, uSize frameIdx)
-	{
-		auto& renderableView = pWorld->CreateView<MeshComponent, TransformComponent>();
-		TransformComponent& cameraTransformComponent = pWorld->Get<TransformComponent>(mCameraEntity);
-		CameraComponent& cameraComponent = pWorld->Get<CameraComponent>(mCameraEntity);
-
-		mRenderables.Clear();
-
-		mBufferCache.ResetPerModelBuffers();
-
-		for (Entity& entity : renderableView)
-		{
-			MeshComponent& meshComponent			= pWorld->Get<MeshComponent>(entity);
-			TransformComponent& transformComponent	= pWorld->Get<TransformComponent>(entity);
-
-			VulkanRenderable renderable = {};
-
-			bool vertexDataFound;
-			mBufferCache.FillRenderableVertexData(renderable, meshComponent.modelURIHash, &meshComponent.modelData, vertexDataFound);
-
-			PerModelUBO perModelUbo = {};
-			perModelUbo.model	= transformComponent.GetMatrix();
-			perModelUbo.view	= cameraTransformComponent.GetViewMatrix();
-			perModelUbo.proj	= cameraComponent.GetProjectionMatrix();
-
-			mBufferCache.FillRenderablePerModelData(renderable, 0, &perModelUbo, sizeof(PerModelUBO));
-
-			if (pWorld->HasComponent<MaterialComponent>(entity))
-			{
-				MaterialComponent& materialComponent = pWorld->Get<MaterialComponent>(entity);
-
-				VulkanShader* pVertexShader		= mShaderCache.FindOrCreateShader(materialComponent.vertexURI, VK_SHADER_STAGE_VERTEX_BIT);
-				VulkanShader* pFragmentShader	= mShaderCache.FindOrCreateShader(materialComponent.fragmentURI, VK_SHADER_STAGE_FRAGMENT_BIT);
-
-				VulkanGraphicsPipelineInfo pipelineInfo = mPipelineCache.MakeDefaultGraphicsPipelineInfo(
-					{ pVertexShader, pFragmentShader },
-					mpDefaultPipeline->pipelineInfo.attachments,
-					mpDefaultPipeline->pipelineInfo.vertexAttributes,
-					mpDefaultPipeline->pipelineInfo.vertexBindings
-				);
-
-				renderable.pPipeline = mPipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
-			}
-			else
-			{
-				renderable.pPipeline = mpDefaultPipeline;
-			}
-
-			mRenderables.PushBack(renderable);
-		}
+		TransformComponent& cameraTransformComponent = world.Get<TransformComponent>(mCameraEntity);
+		CameraComponent& cameraComponent = world.Get<CameraComponent>(mCameraEntity);
 
 		Vec2f centerPos = { -cameraTransformComponent.position.x, -cameraTransformComponent.position.z };
 		//mTerrainRenderer.Update(centerPos, *mpCameraComponent, *mpCameraTransformComponent);
@@ -257,46 +144,29 @@ namespace Quartz
 
 	void VulkanRenderer::RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx)
 	{
-		mBufferCache.RecordTransfers(recorder);
 		//mTerrainRenderer.RecordTransfers(recorder);
+		mSceneRenderer.RecordTransfers(recorder, mBufferCache, frameIdx);
 		mSkyRenderer.RecordTransfers(recorder, frameIdx);
+	}
+
+	void VulkanRenderer::RecordPreDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
+	{
+		mSkyRenderer.RecordPreDraws(recorder, frameIdx);
 	}
 
 	void VulkanRenderer::RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
 	{
 		//mTerrainRenderer.RecordDraws(recorder);
-
-		for (VulkanRenderable& renderable : mRenderables)
-		{
-			recorder.SetGraphicsPipeline(renderable.pPipeline);
-
-			recorder.SetIndexBuffer(renderable.meshLocation.pIndexBuffer->GetVulkanBuffer(),
-				renderable.meshLocation.indexEntry.offset, VK_INDEX_TYPE_UINT16);
-
-			VulkanBufferBind pVertexBufferBinds[] = 
-			{ 
-				{renderable.meshLocation.pVertexBuffer->GetVulkanBuffer(), renderable.meshLocation.vertexEntry.offset} 
-			};
-
-			recorder.SetVertexBuffers(pVertexBufferBinds, 1);
-
-			VulkanUniformBufferBind binding = {};
-			binding.binding = 0;
-			binding.pBuffer = renderable.perModelLocation.pPerModelBuffer->GetVulkanBuffer();
-			binding.offset	= renderable.perModelLocation.perModelEntry.offset;
-			binding.range	= renderable.perModelLocation.perModelEntry.sizeBytes;
-
-			VulkanUniformBufferBind pBufferBinds[] = { binding };
-			
-			recorder.BindUniforms(renderable.pPipeline, 0, pBufferBinds, 1, nullptr, 0);
-
-			recorder.DrawIndexed(1, renderable.indexCount, 0, 0); //renderable.meshLocation.indexEntry.offset / sizeof(uInt16)
-		}
-
+		mSceneRenderer.RecordDraws(recorder, frameIdx);
 		mSkyRenderer.RecordDraws(recorder, frameIdx);
 	}
 
-	void VulkanRenderer::RenderScene(EntityWorld* pWorld, uSize frameIdx)
+	void VulkanRenderer::RecordPostDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
+	{
+
+	}
+
+	void VulkanRenderer::RenderScene(EntityWorld& world, uSize frameIdx)
 	{
 		VulkanCommandBuffer* pCommandBuffer = mCommandBuffers[frameIdx];
 		VulkanCommandRecorder recorder(pCommandBuffer);
@@ -313,7 +183,7 @@ namespace Quartz
 
 		RecordTransfers(recorder, frameIdx);
 
-		mSkyRenderer.PreRender(recorder, frameIdx);
+		RecordPreDraws(recorder, frameIdx);
 
 		VkViewport vkViewport = {};
 		vkViewport.x		= 0;
@@ -384,10 +254,10 @@ namespace Quartz
 		renderingBeginInfo.renderArea			= { { 0, 0 }, { mpGraphics->pSurface->width, mpGraphics->pSurface->height } };
 
 		recorder.BeginRendering(renderingBeginInfo);
-
 		RecordDraws(recorder, frameIdx);
-
 		recorder.EndRendering();
+
+		RecordPostDraws(recorder, frameIdx);
 
 		recorder.PipelineBarrierSwapchainImageEnd(mpSwapchain->images[frameIdx]);
 
@@ -405,8 +275,8 @@ namespace Quartz
 		mSwapTimer.AdvanceFrame();
 		uInt32 frameIdx = mSwapTimer.GetFrameIndex();
 
-		UpdateAll(&world, frameIdx);
-		RenderScene(&world, frameIdx);
+		UpdateAll(world, frameIdx);
+		RenderScene(world, frameIdx);
 	}
 
 	void VulkanRenderer::Register(Runtime& runtime)
