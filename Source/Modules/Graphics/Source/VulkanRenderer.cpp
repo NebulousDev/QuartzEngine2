@@ -14,9 +14,6 @@
 #include "Component/MeshComponent.h"
 #include "Component/TransformComponent.h"
 
-// TEMP
-#include "TerrainRenderer.h"
-
 namespace Quartz
 {
 	VulkanImageView* pPerlinImageView = nullptr;

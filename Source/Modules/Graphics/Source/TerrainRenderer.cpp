@@ -183,20 +183,22 @@ namespace Quartz
 		resources.DestroyBuffer(pMeshLODStagingIndexBuffer);
 	}
 
-	TerrainTile VulkanTerrainRenderer::CreateTile(uInt32 lodIndex, Vec2i position, float scale, uInt64 seed)
+	bool VulkanTerrainRenderer::CreateTile(TerrainTile& tile, Vec2i position, uInt32 lodIndex, uSize resolution, float scale, uInt64 seed)
 	{
-		constexpr float resoultion = 200.0f;
-
-		TerrainTileTextures textures = GenerateTileTextures(lodIndex, { (float)position.x, (float)position.y }, scale, seed, resoultion);
-
-		TerrainTile tile = {};
 		tile.position	= position;
 		tile.scale		= scale;
 		tile.lodIndex	= lodIndex;
+		tile.textures	= {};
+		tile.ready		= false;
+		tile.state		= TERRAIN_STATE_LOADING;
+
+		TerrainTileTextures textures = GenerateTileTextures(lodIndex, { (float)position.x, (float)position.y }, scale, seed, resolution);
+
 		tile.textures	= textures;
 		tile.ready		= true;
+		tile.state		= TERRAIN_STATE_ACTIVE;
 
-		return tile;
+		return true;
 	}
 
 	void VulkanTerrainRenderer::DestroyTile(const TerrainTile& tile)
@@ -209,34 +211,65 @@ namespace Quartz
 
 	void VulkanTerrainRenderer::UpdateGrid(const Vec2f& centerPos)
 	{
-		constexpr const sSize maxChunkDist = 4;
+		constexpr const sSize maxChunkDist	= 4;
+		constexpr const float resolution	= 200.0f;
 
 		sSize tileX = (sSize)centerPos.x;
 		sSize tileY = (sSize)centerPos.y;
+
+		/* Mark tiles outside of range for unload */
+
+		for (TerrainTile& tile : mActiveTiles)
+		{
+			if (tile.state <= TERRAIN_STATE_ACTIVE)
+			{
+				float tileCenterX = tile.position.x + 0.5 * tile.scale;
+				float tileCenterY = tile.position.y + 0.5 * tile.scale;
+				Vec2f tileCenterPos(tileCenterX, tileCenterY);
+
+				Vec2f dist = tileCenterPos - centerPos;
+				if (abs(dist.MagnitudeF()) > maxChunkDist)
+				{
+					TerrainTile& tile2 = mActiveTileMap.Get(tile.position);
+
+					if (tile2.ready)
+					{
+						tile2.state = TERRAIN_STATE_UNLOADING;
+						mUnloadingTiles.Push(tile2);
+					}
+					else
+					{
+						tile2.state = TERRAIN_STATE_UNLOADED;
+						LogDebug("Skipped Early");
+					}
+				}
+			}
+		}
 
 		/* Create pending tiles */
 
 		if (!mLoadingTiles.IsEmpty())
 		{
-			TerrainTile tile = mLoadingTiles.Pop();
-			tile = CreateTile(0, tile.position, tile.scale, 1234);
-			mActiveTileMap.Put(tile.position, tile);
+			Vec2i position = mLoadingTiles.Pop().position;
+			TerrainTile& tile = mActiveTileMap.Get(position);
+
+			if (tile.state == TERRAIN_STATE_WAITING)
+			{
+				CreateTile(tile, tile.position, 0, resolution, tile.scale, 1234);
+			}
+			else
+			{
+				LogDebug("Skipped");
+			}
 		}
 
-		/* Destroy tiles outside of range */
+		/* Destroy pending unload tiles */
 
-		for (TerrainTile& tile : mActiveTiles)
+		if (!mUnloadingTiles.IsEmpty())
 		{
-			float tileCenterX = tile.position.x + 0.5 * tile.scale;
-			float tileCenterY = tile.position.y + 0.5 * tile.scale;
-			Vec2f tileCenterPos(tileCenterX, tileCenterY);
-
-			Vec2f dist = tileCenterPos - centerPos;
-			if (abs(dist.MagnitudeF()) > maxChunkDist)
-			{
-				DestroyTile(tile);
-				mActiveTileMap.Remove(tile.position);
-			}
+			TerrainTile tile = mUnloadingTiles.Pop();
+			DestroyTile(tile);
+			mActiveTileMap.Remove(tile.position);
 		}
 
 		/* Build active tile list */
@@ -302,8 +335,8 @@ namespace Quartz
 		float sampleX = position.x * (float)(resolution - 1);
 		float sampleY = position.y * (float)(resolution - 1);
 
-		Array<float> perlin = GeneratePerlinNoiseMT(
-			resolution, sampleX, sampleY, seed, 450.0f, 2.0f, { 1.0f, 0.5f, 0.25f, 0.125, 0.125 / 2 }
+		Array<float> perlin = GeneratePerlinNoiseMT( // scale 450
+			resolution, sampleX, sampleY, seed, 550.0f, 1.5f, { 1.0f, 0.3f, 0.15f, 0.10f, 0.10f, 0.05f }
 		);
 
 		VulkanImageInfo perlinImageInfo = {};
@@ -607,7 +640,91 @@ namespace Quartz
 		}
 	}
 
-	void GeneratePerlinNoiseMTThread(Array<float>& finalNoise, uSize resolution, uSize yStart, uSize yEnd, 
+	void NormalizeWeights(const Array<float>& inWeights, Array<float>& outWeights)
+	{
+		outWeights.Resize(inWeights.Size());
+
+		float sum = 0;
+
+		for (uSize i = 0; i < inWeights.Size(); i++)
+		{
+			sum += inWeights[i];
+		}
+
+		for (uSize i = 0; i < inWeights.Size(); i++)
+		{
+			outWeights[i] = inWeights[i] / sum;
+		}
+	}
+
+	float GeneratePerlinNoiseAtPoint(float offsetX, float offsetY,
+		uInt64 seed, float scale, float lacunarity, const Array<float>& weights)
+	{
+		float value = 0.0f;
+		float freq = 1.0f;
+		float ampRot = 0.0f;
+		float steap = 0.0f;
+
+		for (float amplitude : weights)
+		{
+			float perlinX = (offsetX / scale) * freq;
+			float perlinY = (offsetY / scale) * freq;
+
+			Quatf rotation = Quatf().SetAxisAngle({ 0.0f, 0.0f, 1.0f }, ampRot);
+			Vec3f perlinPos = rotation * Vec3f(perlinX, perlinY, 1.0f);
+
+			Vec3f perlin = PerlinNoise2D(seed, perlinPos.x, perlinPos.y);
+
+			float val = (perlin.x + 1.0f) / 2.0f;
+			float angle = Dot(perlin, Vec3f(1.0f, 0.0f, 0.0f));
+					
+			value += val * amplitude;
+			steap += angle * amplitude;
+
+			freq *= lacunarity;
+			ampRot += (2.0f * 3.14159) / weights.Size();
+		}
+
+		value = Smootherstep(0.0f, 1.0f, value);
+
+		// Mountains
+
+		float mountainX = (offsetX / scale) * 0.1f;
+		float mountainY = (offsetY / scale) * 0.1f;
+
+		float mountainPerlin = PerlinNoise2D(seed, mountainX + 0.51f, mountainY + 0.83f);
+		mountainPerlin += PerlinNoise2D(seed, (mountainX + 3.88f) * 2.0f, (mountainY + 7.77f) * 2.0f);
+		mountainPerlin += PerlinNoise2D(seed, (mountainX + 99.51f) * 4.0f, (mountainY + 4.43f) * 4.0f);
+		float mountain = (mountainPerlin + 1.0f) / 2.0f;
+		mountain = Smootherstep(0.0f, 1.0f, mountain);
+
+		// Rivers
+
+		float riverX = ((offsetX + 811.0f) / scale) * 0.2f;
+		float riverY = ((offsetY + 118.0f) / scale) * 0.2f;
+
+		float riverPerlin0 = PerlinNoise2D(seed, riverX * 2.0f, riverY * 2.0f);
+		float riverPerlin1 = PerlinNoise2D(seed, (riverX + 0.9) * 1.0f, (riverY + 0.34) * 1.0f);
+		float river = PerlinNoise2D(seed, riverPerlin0 * 2.0f, riverPerlin1 * 2.0f);
+		river = (river + 1.0f) / 2.0f;
+
+		float riverMountainClamp = 1.0f - pow((1.0f - river), 3.0f);
+
+		mountain -= riverMountainClamp;
+		mountain = Clamp(0.0f, 10.0f, mountain);
+		mountain = 1.0f - pow((1.0f - mountain), 3.0f);
+
+		value = Cerp(value / 3.0f, value + mountain, mountain);
+		value = 1.0f - pow((1.0f - value), 2.0f);
+		value = Smootherstep(0.0f, 1.0f, value);
+
+		river /= 10.0f;
+		value -= river;
+
+		return value;
+	}
+
+	void GeneratePerlinNoiseMTThread(Array<float>& finalNoise, uSize resolution, uSize yStart, uSize yEnd,
 		float offsetX, float offsetY, uInt64 seed, float scale, float lacunarity, const Array<float>& octaveWeights)
 	{
 		float halfWidth = (float)resolution / 2.0f;
@@ -616,22 +733,9 @@ namespace Quartz
 		{
 			for (float x = 0; x < resolution; x++)
 			{
-				float value		= 0.0f;
-				float freq		= 1.0f;
-				float maxAmp	= 1.0f;
-
-				for (float amplitude : octaveWeights)
-				{
-					float perlinX = (offsetX + (x - halfWidth)) / scale * freq;
-					float perlinY = (offsetY + (y - halfWidth)) / scale * freq;
-
-					value += PerlinNoise2D(seed, perlinX, perlinY) * amplitude;
-
-					freq *= lacunarity;
-					maxAmp += amplitude;
-				}
-
-				finalNoise[x + y * resolution] = (value * 2.0f + 1.0f) / maxAmp;
+				float value = GeneratePerlinNoiseAtPoint(offsetX + (x - halfWidth), offsetY + (y - halfWidth), 
+					seed, scale, lacunarity, octaveWeights);
+				finalNoise[x + y * resolution] = value;
 			}
 		}
 	}
@@ -641,6 +745,9 @@ namespace Quartz
 	{
 		constexpr uSize threadCount = 6;
 		std::thread threads[threadCount];
+
+		Array<float> weights;
+		NormalizeWeights(octaveWeights, weights);
 
 		Array<float> finalNoise(resolution * resolution);
 
@@ -652,50 +759,13 @@ namespace Quartz
 			if (i == threadCount - 1) end = resolution;
 
 			threads[i] = std::thread(GeneratePerlinNoiseMTThread, 
-				std::ref(finalNoise), resolution, start, end, offsetX, offsetY, seed, scale, lacunarity, std::ref(octaveWeights));
+				std::ref(finalNoise), resolution, start, end, 
+				offsetX, offsetY, seed, scale, lacunarity, std::ref(weights));
 		}
 
 		for (uSize i = 0; i < threadCount; i++)
 		{
 			threads[i].join();
-		}
-
-		return finalNoise;
-	}
-
-	Array<float> VulkanTerrainRenderer::GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed, 
-		float scale, float lacunarity, const Array<float>& octaveWeights)
-	{
-		Array<float> finalNoise(resolution * resolution);
-
-		float halfWidth = (float)resolution / 2.0f;
-
-		for (float y = 0; y < resolution; y++)
-		{
-			for (float x = 0; x < resolution; x++)
-			{
-				float value		= 0.0f;
-				float freq		= 1.0f;
-				float maxAmp	= 1.0f;
-
-				for (float amplitude : octaveWeights)
-				{
-					float perlinX = (offsetX + (x - halfWidth)) / scale * freq;
-					float perlinY = (offsetY + (y - halfWidth)) / scale * freq;
-
-					value += PerlinNoise2D(seed, perlinX, perlinY) * amplitude;
-
-					freq *= lacunarity;
-					maxAmp += amplitude;
-				}
-
-				finalNoise[x + y * resolution] = (value * 2.0f + 1.0f) / maxAmp;
-			}
-		}
-
-		for (uSize i = 0; i < finalNoise.Size(); i++)
-		{
-			finalNoise[i] = Parabola(1.0f, 0.0f, 0.0f, finalNoise[i]);//pow(5, finalNoise[i]);
 		}
 
 		return finalNoise;

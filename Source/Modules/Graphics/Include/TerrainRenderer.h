@@ -44,12 +44,22 @@ namespace Quartz
 		VulkanImageView*	pHeightMapView;
 	};
 
+	enum TerrainState
+	{
+		TERRAIN_STATE_WAITING,
+		TERRAIN_STATE_LOADING,
+		TERRAIN_STATE_ACTIVE,
+		TERRAIN_STATE_UNLOADING,
+		TERRAIN_STATE_UNLOADED
+	};
+
 	struct TerrainTile
 	{
 		Vec2i				position;
 		float				scale;
 		uInt32				lodIndex;
 		TerrainTileTextures	textures;
+		TerrainState		state;
 		bool				ready;
 	};
 
@@ -61,6 +71,7 @@ namespace Quartz
 		VulkanBuffer*				mpLODIndexBuffer;
 		Array<TerrainLOD>			mLODs;
 		Array<TerrainTile>			mActiveTiles;
+		Stack<TerrainTile>			mUnloadingTiles;
 		Map<Vec2i, TerrainTile>		mActiveTileMap;
 		Stack<TerrainTile>			mLoadingTiles;
 
@@ -83,16 +94,15 @@ namespace Quartz
 		ModelData	CreateTileMesh(uSize resolution);
 		void		CreateLODs(uSize count, uSize closeResolution);
 
-		TerrainTile	CreateTile(uInt32 lodIndex, Vec2i position, float scale, uInt64 seed);
+		bool		CreateTile(TerrainTile& tile, Vec2i position, uInt32 lodIndex, uSize resolution, float scale, uInt64 seed);
 		void		DestroyTile(const TerrainTile& tile);
 
 		void		UpdateGrid(const Vec2f& centerPos);
 
-		Array<float>		GeneratePerlinNoise(uSize resolution, float offsetX, float offsetY, uInt64 seed,
-								float scale, float lacunarity, const Array<float>& octaveWeights);
 		Array<float>		GeneratePerlinNoiseMT(uSize resolution, float offsetX, float offsetY, uInt64 seed,
 								float scale, float lacunarity, const Array<float>& octaveWeights);
-		TerrainTileTextures	GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed, uSize resolution);
+		TerrainTileTextures	GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, 
+								float scale, uInt64 seed, uSize resolution);
 
 	public:
 		void Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, 

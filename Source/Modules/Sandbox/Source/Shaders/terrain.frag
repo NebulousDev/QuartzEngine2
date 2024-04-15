@@ -11,7 +11,7 @@ void main()
 	float height = inHeight;
 	vec3 hColor = vec3(height);
 
-	if(height < 0.1)
+	if(height < 0.0)
 	{
 		hColor = vec3(0.1f, 0.2f, 0.9f);
 	}
