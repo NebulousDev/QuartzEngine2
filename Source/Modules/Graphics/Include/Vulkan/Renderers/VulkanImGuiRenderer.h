@@ -20,7 +20,7 @@ namespace Quartz
 	public:
 		void Initialize(VulkanGraphics& graphics, VulkanDevice& device, Window& window, VkPipelineRenderingCreateInfo& renderingInfo);
 
-		void Update();
+		void Update(double deltaTime);
 
 		void RecordDraws(VulkanCommandRecorder& renderRecorder);
 	};

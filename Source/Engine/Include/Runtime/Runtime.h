@@ -129,8 +129,13 @@ namespace Quartz
 		uInt64 mTargetUPS;
 		uInt64 mTargetTPS;
 
+		double mAverageDecayUPS	= 0.9;
+		double mAverageDecayTPS = 0.9;
+
 		double mCurrentUPS;
 		double mCurrentTPS;
+		double mAverageUPS;
+		double mAverageTPS;
 
 		double mUpdateDelta;
 
@@ -355,11 +360,13 @@ namespace Quartz
 		inline void SetTargetUps(uInt64 ups) { mTargetUPS = ups; }
 		inline void SetTargetTps(uInt64 tps) { mTargetTPS = tps; }
 
-		inline double GetCurrentUps() const { return mCurrentUPS; }
-		inline double GetCurrentTps() const { return mCurrentTPS; }
-
 		inline double GetTargetUps() const { return mTargetUPS; }
 		inline double GetTargetTps() const { return mTargetUPS; }
+
+		inline double GetCurrentUps() const { return mCurrentUPS; }
+		inline double GetCurrentTps() const { return mCurrentTPS; }
+		inline double GetAverageUps() const { return mAverageUPS; }
+		inline double GetAverageTps() const { return mAverageTPS; }
 
 		inline double GetUpdateDelta() const { return mUpdateDelta; }
 	};

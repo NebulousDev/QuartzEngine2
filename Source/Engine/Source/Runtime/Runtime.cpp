@@ -184,6 +184,9 @@ namespace Quartz
 		uInt64 accumulatedUpdates		= 0;
 		uInt64 accumulatedTicks			= 0;
 
+		double averageDecay = 0.5f;
+		double averageUPS	= 1.0f;
+
 		double targetTickTime   = SECOND / (double)mTargetTPS;
 		double targetUpdateTime = SECOND / (double)mTargetUPS;
 
@@ -200,27 +203,32 @@ namespace Quartz
 
 			if (accumulatedTickTime >= targetTickTime)
 			{
+				mCurrentTPS = SECOND / accumulatedTickTime;
+				mAverageTPS = mAverageDecayTPS * mAverageTPS + (1.0 - mAverageDecayTPS) * mCurrentTPS;
+
 				TickAll(accumulatedTicks);
+
 				accumulatedTicks++;
 				accumulatedTickTime = 0;
 			}
 
 			if (accumulatedUpdateTime >= targetUpdateTime)
 			{
+				mCurrentUPS = SECOND / accumulatedUpdateTime;
+				mAverageUPS = mAverageDecayUPS * mAverageUPS + (1.0 - mAverageDecayUPS) * mCurrentUPS;
+
 				mUpdateDelta = accumulatedUpdateTime / SECOND;
 
 				if (mUpdateDelta > 1.0f) mUpdateDelta = 1.0f;
 
 				UpdateAll(mUpdateDelta);
+
 				accumulatedUpdates++;
 				accumulatedUpdateTime = 0;
 			}
 
 			if (accumulatedTime >= SECOND)
 			{
-				mCurrentUPS = accumulatedUpdates;
-				mCurrentTPS = accumulatedTicks;
-
 				accumulatedTime = 0;
 				accumulatedTicks = 0;
 				accumulatedUpdates = 0;

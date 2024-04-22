@@ -309,7 +309,7 @@ namespace Quartz
 					if (deltaAcc > 1.0)
 					{
 						deltaAcc = 0;
-						//LogInfo("> FPS: %.1lf", pRuntime->GetCurrentUps());
+						//LogInfo("> FPS: %.1lf", runtime.GetCurrentUps());
 					}
 
 					TransformComponent& cameraTransform = Engine::GetWorld().Get<TransformComponent>(gCamera);
@@ -334,8 +334,6 @@ namespace Quartz
 					/// PHYSICS
 
 					gPhysics.Step(Engine::GetWorld(), delta);
-					
-					//cube2RigidBody.AddForce({ 0.0f, -1.81f, 0.0f });
 				}
 			);
 

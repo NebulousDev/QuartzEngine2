@@ -111,15 +111,26 @@ namespace Quartz
 			ImGuiWindowFlags_NoBackground |
 			ImGuiWindowFlags_NoTitleBar);
 
-		const double fps = Engine::GetRuntime().GetCurrentUps();
-		const double tps = Engine::GetRuntime().GetCurrentTps();
+		const double fps = Engine::GetRuntime().GetAverageUps();
+		const double tps = Engine::GetRuntime().GetAverageTps();
 
-		ImGui::Text("FPS: %d", (sSize)fps);
-		ImGui::Text("TPS: %d", (sSize)tps);
+		ImGui::Text("FPS: %.2lf", fps + 0.01);
+		ImGui::Text("TPS: %.2lf", tps);
 	}
 
-	void VulkanImGuiRenderer::Update()
+	double accumTime = 0.05;
+	double updateTime = 0.05;
+
+	void VulkanImGuiRenderer::Update(double deltaTime)
 	{
+		accumTime += deltaTime;
+		if (accumTime < updateTime)
+		{
+			return; // Dont update
+		}
+
+		accumTime = 0.0;
+
 		ImGui_ImplVulkan_NewFrame();
 		
 		switch (mWindowApi)

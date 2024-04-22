@@ -141,7 +141,7 @@ namespace Quartz
 		mCameraEntity = cameraEntity;
 	}
 
-	void VulkanRenderer::UpdateAll(EntityWorld& world, uSize frameIdx)
+	void VulkanRenderer::UpdateAll(EntityWorld& world, uSize frameIdx, double deltaTime)
 	{
 		TransformComponent& cameraTransformComponent = world.Get<TransformComponent>(mCameraEntity);
 		CameraComponent& cameraComponent = world.Get<CameraComponent>(mCameraEntity);
@@ -151,7 +151,7 @@ namespace Quartz
 		Vec2f centerPos = { cameraTransformComponent.position.x, cameraTransformComponent.position.z };
 		mTerrainRenderer.Update(centerPos, cameraComponent, cameraTransformComponent);
 		mSkyRenderer.Update(cameraComponent, cameraTransformComponent, frameIdx);
-		mImGuiRenderer.Update();
+		mImGuiRenderer.Update(deltaTime);
 	}
 
 	void VulkanRenderer::RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx)
@@ -288,7 +288,7 @@ namespace Quartz
 		mSwapTimer.AdvanceFrame();
 		uInt32 frameIdx = mSwapTimer.GetFrameIndex();
 
-		UpdateAll(world, frameIdx);
+		UpdateAll(world, frameIdx, delta);
 		RenderScene(world, frameIdx);
 	}
 
