@@ -1,4 +1,4 @@
-#include "TerrainRenderer.h"
+#include "Vulkan/Renderers/VulkanTerrainRenderer.h"
 
 #include "Math/Math.h"
 #include "Engine.h"
@@ -497,18 +497,19 @@ namespace Quartz
 		return textures;
 	}
 
-	void VulkanTerrainRenderer::Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, 
+	void VulkanTerrainRenderer::Initialize(VulkanGraphics& graphics, VulkanDevice& device, VulkanShaderCache& shaderCache, 
 		VulkanPipelineCache& pipelineCache, uSize maxInFlightCount)
 	{
 		mpGraphics = &graphics;
+		mpDevice = &device;
 
 		/* Create Command Buffers */
 
 		VulkanCommandPoolInfo terrainCommandPoolInfo = {};
-		terrainCommandPoolInfo.queueFamilyIndex			= graphics.pPrimaryDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
+		terrainCommandPoolInfo.queueFamilyIndex			= device.pPhysicalDevice->primaryQueueFamilyIndices.graphics;
 		terrainCommandPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		mpImmediateCommandPool = graphics.pResourceManager->CreateCommandPool(graphics.pPrimaryDevice, terrainCommandPoolInfo);
+		mpImmediateCommandPool = graphics.pResourceManager->CreateCommandPool(&device, terrainCommandPoolInfo);
 		graphics.pResourceManager->CreateCommandBuffers(mpImmediateCommandPool, 3, mImmediateCommandBuffers);
 
 		VkFenceCreateInfo vkImmediateFenceInfo = {};
@@ -519,7 +520,7 @@ namespace Quartz
 		for (uSize i = 0; i < maxInFlightCount; i++)
 		{
 			mImmediateRecorders[i] = VulkanCommandRecorder(mImmediateCommandBuffers[i]);
-			vkCreateFence(graphics.pPrimaryDevice->vkDevice, &vkImmediateFenceInfo, VK_NULL_HANDLE, &mImmediateFences[i]);
+			vkCreateFence(device.vkDevice, &vkImmediateFenceInfo, VK_NULL_HANDLE, &mImmediateFences[i]);
 		}
 
 		mImmediateIdx = 0;

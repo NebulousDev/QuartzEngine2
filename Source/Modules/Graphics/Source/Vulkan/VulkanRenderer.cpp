@@ -19,20 +19,24 @@ namespace Quartz
 	VulkanImageView* pPerlinImageView = nullptr;
 	VkSampler perlinSampler;
 
-	void VulkanRenderer::Initialize(VulkanGraphics& graphics, void* pWindowHandle, uSize maxInFlightCount)
+	VulkanRenderer::VulkanRenderer(VulkanGraphics& graphics, VulkanDevice& device, Window& activeWindow, uSize maxInFlightCount)
 	{
-		VulkanResourceManager*	pResources	= graphics.pResourceManager;
-		VulkanDevice*			pDevice		= graphics.pPrimaryDevice;
-
-		mpGraphics		= &graphics;
-		mPipelineCache	= VulkanPipelineCache(pDevice, pResources);
-		mShaderCache	= VulkanShaderCache(pDevice, pResources);
-		mpSwapchain		= pResources->CreateSwapchain(pDevice, *graphics.pSurface, maxInFlightCount);
-		mSwapTimer		= VulkanSwapchainTimer(mpSwapchain);
-
 		assert(maxInFlightCount < VULKAN_GRAPHICS_MAX_IN_FLIGHT);
-		mMaxInFlightCount = maxInFlightCount;
 
+		mpGraphics			= &graphics;
+		mpResourceManager	= graphics.pResourceManager;
+		mpWindow			= &activeWindow;
+		mpDevice			= &device;
+		mMaxInFlightCount	= maxInFlightCount;
+
+		mPipelineCache		= VulkanPipelineCache(mpDevice, mpResourceManager);
+		mShaderCache		= VulkanShaderCache(mpDevice, mpResourceManager);
+		mpSwapchain			= mpResourceManager->CreateSwapchain(mpDevice, *graphics.pSurface, maxInFlightCount);
+		mSwapTimer			= VulkanSwapchainTimer(mpSwapchain);
+	}
+
+	void VulkanRenderer::Initialize()
+	{
 		VulkanRenderSettings renderSettings = {};
 		renderSettings.useUniqueMeshBuffers				= false;
 		renderSettings.useUniqueMeshStagingBuffers		= false;
@@ -50,21 +54,21 @@ namespace Quartz
 		renderSettings.useUniformStaging				= true;
 		renderSettings.useDrawIndirect					= false;
 
-		mBufferCache.Initialize(pDevice, pResources, renderSettings);
+		mBufferCache.Initialize(mpDevice, mpResourceManager, renderSettings);
 
-		for (uSize i = 0; i < maxInFlightCount; i++)
+		for (uSize i = 0; i < mMaxInFlightCount; i++)
 		{
 			VulkanImageInfo depthImageInfo = {};
 			depthImageInfo.vkFormat		= VK_FORMAT_D24_UNORM_S8_UINT;
 			depthImageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
 			depthImageInfo.vkUsageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-			depthImageInfo.width		= graphics.pSurface->width;
-			depthImageInfo.height		= graphics.pSurface->height;
+			depthImageInfo.width		= mpGraphics->pSurface->width;
+			depthImageInfo.height		= mpGraphics->pSurface->height;
 			depthImageInfo.depth		= 1;
 			depthImageInfo.layers		= 1;
 			depthImageInfo.mips			= 1;
 
-			mDepthImages[i] = pResources->CreateImage(pDevice, depthImageInfo);
+			mDepthImages[i] = mpResourceManager->CreateImage(mpDevice, depthImageInfo);
 			LogInfo("Image %p", mDepthImages[i]);
 
 			VulkanImageViewInfo depthImageViewInfo = {};
@@ -77,19 +81,19 @@ namespace Quartz
 			depthImageViewInfo.mipStart			= 0;
 			depthImageViewInfo.mipCount			= 1;
 
-			mDepthImageViews[i] = pResources->CreateImageView(pDevice, depthImageViewInfo);
+			mDepthImageViews[i] = mpResourceManager->CreateImageView(mpDevice, depthImageViewInfo);
 			LogInfo("View %p", mDepthImageViews[i]);
 		}
 
 		VulkanCommandPoolInfo renderPoolInfo = {};
-		renderPoolInfo.queueFamilyIndex			= pDevice->pPhysicalDevice-> primaryQueueFamilyIndices.graphics;
+		renderPoolInfo.queueFamilyIndex			= mpDevice->pPhysicalDevice-> primaryQueueFamilyIndices.graphics;
 		renderPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		VulkanCommandPool* pRenderPool = pResources->CreateCommandPool(graphics.pPrimaryDevice, renderPoolInfo);
+		VulkanCommandPool* pRenderPool = mpResourceManager->CreateCommandPool(mpDevice, renderPoolInfo);
 
-		pResources->CreateCommandBuffers(pRenderPool, maxInFlightCount, mCommandBuffers);
+		mpResourceManager->CreateCommandBuffers(pRenderPool, mMaxInFlightCount, mCommandBuffers);
 
-		mTerrainRenderer.Initialize(graphics, mShaderCache, mPipelineCache, maxInFlightCount);
+		mTerrainRenderer.Initialize(*mpGraphics, *mpDevice, mShaderCache, mPipelineCache, mMaxInFlightCount);
 
 		AtmosphereSun sun0 = {};
 		sun0.sunDir = { 0.0f, -0.2f, -1.0f };
@@ -110,13 +114,20 @@ namespace Quartz
 		atmosphere.suns[1]				= sun1;
 
 		SkyRenderSettings settings = {};
-		settings.transmittanceLUTSize = { 256, 64 };
-		settings.scatterLUTSize = { 32, 32 };
-		settings.viewLUTSize = { 200, 200 };
+		settings.transmittanceLUTSize	= { 256, 64 };
+		settings.scatterLUTSize			= { 32, 32 };
+		settings.viewLUTSize			= { 200, 200 };
 
-		mSceneRenderer.Initialize(graphics, mShaderCache, mPipelineCache, maxInFlightCount);
-		mSkyRenderer.Initialize(graphics, atmosphere, settings, mShaderCache, mPipelineCache, maxInFlightCount);
-		mImGuiRenderer.Initialize(graphics, pWindowHandle, *mSwapTimer.GetSwapchain());
+		mSceneRenderer.Initialize(*mpGraphics, *mpDevice, mShaderCache, mPipelineCache, mMaxInFlightCount);
+		mSkyRenderer.Initialize(*mpGraphics, *mpDevice, atmosphere, settings, mShaderCache, mPipelineCache, mMaxInFlightCount);
+
+		VkPipelineRenderingCreateInfo renderingInfo = {};
+		renderingInfo.sType						= VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+		renderingInfo.colorAttachmentCount		= 1;
+		renderingInfo.pColorAttachmentFormats	= &mpSwapchain->images[0]->vkFormat;
+		renderingInfo.depthAttachmentFormat		= VK_FORMAT_D24_UNORM_S8_UINT;
+
+		mImGuiRenderer.Initialize(*mpGraphics, *mpDevice, *mpWindow, renderingInfo);
 	}
 
 	void VulkanRenderer::SetCamera(Entity cameraEntity)

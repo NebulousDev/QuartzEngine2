@@ -10,6 +10,7 @@ file(GLOB imgui_sources
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_glfw.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_win32.cpp"
 )
 
 add_library(${PROJECT_NAME} SHARED
@@ -18,7 +19,7 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Vulkan/VulkanBufferCache.cpp"
     "Source/Vulkan/VulkanGraphics.cpp"
 	"Source/OpenGL/GLGraphics.cpp"
-    "Source/VulkanRenderer.cpp"
+    "Source/Vulkan/VulkanRenderer.cpp"
 	"Source/Vulkan/VulkanSwapchianTimer.cpp"
 	"Source/Vulkan/VulkanResourceManager.cpp"
 	"Source/Vulkan/SPIRV/SPIRV.cpp"
@@ -31,11 +32,12 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Vulkan/VulkanPipelineCache.cpp"
 	"Source/Vulkan/VulkanShaderCache.cpp"
 	"Source/Component/CameraComponent.cpp"
-	"Source/TerrainRenderer.cpp"
-	"Source/SkyRenderer.cpp"
-	"Source/SceneRenderer.cpp"
-	"Source/ImGuiRenderer.cpp"
-)
+	
+	"Source/Vulkan/Renderers/VulkanTerrainRenderer.cpp"
+	"Source/Vulkan/Renderers/VulkanSkyRenderer.cpp"
+	"Source/Vulkan/Renderers/VulkanSceneRenderer.cpp"
+	"Source/Vulkan/Renderers/VulkanImGuiRenderer.cpp"
+ )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

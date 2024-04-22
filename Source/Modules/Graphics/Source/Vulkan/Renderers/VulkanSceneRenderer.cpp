@@ -1,13 +1,16 @@
-#include "SceneRenderer.h"
+#include "Vulkan/Renderers/VulkanSceneRenderer.h"
 
 #include "Component/MeshComponent.h"
 #include "Component/MaterialComponent.h"
 
 namespace Quartz
 {
-	void VulkanSceneRenderer::Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, 
+	void VulkanSceneRenderer::Initialize(VulkanGraphics& graphics, VulkanDevice& device, VulkanShaderCache& shaderCache,
 		VulkanPipelineCache& pipelineCache, uSize maxInFlightCount)
 	{
+		mpGraphics	= &graphics;
+		mpDevice	= &device;
+
 		VulkanResourceManager*	pResources	= graphics.pResourceManager;
 		VulkanDevice*			pDevice		= graphics.pPrimaryDevice;
 

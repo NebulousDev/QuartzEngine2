@@ -27,13 +27,16 @@ namespace Quartz
 	class QUARTZ_GRAPHICS_API VulkanSceneRenderer
 	{
 	private:
+		VulkanGraphics* mpGraphics;
+		VulkanDevice*	mpDevice;
+
 		VulkanGraphicsPipeline* mpDefaultPipeline;
 
 		Array<VulkanRenderable>	mRenderables;
 		Array<VulkanRenderable>	mRenderablesSorted;
 
 	public:
-		void Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, 
+		void Initialize(VulkanGraphics& graphics, VulkanDevice& device, VulkanShaderCache& shaderCache, 
 			VulkanPipelineCache& pipelineCache, uSize maxInFlightCount);
 
 		void Update(EntityWorld& world, VulkanBufferCache& bufferCache, 

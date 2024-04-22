@@ -67,6 +67,8 @@ namespace Quartz
 
 	private:
 		VulkanGraphics*			mpGraphics;
+		VulkanResourceManager*	mpResourceManager;
+		VulkanDevice*			mpDevice;
 
 		AtmosphereValues		mAtmosphere;
 		SkyRenderSettings		mSettings;
@@ -103,7 +105,7 @@ namespace Quartz
 		void PrepareImageForSampling(VulkanCommandRecorder& recorder, VulkanImage* pImage);
 
 	public:
-		void Initialize(VulkanGraphics& graphics, const AtmosphereValues& atmosphere, const SkyRenderSettings& settings, 
+		void Initialize(VulkanGraphics& graphics, VulkanDevice& device, const AtmosphereValues& atmosphere, const SkyRenderSettings& settings,
 			VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache, uSize maxInFlightCount);
 
 		void Update(CameraComponent& camera, TransformComponent& cameraTransform, uSize frameIdx);

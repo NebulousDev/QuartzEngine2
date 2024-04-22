@@ -1,17 +1,24 @@
 #pragma once
 
 #include "GfxAPI.h"
+
+#include "Window.h"
+#include "Application.h"
+
 #include "Vulkan/VulkanGraphics.h"
 #include "Vulkan/VulkanCommandRecorder.h"
-#include "Vulkan/Primatives/VulkanSwapchain.h"
 
 namespace Quartz
 {
 	class QUARTZ_GRAPHICS_API VulkanImGuiRenderer
 	{
+	private:
+		Window*				mpWindow;
+		WindowAPI			mWindowApi;
+		VkDescriptorPool	mvkDescriptorPool;
 
 	public:
-		void Initialize(VulkanGraphics& graphics, void* pWindowHandle, VulkanSwapchain& swapchain);
+		void Initialize(VulkanGraphics& graphics, VulkanDevice& device, Window& window, VkPipelineRenderingCreateInfo& renderingInfo);
 
 		void Update();
 

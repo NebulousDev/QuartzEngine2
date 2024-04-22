@@ -1,4 +1,4 @@
-#include "SkyRenderer.h"
+#include "Vulkan/Renderers/VulkanSkyRenderer.h"
 
 namespace Quartz
 {
@@ -102,15 +102,14 @@ namespace Quartz
 
 #define LUT_FORMAT VK_FORMAT_R16G16B16A16_SFLOAT
 
-	void VulkanSkyRenderer::Initialize(VulkanGraphics& graphics, const AtmosphereValues& atmosphere, const SkyRenderSettings& settings, 
+	void VulkanSkyRenderer::Initialize(VulkanGraphics& graphics, VulkanDevice& device, const AtmosphereValues& atmosphere, const SkyRenderSettings& settings,
 		VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache, uSize maxInFlightCount)
 	{
-		VulkanResourceManager& resources = *graphics.pResourceManager;
-		VulkanDevice& device = *graphics.pPrimaryDevice;
-
-		mpGraphics = &graphics;
-		mAtmosphere = atmosphere;
-		mSettings = settings;
+		mpGraphics			= &graphics;
+		mpResourceManager	= graphics.pResourceManager;
+		mpDevice			= &device;
+		mAtmosphere			= atmosphere;
+		mSettings			= settings;
 
 		/* Create Uniform Buffers */
 
@@ -124,8 +123,8 @@ namespace Quartz
 		skyPerFrameBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		skyPerFrameBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-		mpSkyPerFrameStagingBuffer = resources.CreateBuffer(&device, skyPerFrameStagingBufferInfo);
-		mpSkyPerFrameBuffer = resources.CreateBuffer(&device, skyPerFrameBufferInfo);
+		mpSkyPerFrameStagingBuffer = mpResourceManager->CreateBuffer(&device, skyPerFrameStagingBufferInfo);
+		mpSkyPerFrameBuffer = mpResourceManager->CreateBuffer(&device, skyPerFrameBufferInfo);
 
 		mpSkyPerFrameWriter = VulkanBufferWriter(mpSkyPerFrameStagingBuffer);
 		mpSkyPerFrameData = mpSkyPerFrameWriter.Map<AtmospherePerFrameData>();
@@ -164,9 +163,9 @@ namespace Quartz
 			viewImageInfo.layers				= 1;
 			viewImageInfo.mips					= 1;
 
-			mpSkyTransmittanceLUT[i] = resources.CreateImage(&device, transmittanceImageInfo);
-			mpSkyScatterLUT[i] = resources.CreateImage(&device, scatterImageInfo);
-			mpSkyViewLUT[i] = resources.CreateImage(&device, viewImageInfo);
+			mpSkyTransmittanceLUT[i] = mpResourceManager->CreateImage(&device, transmittanceImageInfo);
+			mpSkyScatterLUT[i] = mpResourceManager->CreateImage(&device, scatterImageInfo);
+			mpSkyViewLUT[i] = mpResourceManager->CreateImage(&device, viewImageInfo);
 
 			VulkanImageViewInfo transmittanceViewInfo = {};
 			transmittanceViewInfo.pImage				= mpSkyTransmittanceLUT[i];
@@ -198,9 +197,9 @@ namespace Quartz
 			viewViewInfo.layerStart						= 0;
 			viewViewInfo.layerCount						= 1;
 
-			mpSkyTransmittanceLUTView[i] = resources.CreateImageView(&device, transmittanceViewInfo);
-			mpSkyScatterLUTView[i] = resources.CreateImageView(&device, scatterViewInfo);
-			mpSkyViewLUTView[i] = resources.CreateImageView(&device, viewViewInfo);
+			mpSkyTransmittanceLUTView[i] = mpResourceManager->CreateImageView(&device, transmittanceViewInfo);
+			mpSkyScatterLUTView[i] = mpResourceManager->CreateImageView(&device, scatterViewInfo);
+			mpSkyViewLUTView[i] = mpResourceManager->CreateImageView(&device, viewViewInfo);
 		}
 
 		/* Create Samplers */

@@ -67,6 +67,8 @@ namespace Quartz
 	{
 	private:
 		VulkanGraphics*				mpGraphics;
+		VulkanDevice*				mpDevice;
+
 		VulkanBuffer*				mpLODVertexBuffer;
 		VulkanBuffer*				mpLODIndexBuffer;
 		Array<TerrainLOD>			mLODs;
@@ -105,7 +107,7 @@ namespace Quartz
 								float scale, uInt64 seed, uSize resolution);
 
 	public:
-		void Initialize(VulkanGraphics& graphics, VulkanShaderCache& shaderCache, 
+		void Initialize(VulkanGraphics& graphics, VulkanDevice& device, VulkanShaderCache& shaderCache,
 			VulkanPipelineCache& pipelineCache, uSize maxInFlightCount);
 
 		void Update(const Vec2f& gridPos, CameraComponent& camera, TransformComponent& cameraTransform);

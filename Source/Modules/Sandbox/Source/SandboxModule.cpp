@@ -290,10 +290,10 @@ namespace Quartz
 			gCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
 
 			uSize maxInFlightCount = 3;
+			VulkanRenderer* pRenderer = new VulkanRenderer(gfx, *gfx.pPrimaryDevice, *gpWindow, maxInFlightCount);
 
-			VulkanRenderer* pRenderer = new VulkanRenderer();
+			pRenderer->Initialize();
 			pRenderer->Register(runtime);
-			pRenderer->Initialize(gfx, gpWindow->GetNativeHandle(), maxInFlightCount);
 			pRenderer->SetCamera(gCamera);
 
 			runtime.SetTargetUps(350);

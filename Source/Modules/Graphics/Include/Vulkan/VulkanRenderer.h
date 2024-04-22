@@ -4,15 +4,17 @@
 #include "Math/Math.h"
 #include "Runtime/Runtime.h"
 
+#include "Window.h"
+
 #include "VulkanGraphics.h"
 #include "VulkanBufferCache.h"
 #include "VulkanSwapchainTimer.h"
 #include "VulkanBufferWriter.h"
 
-#include "../SceneRenderer.h"
-#include "../TerrainRenderer.h"
-#include "../SkyRenderer.h"
-#include "../ImGuiRenderer.h"
+#include "Renderers/VulkanSceneRenderer.h"
+#include "Renderers/VulkanTerrainRenderer.h"
+#include "Renderers/VulkanSkyRenderer.h"
+#include "Renderers/VulkanImGuiRenderer.h"
 
 namespace Quartz
 {
@@ -20,6 +22,10 @@ namespace Quartz
 	{
 	private:
 		VulkanGraphics*				mpGraphics;
+		VulkanResourceManager*		mpResourceManager;
+		Window*						mpWindow;
+		VulkanDevice*				mpDevice;
+
 		VulkanSwapchain*			mpSwapchain;
 		VulkanSwapchainTimer		mSwapTimer;
 
@@ -40,11 +46,14 @@ namespace Quartz
 		VulkanImGuiRenderer			mImGuiRenderer;
 
 	public:
-		void Initialize(VulkanGraphics& graphics, void* pWindowHandle, uSize maxInFlightCount);
+		VulkanRenderer(VulkanGraphics& graphics, VulkanDevice& device, Window& activeWindow, uSize maxInFlightCount);
+
+		void Initialize();
 
 		void SetCamera(Entity cameraEntity);
 
 		void UpdateAll(EntityWorld& world, uSize frameIdx);
+
 		void RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx);
 		void RecordPreDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
 		void RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
@@ -55,9 +64,11 @@ namespace Quartz
 		void RenderUpdate(Runtime& runtime, double delta);
 		void Register(Runtime& runtime);
 
-		uSize GetMaxInFlightCount() const { return mMaxInFlightCount; }
-		VulkanBufferCache& GetBufferCache() { return mBufferCache; }
-		VulkanShaderCache& GetShaderCache() { return mShaderCache; }
-		VulkanPipelineCache& GetPipelineCache() { return mPipelineCache; }
+		Window&					GetWindow() const { return *mpWindow; }
+		VulkanDevice&			GetDevice() const { return *mpDevice; }
+		uSize					GetMaxInFlightCount() const { return mMaxInFlightCount; }
+		VulkanBufferCache&		GetBufferCache() { return mBufferCache; }
+		VulkanShaderCache&		GetShaderCache() { return mShaderCache; }
+		VulkanPipelineCache&	GetPipelineCache() { return mPipelineCache; }
 	};
 }
