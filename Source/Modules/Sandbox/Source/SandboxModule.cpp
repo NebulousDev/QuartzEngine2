@@ -296,7 +296,8 @@ namespace Quartz
 			pRenderer->Register(runtime);
 			pRenderer->SetCamera(gCamera);
 
-			runtime.SetTargetUps(350);
+			//runtime.SetTargetUps(350);
+			runtime.SetTargetUps(5000);
 			runtime.SetTargetTps(60);
 
 			runtime.RegisterOnUpdate(

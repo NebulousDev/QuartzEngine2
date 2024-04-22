@@ -1,5 +1,6 @@
 #include "Vulkan/Renderers/VulkanImGuiRenderer.h"
 
+#include "Engine.h"
 #include "Log.h"
 
 #include "imgui.h"
@@ -97,6 +98,26 @@ namespace Quartz
 		ImGui_ImplVulkan_CreateFontsTexture();
 	}
 
+	void BuildSettingsWindow()
+	{
+		ImGui::SetNextWindowPos({ 0,0 });
+		ImGui::SetNextWindowSize({150, 100});
+
+		bool debugOpen = false;
+		ImGui::Begin("DebugInfo", &debugOpen, 
+			ImGuiWindowFlags_NoInputs | 
+			ImGuiWindowFlags_NoMove | 
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoBackground |
+			ImGuiWindowFlags_NoTitleBar);
+
+		const double fps = Engine::GetRuntime().GetCurrentUps();
+		const double tps = Engine::GetRuntime().GetCurrentTps();
+
+		ImGui::Text("FPS: %d", (sSize)fps);
+		ImGui::Text("TPS: %d", (sSize)tps);
+	}
+
 	void VulkanImGuiRenderer::Update()
 	{
 		ImGui_ImplVulkan_NewFrame();
@@ -120,7 +141,7 @@ namespace Quartz
 		}
 
 		ImGui::NewFrame();
-		ImGui::ShowDemoWindow();
+		BuildSettingsWindow();
 		ImGui::Render();
 	}
 
