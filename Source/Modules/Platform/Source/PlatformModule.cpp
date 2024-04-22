@@ -168,7 +168,7 @@ extern "C"
 
 		appInfo.appName     = "Quartz";
 		appInfo.version     = "2.0.0";
-		appInfo.windowApi   = WINDOW_API_WINAPI;
+		appInfo.windowApi   = WINDOW_API_GLFW;
 		appInfo.logCallback = QuartzAppLogCallback;
 
 		gpApp = CreateApplication(appInfo);

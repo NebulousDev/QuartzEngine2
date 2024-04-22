@@ -19,7 +19,7 @@ namespace Quartz
 	VulkanImageView* pPerlinImageView = nullptr;
 	VkSampler perlinSampler;
 
-	void VulkanRenderer::Initialize(VulkanGraphics& graphics, uSize maxInFlightCount)
+	void VulkanRenderer::Initialize(VulkanGraphics& graphics, void* pWindowHandle, uSize maxInFlightCount)
 	{
 		VulkanResourceManager*	pResources	= graphics.pResourceManager;
 		VulkanDevice*			pDevice		= graphics.pPrimaryDevice;
@@ -116,6 +116,7 @@ namespace Quartz
 
 		mSceneRenderer.Initialize(graphics, mShaderCache, mPipelineCache, maxInFlightCount);
 		mSkyRenderer.Initialize(graphics, atmosphere, settings, mShaderCache, mPipelineCache, maxInFlightCount);
+		mImGuiRenderer.Initialize(graphics, pWindowHandle, *mSwapTimer.GetSwapchain());
 	}
 
 	void VulkanRenderer::SetCamera(Entity cameraEntity)
@@ -139,6 +140,7 @@ namespace Quartz
 		Vec2f centerPos = { cameraTransformComponent.position.x, cameraTransformComponent.position.z };
 		mTerrainRenderer.Update(centerPos, cameraComponent, cameraTransformComponent);
 		mSkyRenderer.Update(cameraComponent, cameraTransformComponent, frameIdx);
+		mImGuiRenderer.Update();
 	}
 
 	void VulkanRenderer::RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx)
@@ -158,6 +160,7 @@ namespace Quartz
 		mSkyRenderer.RecordDraws(recorder, frameIdx);
 		mTerrainRenderer.RecordDraws(recorder);
 		mSceneRenderer.RecordDraws(recorder, frameIdx);
+		mImGuiRenderer.RecordDraws(recorder);
 	}
 
 	void VulkanRenderer::RecordPostDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)

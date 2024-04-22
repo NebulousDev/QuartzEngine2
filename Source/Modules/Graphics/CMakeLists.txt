@@ -6,7 +6,14 @@ include(GNUInstallDirs)
 
 add_compile_definitions(QUARTZ_GRAPHICS_EXPORT)
 
-add_library(${PROJECT_NAME} SHARED 
+file(GLOB imgui_sources 
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_glfw.cpp"
+)
+
+add_library(${PROJECT_NAME} SHARED
+	${imgui_sources}
 	"Source/GraphicsModule.cpp"
 	"Source/Vulkan/VulkanBufferCache.cpp"
     "Source/Vulkan/VulkanGraphics.cpp"
@@ -26,16 +33,20 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Component/CameraComponent.cpp"
 	"Source/TerrainRenderer.cpp"
 	"Source/SkyRenderer.cpp"
-	"Source/SceneRenderer.cpp")
+	"Source/SceneRenderer.cpp"
+	"Source/ImGuiRenderer.cpp"
+)
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 target_include_directories(${PROJECT_NAME} 
 	PUBLIC 
 		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>"
+		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui>"
 		"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 	PRIVATE
 		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Source>"
+		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui>"
 		${QUARTZLIB_INCLUDE_PATH}
 		${QUARTZENGINE_INCLUDE_PATH}
 )

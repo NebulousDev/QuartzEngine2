@@ -4,7 +4,14 @@ project(SandboxSystem)
 
 include(GNUInstallDirs)
 
+file(GLOB imgui_sources 
+	"${QUARTZ_GRAPHICS_PATH}/ThirdParty/imgui/*.cpp"
+	"${QUARTZ_GRAPHICS_PATH}/ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
+	"${QUARTZ_GRAPHICS_PATH}/ThirdParty/imgui/backends/imgui_impl_glfw.cpp"
+)
+
 add_library(${PROJECT_NAME} SHARED 
+	${imgui_sources}
 	"Source/SandboxModule.cpp"
 	"Source/Physics.cpp"
 	"Source/Collisions.cpp"

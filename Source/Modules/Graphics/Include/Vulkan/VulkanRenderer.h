@@ -12,6 +12,7 @@
 #include "../SceneRenderer.h"
 #include "../TerrainRenderer.h"
 #include "../SkyRenderer.h"
+#include "../ImGuiRenderer.h"
 
 namespace Quartz
 {
@@ -36,9 +37,10 @@ namespace Quartz
 		VulkanSceneRenderer			mSceneRenderer;
 		VulkanTerrainRenderer		mTerrainRenderer;
 		VulkanSkyRenderer			mSkyRenderer;
+		VulkanImGuiRenderer			mImGuiRenderer;
 
 	public:
-		void Initialize(VulkanGraphics& graphics, uSize maxInFlightCount);
+		void Initialize(VulkanGraphics& graphics, void* pWindowHandle, uSize maxInFlightCount);
 
 		void SetCamera(Entity cameraEntity);
 

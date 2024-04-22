@@ -10,12 +10,25 @@ set(QUARTZAPP_INCLUDE_PATH			"${CMAKE_SOURCE_DIR}/Source/Core/App/Include")
 set(QUARTZMATH_INCLUDE_PATH			"${CMAKE_SOURCE_DIR}/Source/Core/Math/Include")
 set(QUARTZLOG_INCLUDE_PATH			"${CMAKE_SOURCE_DIR}/Source/Core/Log/Include")
 
+set(QUARTZLIB_SOURCE_PATH			"${CMAKE_SOURCE_DIR}/Source/Core/Lib/Source")
+set(QUARTZAPP_SOURCE_PATH			"${CMAKE_SOURCE_DIR}/Source/Core/App/Source")
+set(QUARTZMATH_SOURCE_PATH			"${CMAKE_SOURCE_DIR}/Source/Core/Math/Source")
+set(QUARTZLOG_SOURCE_PATH			"${CMAKE_SOURCE_DIR}/Source/Core/Log/Source")
+
 # Module Paths:
+set(QUARTZ_PLATFORM_PATH			"${CMAKE_SOURCE_DIR}/Source/Modules/Platform")
+set(QUARTZ_GRAPHICS_PATH			"${CMAKE_SOURCE_DIR}/Source/Modules/Graphics")
+
 set(QUARTZ_PLATFORM_INCLUDE_PATH	"${CMAKE_SOURCE_DIR}/Source/Modules/Platform/Include")
 set(QUARTZ_GRAPHICS_INCLUDE_PATH	"${CMAKE_SOURCE_DIR}/Source/Modules/Graphics/Include")
 
+set(QUARTZ_PLATFORM_SOURCE_PATH		"${CMAKE_SOURCE_DIR}/Source/Modules/Platform/Source")
+set(QUARTZ_GRAPHICS_SOURCE_PATH		"${CMAKE_SOURCE_DIR}/Source/Modules/Graphics/Source")
+
+
 # Engine Path:
-set(QUARTZENGINE_INCLUDE_PATH		"${CMAKE_SOURCE_DIR}/Source/Engine/Include")
+set(QUARTZ_ENGINE_INCLUDE_PATH		"${CMAKE_SOURCE_DIR}/Source/Engine/Source")
+set(QUARTZ_ENGINE_SOURCE_PATH		"${CMAKE_SOURCE_DIR}/Source/Engine/Source")
 
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

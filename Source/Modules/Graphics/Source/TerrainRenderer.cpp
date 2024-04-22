@@ -209,6 +209,7 @@ namespace Quartz
 		mpGraphics->pResourceManager->DestroyImageView(tile.textures.pHeightMapView);
 	}
 
+	// @TODO: Clean this up
 	void VulkanTerrainRenderer::UpdateGrid(const Vec2f& centerPos)
 	{
 		constexpr const sSize maxChunkDist	= 4;
@@ -240,7 +241,6 @@ namespace Quartz
 					else
 					{
 						tile2.state = TERRAIN_STATE_UNLOADED;
-						LogDebug("Skipped Early");
 					}
 				}
 			}
@@ -256,10 +256,6 @@ namespace Quartz
 			if (tile.state == TERRAIN_STATE_WAITING)
 			{
 				CreateTile(tile, tile.position, 0, resolution, tile.scale, 1234);
-			}
-			else
-			{
-				LogDebug("Skipped");
 			}
 		}
 

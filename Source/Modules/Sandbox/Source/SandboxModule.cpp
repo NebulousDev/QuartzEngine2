@@ -23,7 +23,6 @@
 #include <vulkan/vulkan.h>
 
 #include "Input/Input.h"
-//#include "Types/FractalGrid.h"
 
 namespace Quartz
 {
@@ -294,7 +293,7 @@ namespace Quartz
 
 			VulkanRenderer* pRenderer = new VulkanRenderer();
 			pRenderer->Register(runtime);
-			pRenderer->Initialize(gfx, maxInFlightCount);
+			pRenderer->Initialize(gfx, gpWindow->GetNativeHandle(), maxInFlightCount);
 			pRenderer->SetCamera(gCamera);
 
 			runtime.SetTargetUps(350);
