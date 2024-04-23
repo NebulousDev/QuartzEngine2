@@ -296,8 +296,8 @@ namespace Quartz
 			pRenderer->Register(runtime);
 			pRenderer->SetCamera(gCamera);
 
-			//runtime.SetTargetUps(350);
-			runtime.SetTargetUps(5000);
+			runtime.SetTargetUps(350);
+			//runtime.SetTargetUps(5000);
 			runtime.SetTargetTps(60);
 
 			runtime.RegisterOnUpdate(
@@ -374,8 +374,8 @@ namespace Quartz
 					{
 						TransformComponent& transform = Engine::GetWorld().Get<TransformComponent>(gCamera);
 
-						Quatf rotX = Quatf().SetAxisAngle(Vec3f::UP, direction.x * upSpeed * runtime.GetUpdateDelta());
-						Quatf rotY = Quatf().SetAxisAngle(transform.GetRight(), direction.y * rightSpeed * runtime.GetUpdateDelta());
+						Quatf rotX = Quatf().SetAxisAngle(Vec3f::UP, (double)direction.x * (double)upSpeed * 0.002f);// *runtime.GetUpdateDelta());
+						Quatf rotY = Quatf().SetAxisAngle(transform.GetRight(), (double)direction.y * (double)rightSpeed * 0.002f);// *runtime.GetUpdateDelta());
 
 						transform.rotation *= rotX;
 	

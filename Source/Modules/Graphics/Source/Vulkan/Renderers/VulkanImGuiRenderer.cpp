@@ -114,7 +114,7 @@ namespace Quartz
 		const double fps = Engine::GetRuntime().GetAverageUps();
 		const double tps = Engine::GetRuntime().GetAverageTps();
 
-		ImGui::Text("FPS: %.2lf", fps + 0.01);
+		ImGui::Text("FPS: %.2lf", fps);
 		ImGui::Text("TPS: %.2lf", tps);
 	}
 

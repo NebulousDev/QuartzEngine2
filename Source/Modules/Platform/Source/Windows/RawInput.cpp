@@ -479,6 +479,8 @@ namespace Quartz
 	
 		int32 inputCount = GetRawInputBuffer(inputBuffer, &bufferSize, sizeof(RAWINPUTHEADER));
 	
+		assert(bufferSize < sizeof(RAWINPUT) * INPUT_MAX_RAWINPUT_BUFFER_SIZE);
+
 		for (uInt32 i = 0; i < inputCount; i++)
 		{
 			if (!mDeviceIdMap.Contains((uInt64)inputBuffer[i].header.hDevice))
