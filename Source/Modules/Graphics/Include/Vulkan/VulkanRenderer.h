@@ -33,6 +33,14 @@ namespace Quartz
 		VulkanShaderCache			mShaderCache;
 		VulkanPipelineCache			mPipelineCache;
 
+		uInt64						mTargetFPS			= 350;
+		double						mCurrentFPS			= 0.0;
+		double						mAverageFPS			= 0.0;
+		double						mAverageDecayFPS	= 0.9;
+		double						mAccumFrametime		= 1.0;
+
+		uInt64						mCurrentFrameIdx	= 0;
+
 		uSize						mMaxInFlightCount;
 		VulkanCommandBuffer*		mCommandBuffers[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
 		VulkanImage*				mDepthImages[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
@@ -63,6 +71,12 @@ namespace Quartz
 
 		void RenderUpdate(Runtime& runtime, double delta);
 		void Register(Runtime& runtime);
+
+		void SetTargetFPS(uInt64 fps);
+
+		uInt64 GetTargetFPS() const { return mTargetFPS; }
+		double GetCurrentFPS() const { return mCurrentFPS; }
+		double GetAverageFPS() const { return mAverageFPS; }
 
 		Window&					GetWindow() const { return *mpWindow; }
 		VulkanDevice&			GetDevice() const { return *mpDevice; }

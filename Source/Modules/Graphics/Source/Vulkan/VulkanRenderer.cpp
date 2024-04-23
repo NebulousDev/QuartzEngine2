@@ -151,7 +151,7 @@ namespace Quartz
 		Vec2f centerPos = { cameraTransformComponent.position.x, cameraTransformComponent.position.z };
 		mTerrainRenderer.Update(centerPos, cameraComponent, cameraTransformComponent);
 		mSkyRenderer.Update(cameraComponent, cameraTransformComponent, frameIdx);
-		mImGuiRenderer.Update(deltaTime);
+		mImGuiRenderer.Update(this, deltaTime);
 	}
 
 	void VulkanRenderer::RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx)
@@ -285,15 +285,29 @@ namespace Quartz
 	{
 		EntityWorld& world = Engine::GetWorld();
 
-		mSwapTimer.AdvanceFrame();
-		uInt32 frameIdx = mSwapTimer.GetFrameIndex();
+		UpdateAll(world, mCurrentFrameIdx, delta);
 
-		UpdateAll(world, frameIdx, delta);
-		RenderScene(world, frameIdx);
+		mAccumFrametime += delta;
+		if (mAccumFrametime >= (1.0 / mTargetFPS))
+		{
+			mSwapTimer.AdvanceFrame();
+			mCurrentFrameIdx = mSwapTimer.GetFrameIndex();
+
+			mCurrentFPS = (1.0 / mAccumFrametime);
+			mAverageFPS = mAverageDecayFPS * mAverageFPS + (1.0 - mAverageDecayFPS) * mCurrentFPS;
+			mAccumFrametime = 0;
+
+			RenderScene(world, mCurrentFrameIdx);
+		}
 	}
 
 	void VulkanRenderer::Register(Runtime& runtime)
 	{
 		runtime.RegisterOnUpdate(&VulkanRenderer::RenderUpdate, this);
+	}
+
+	void VulkanRenderer::SetTargetFPS(uInt64 fps)
+	{
+		mTargetFPS = fps;
 	}
 }

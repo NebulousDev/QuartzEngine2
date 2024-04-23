@@ -1,5 +1,6 @@
 #include "Vulkan/Renderers/VulkanImGuiRenderer.h"
 
+#include "Vulkan/VulkanRenderer.h"
 #include "Engine.h"
 #include "Log.h"
 
@@ -98,7 +99,7 @@ namespace Quartz
 		ImGui_ImplVulkan_CreateFontsTexture();
 	}
 
-	void BuildSettingsWindow()
+	void BuildSettingsWindow(VulkanRenderer* pRenderer)
 	{
 		ImGui::SetNextWindowPos({ 0,0 });
 		ImGui::SetNextWindowSize({150, 100});
@@ -111,17 +112,21 @@ namespace Quartz
 			ImGuiWindowFlags_NoBackground |
 			ImGuiWindowFlags_NoTitleBar);
 
-		const double fps = Engine::GetRuntime().GetAverageUps();
+		const double fps = pRenderer->GetAverageFPS();
+		const double ups = Engine::GetRuntime().GetAverageUps();
 		const double tps = Engine::GetRuntime().GetAverageTps();
 
 		ImGui::Text("FPS: %.2lf", fps);
+		ImGui::Text("UPS: %.2lf", ups);
 		ImGui::Text("TPS: %.2lf", tps);
+
+		ImGui::End();
 	}
 
 	double accumTime = 0.05;
 	double updateTime = 0.05;
 
-	void VulkanImGuiRenderer::Update(double deltaTime)
+	void VulkanImGuiRenderer::Update(VulkanRenderer* pRenderer, double deltaTime)
 	{
 		accumTime += deltaTime;
 		if (accumTime < updateTime)
@@ -152,7 +157,7 @@ namespace Quartz
 		}
 
 		ImGui::NewFrame();
-		BuildSettingsWindow();
+		BuildSettingsWindow(pRenderer);
 		ImGui::Render();
 	}
 

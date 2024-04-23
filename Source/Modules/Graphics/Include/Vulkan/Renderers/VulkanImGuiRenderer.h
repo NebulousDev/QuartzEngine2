@@ -10,6 +10,8 @@
 
 namespace Quartz
 {
+	class VulkanRenderer;
+
 	class QUARTZ_GRAPHICS_API VulkanImGuiRenderer
 	{
 	private:
@@ -20,7 +22,7 @@ namespace Quartz
 	public:
 		void Initialize(VulkanGraphics& graphics, VulkanDevice& device, Window& window, VkPipelineRenderingCreateInfo& renderingInfo);
 
-		void Update(double deltaTime);
+		void Update(VulkanRenderer* pRenderer, double deltaTime);
 
 		void RecordDraws(VulkanCommandRecorder& renderRecorder);
 	};
