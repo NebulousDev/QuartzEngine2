@@ -13,6 +13,7 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Windows/WinApi.cpp"
 	"Source/Windows/WinApiPlatform.cpp"
 	"Source/Windows/RawInput.cpp"
+	"Source/Windows/WinFilesystem.cpp"
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

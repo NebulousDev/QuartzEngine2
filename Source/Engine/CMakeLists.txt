@@ -20,6 +20,10 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Input/Input.cpp"
     "Source/Input/InputDevice.cpp"
     "Source/Input/InputDeviceRegistry.cpp"
+    "Source/Config/Config.cpp"
+    "Source/Filesystem/File.cpp"
+    "Source/Filesystem/Folder.cpp"
+    "Source/Filesystem/Filesystem.cpp"
 )
 
 if(WIN32)
@@ -45,7 +49,7 @@ elseif(UNIX)
 
 endif()
 
-add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES} )
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC 

@@ -21,6 +21,7 @@
 #endif
 
 #include "Windows/WinApi.h"
+#include "Windows/WinFilesystem.h"
 
 namespace Quartz
 {
@@ -153,6 +154,7 @@ extern "C"
 	{
 		Log::SetInstance(engineLog);
 		Engine::SetInstance(engine);
+
 		return true;
 	}
 
@@ -178,6 +180,9 @@ extern "C"
 		CreatePlatform(gpApp, gpPlatform);
 
 		gpPlatform->pApplication = gpApp;
+
+		FilesystemImpl& filesystem = static_cast<FilesystemImpl&>(Engine::GetFilesystem());
+		filesystem.SetPopulateFolderFunc(WinApiPopulateFolder);
 	}
 
 	void CreateDevices()

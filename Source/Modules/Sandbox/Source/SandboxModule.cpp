@@ -17,12 +17,16 @@
 #include "Component/MeshComponent.h"
 #include "Component/MaterialComponent.h"
 #include "Component/CameraComponent.h"
+#include "Component/TerrainComponent.h"
 
 #include "Physics.h"
 
 #include <vulkan/vulkan.h>
 
 #include "Input/Input.h"
+#include "Filesystem/File.h"
+#include "Memory/Allocator.h"
+#include "Utility/StringReader.h"
 
 namespace Quartz
 {
@@ -232,7 +236,7 @@ namespace Quartz
 		RigidBody cameraRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		SphereCollider cameraCollider(0.5f, true);
 
-		void QUARTZ_ENGINE_API ModuleInit()
+		void QUARTZ_ENGINE_API ModulePostInit()
 		{
 			RigidBodyComponent cubePhysics(cubeRigidBody, cubeCollider);
 			RigidBodyComponent cubePhysics2(cubeRigidBody2, cubeCollider2);
@@ -285,6 +289,15 @@ namespace Quartz
 			Entity planeF = world.CreateEntity(transformPlaneF, material1, planePhysics2);
 			Entity planeB = world.CreateEntity(transformPlaneB,  material1, planePhysics2);
 
+			TerrainSettings terrainSettings;
+			terrainSettings.resolution		= 200;
+			terrainSettings.seed			= 1234;
+			terrainSettings.scale			= 550.0f;
+			terrainSettings.lacunarity		= 1.5f;
+			terrainSettings.octaveWeights	= { 1.0f, 0.3f, 0.15f, 0.10f, 0.10f, 0.05f };
+
+			Entity terrain = world.CreateEntity(TerrainComponent(terrainSettings));
+
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
 			TransformComponent cameraTransform({ 0.0f, 52.0f, 4.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
 			gCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
@@ -295,8 +308,8 @@ namespace Quartz
 			pRenderer->Initialize();
 			pRenderer->Register(runtime);
 			pRenderer->SetCamera(gCamera);
-			//pRenderer->SetTargetFPS(350);
-			pRenderer->SetTargetFPS(5000);
+			pRenderer->SetTargetFPS(350);
+			//pRenderer->SetTargetFPS(5000);
 
 			//runtime.SetTargetUps(350);
 			runtime.SetTargetUps(5000);
