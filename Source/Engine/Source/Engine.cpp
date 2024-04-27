@@ -29,6 +29,16 @@ namespace Quartz
 		return *spInstance->mpModuleRegistry;
 	}
 
+	Filesystem& Engine::GetFilesystem()
+	{
+		return *spInstance->mpFilesystem;
+	}
+
+	EngineConfig& Engine::GetConfig()
+	{
+		return *spInstance->mpConfig;
+	}
+
 	Log& Engine::GetLog()
 	{
 		return *spInstance->mpLog;

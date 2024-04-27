@@ -18,6 +18,8 @@ public:
 	Engine::mpInput;
 	Engine::mpDeviceRegistry;
 	Engine::mpModuleRegistry;
+	Engine::mpFilesystem;
+	Engine::mpConfig;
 	Engine::mpLog;
 
 	inline void SetWorld(EntityWorld* pWorld) { mpWorld = pWorld; }
@@ -25,6 +27,8 @@ public:
 	inline void SetInput(Input* pInput) { mpInput = pInput; }
 	inline void SetDeviceRegistry(InputDeviceRegistry* pDeviceRegistry) { mpDeviceRegistry = pDeviceRegistry; }
 	inline void SetModuleRegistry(ModuleRegistry* pModuleRegistry) { mpModuleRegistry = pModuleRegistry; }
+	inline void SetFilesystem(Filesystem* pFilesystem) { mpFilesystem = pFilesystem; }
+	inline void SetConfig(EngineConfig* pConfig) { mpConfig = pConfig; }
 	inline void SetLog(Log* pLog) { mpLog = pLog; }
 };
 
@@ -58,6 +62,18 @@ int main()
 
 	/////////////////////////////////////////////////////////////////////////////////
 
+	/* Create Filesystem */
+
+	Filesystem filesystem					= world.CreateSingleton<Filesystem>();
+
+	/////////////////////////////////////////////////////////////////////////////////
+
+	/* Create Config */
+
+	EngineConfig config						= world.CreateSingleton<EngineConfig>();
+
+	/////////////////////////////////////////////////////////////////////////////////
+
 	/* Create Runtime */
 
 	Runtime& runtime						= world.CreateSingleton<Runtime>();
@@ -85,6 +101,8 @@ int main()
 	engineImpl.mpInput			= &input;
 	engineImpl.mpDeviceRegistry = &deviceRegistry;
 	engineImpl.mpModuleRegistry	= &moduleRegistry;
+	engineImpl.mpFilesystem		= &filesystem;
+	engineImpl.mpConfig			= &config;
 	engineImpl.mpLog			= &engineLog;
 
 	Engine::SetInstance(engineImpl);
@@ -109,6 +127,28 @@ int main()
 
 	moduleRegistry.LoadAll(engineLog, Engine::GetInstance());
 	moduleRegistry.PreInitAll();
+
+	/////////////////////////////////////////////////////////////////////////////////
+
+	/* Setup Relative Filesystem */
+
+	// We must set up the filesystem here to allow module init functions access to files
+	if (!filesystem.AddRoot(".", 1000))
+	{
+		LogFatal("Failed to read filesystem! Exiting...");
+		return 1;
+	}
+
+	/* Setup Config Files */
+
+	// We must set up configs here to allow module init functions access to engine.ini
+	File* pEngineConfigFile = filesystem.GetFile("engine.ini");
+	config.SetConfigFile(pEngineConfigFile);
+	config.Read();
+	config.PrintConfigs();
+
+	/////////////////////////////////////////////////////////////////////////////////
+
 	moduleRegistry.InitAll();
 	moduleRegistry.PostInitAll();
 
@@ -121,6 +161,8 @@ int main()
 	/////////////////////////////////////////////////////////////////////////////////
 
 	/* Shutdown */
+
+	pEngineConfigFile->Close();
 
 	moduleRegistry.UnloadAll();
 	moduleRegistry.DestroyAll();
