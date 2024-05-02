@@ -2,7 +2,7 @@
 
 namespace Quartz
 {
-	Folder::Folder(const String& path, Handler& handler, void* pHandle, FolderFlags flags, uSize priority) :
+	Folder::Folder(const String& path, Handler& handler, void* pHandle, FolderFlags flags, uInt16 priority) :
 		mPath(path), mpHandler(&handler), mpNative(pHandle), mFlags(flags), mPriority(priority)
 	{
 		mNameIdx = path.FindReverse("/");

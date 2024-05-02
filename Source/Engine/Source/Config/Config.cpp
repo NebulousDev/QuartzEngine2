@@ -59,12 +59,12 @@ namespace Quartz
 
 	bool EngineConfig::Read()
 	{
-		const uSize fileSizeBytes = mpConfigFile->Size();
+		const uSize fileSizeBytes = mpConfigFile->GetSize();
 		const char* pFileData = new char[fileSizeBytes];
 		
 		if (!mpConfigFile->Read(pFileData, fileSizeBytes))
 		{
-			LogError("Failed to read config file [%s]!", mpConfigFile->Path());
+			LogError("Failed to read config file [%s]!", mpConfigFile->GetPath());
 			return false;
 		}
 
@@ -90,7 +90,7 @@ namespace Quartz
 				if (endIdx == line.Length())
 				{
 					LogError("Error loading Config. File [%s] is missing a closing bracket ']' on line %d.", 
-						mpConfigFile->Path(), lineNumber);
+						mpConfigFile->GetPath(), lineNumber);
 
 					//mConfigs.Clear();
 					//mCategories.Clear();
@@ -115,7 +115,7 @@ namespace Quartz
 				if (assignIdx == line.Length())
 				{
 					LogError("Error loading Config. File [%s] is missing an assignment '=' on line %d.",
-						mpConfigFile->Path(), lineNumber);
+						mpConfigFile->GetPath(), lineNumber);
 
 					//mConfigs.Clear();
 					//mCategories.Clear();
@@ -143,7 +143,7 @@ namespace Quartz
 	{
 		assert(pConfigFile);
 		assert(pConfigFile->IsValid());
-		assert(pConfigFile->Extention() == "ini"_STR);
+		assert(pConfigFile->GetExtention() == "ini"_STR);
 
 		mpConfigFile = pConfigFile;
 
@@ -155,7 +155,7 @@ namespace Quartz
 
 	void EngineConfig::PrintConfigs()
 	{
-		LogInfo("Config file [%s]:", mpConfigFile->Path().Str());
+		LogInfo("Config file [%s]:", mpConfigFile->GetPath().Str());
 
 		for (auto& categoryIt : mCategories)
 		{

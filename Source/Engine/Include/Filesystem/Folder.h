@@ -15,7 +15,7 @@ namespace Quartz
 		FOLDER_IS_ROOT	= 0x4
 	};
 
-	using FolderFlags = uSize;
+	using FolderFlags = uInt16;
 
 	class QUARTZ_ENGINE_API Folder
 	{
@@ -27,9 +27,9 @@ namespace Quartz
 
 	protected:
 		String			mPath;
-		uInt32			mNameIdx;
+		uInt16			mNameIdx;
 		FolderFlags		mFlags;
-		uSize			mPriority;
+		uInt16			mPriority;
 
 		Array<Folder*>	mFolders;
 		Array<File*>	mFiles;
@@ -39,14 +39,14 @@ namespace Quartz
 
 	public:
 		Folder() = default;
-		Folder(const String& path, Handler& handler, void* pHandle, FolderFlags flags, uSize priority = 0);
+		Folder(const String& path, Handler& handler, void* pHandle, FolderFlags flags, uInt16 priority = 0);
 
 		friend QUARTZ_ENGINE_API bool operator==(const Folder& folder0, const Folder& folder1);
 		friend QUARTZ_ENGINE_API bool operator!=(const Folder& folder0, const Folder& folder1);
 
-		const Substring Name() const { return mPath.Substring(mNameIdx); }
-		const String& Path() const { return mPath; }
-		FolderFlags Flags() const { return mFlags; }
+		const Substring GetName() const { return mPath.Substring(mNameIdx); }
+		const String& GetPath() const { return mPath; }
+		FolderFlags GetFlags() const { return mFlags; }
 		const Array<Folder*>& GetChildFolders() const { return mFolders; }
 		const Array<File*>& GetChildFiles() const { return mFiles; }
 		bool IsValid() const { return mFlags & FOLDER_VALID; }

@@ -19,17 +19,21 @@ namespace Quartz
 	protected:
 		Array<Folder*>			mRootFolders;
 		Map<String, File*>		mFileMap;
+		Map<String, Folder*>	mFolderMap;
 		Stack<File*>			mChangedFiles;
 
-		void PopulateRecursive(Folder& folder, FilesystemHandler& handler);
+		void PopulateRecursive(const String& rootPath, Folder& folder, FilesystemHandler& handler);
 
 	public:
 		Filesystem();
 
 		bool AddRoot(const String& rootPath, FilesystemHandler& handler, uSize priority);
 
-		const Folder* GetFolder(const String& folderPath);
-		File* GetFile(const String& path);
+		File* GetFile(const String& filePath);
+		Folder* GetFolder(const String& folderPath);
+
+		bool FileExists(const String& filePath);
+		bool FolderExists(const String& folderPath);
 
 		bool CheckForChanges();
 	};

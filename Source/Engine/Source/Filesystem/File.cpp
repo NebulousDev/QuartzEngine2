@@ -8,8 +8,10 @@ namespace Quartz
 		mPath(), mFlags(FileFlags(0)), mpNative(nullptr),
 		mSizeBytes(0), mOffsetBytes(0) {};
 
-	File::File(const String& path, Handler& handler, void* pHandle, FileFlags flags, uSize sizeBytes, uSize offsetBytes) :
-		mPath(path), mpHandler(&handler), mpNative(pHandle), mFlags(flags), mSizeBytes(sizeBytes), mOffsetBytes(offsetBytes)
+	File::File(const String& path, Handler& handler, void* pHandle, 
+		FileFlags flags, uSize sizeBytes, uSize offsetBytes) :
+		mPath(path), mpHandler(&handler), mpNative(pHandle), 
+		mFlags(flags), mSizeBytes(sizeBytes), mOffsetBytes(offsetBytes)
 	{
 		uSize extIdx = path.FindReverse(".");
 

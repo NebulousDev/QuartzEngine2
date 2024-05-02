@@ -190,11 +190,13 @@ extern "C"
 
 		gpPlatform->pApplication = gpApp;
 
-		if (!engine.GetFilesystem().AddRoot(".", *gpFilesystemHandler, 1000))
+		if (!engine.GetFilesystem().AddRoot(".", *gpFilesystemHandler, 0))
 		{
 			LogFatal("Failed to read filesystem!");
 			assert(false && "No filesystem!");
 		}
+
+		engine.GetFilesystem().AddRoot("./test", *gpFilesystemHandler, 1000);
 	}
 
 	void CreateDevices()

@@ -8,56 +8,73 @@
 
 namespace Quartz
 {
-	//bool Filesystem::PopulateSubfolders(const String& rootPath, Folder& folder)
-	//{
-	//	bool anyError = false;
-	//
-	//	for (Folder* pSubFolder : folder.mFolders)
-	//	{
-	//		String folderPath = pSubFolder->mPath + "/" + pSubFolder->Name();
-	//
-	//		if (folder.mPath.IsEmpty())
-	//		{
-	//			folderPath = pSubFolder->Name();
-	//		}
-	//
-	//		if (!mPopulateFolderFunc(rootPath, folderPath, *pSubFolder, mFileAllocator, mFolderAllocator))
-	//		{
-	//			LogWarning("Failed to read directory [%s]!", folderPath.Str());
-	//			anyError = true;
-	//		}
-	//
-	//		if (!PopulateSubfolders(rootPath, *pSubFolder))
-	//		{
-	//			anyError = true;
-	//		}
-	//	}
-	//
-	//	for (File* pFile : folder.mFiles)
-	//	{
-	//		mFileMap.Put(pFile->Path(), pFile);
-	//	}
-	//
-	//	return !anyError;
-	//}
-
 	Filesystem::Filesystem()
 	{
 		mFileMap.Reserve(8192 * 2);
+		mFolderMap.Reserve(8192 * 2);
 	}
 
-	void Filesystem::PopulateRecursive(Folder& folder, FilesystemHandler& handler)
+	void Filesystem::PopulateRecursive(const String& rootPath, Folder& folder, FilesystemHandler& handler)
 	{
+		bool isRoot = rootPath == folder.mPath;
+
 		handler.PopulateChildren(folder, *this, folder.mFolders, folder.mFiles);
 
 		for (Folder* pSubFolder : folder.mFolders)
 		{
-			PopulateRecursive(*pSubFolder, handler);
+			PopulateRecursive(rootPath, *pSubFolder, handler);
 		}
 
-		for (File* pFile : folder.mFiles)
+		Folder* pPriorityFolder = nullptr;
+		String trimmedFolderPath = rootPath;
+		sSize maxPriority = -1;
+
+		if (!isRoot)
 		{
-			mFileMap.Put(pFile->Path(), pFile);
+			trimmedFolderPath = folder.mPath.Substring(rootPath.Length() + 1);
+		}
+		else
+		{
+			pPriorityFolder = GetFolder(trimmedFolderPath);
+
+			if (!pPriorityFolder)
+			{
+				for (Folder* pRoot : mRootFolders)
+				{
+					uSize trimIdx = trimmedFolderPath.Find(pRoot->mPath);
+
+					if (trimIdx >= trimmedFolderPath.Length())
+					{
+						continue;
+					}
+
+					String rootTrimmedFolderPath = trimmedFolderPath.Substring(trimIdx + pRoot->mPath.Length() + 1);
+					Folder* pFoundFolder = GetFolder(rootTrimmedFolderPath);
+
+					if (pFoundFolder && pFoundFolder->mPriority > maxPriority)
+					{
+						pPriorityFolder = pFoundFolder;
+						maxPriority = pFoundFolder->mPriority;
+					}
+				}
+			}
+
+		}
+			
+		if (!pPriorityFolder || pPriorityFolder->mPriority < folder.mPriority)
+		{
+			// Only override files if the parent folder is of higher priority
+
+			for (File* pFile : folder.mFiles)
+			{
+				String trimmedFilePath = pFile->mPath.Substring(rootPath.Length() + 1);
+				mFileMap.Put(trimmedFilePath, pFile);
+			}
+
+			if (!isRoot)
+			{
+				mFolderMap.Put(trimmedFolderPath, &folder);
+			}
 		}
 	}
 
@@ -67,27 +84,22 @@ namespace Quartz
 
 		Folder* pRootFolder;
 
-		if(!handler.CreateFolder(rootPath, pRootFolder, priority))
+		if(!handler.CreateFolder(rootPath, pRootFolder, priority)) 
 		{
 			LogError("Failed to add root directory [%s]!", rootPath.Str());
 			return false;
 		}
 	
-		PopulateRecursive(*pRootFolder, handler);
+		PopulateRecursive(rootPath, *pRootFolder, handler);
 
 		mRootFolders.PushBack(pRootFolder);
 
 		return true;
 	}
 
-	const Folder* Filesystem::GetFolder(const String& folderPath)
+	File* Filesystem::GetFile(const String& filePath)
 	{
-		return nullptr; // @TODO
-	}
-
-	File* Filesystem::GetFile(const String& path)
-	{
-		auto& fileIt = mFileMap.Find(path);
+		auto& fileIt = mFileMap.Find(filePath);
 		if (fileIt != mFileMap.End())
 		{
 			File* pFile = fileIt->value;
@@ -99,29 +111,38 @@ namespace Quartz
 
 			return pFile;
 		}
-		else
+
+		return nullptr;
+	}
+
+	Folder* Filesystem::GetFolder(const String& folderPath)
+	{
+		auto& folderIt = mFolderMap.Find(folderPath);
+		if (folderIt != mFolderMap.End())
 		{
-			for (Folder* pRoot : mRootFolders)
+			Folder* pFolder = folderIt->value;
+
+			if (!pFolder->IsValid())
 			{
-				const String& fullPath = pRoot->Path() + "/" + path;
-				fileIt = mFileMap.Find(fullPath);
-				if (fileIt != mFileMap.End())
-				{
-					File* pFile = fileIt->value;
-
-					if (!pFile->IsValid())
-					{
-						return nullptr;
-					}
-
-					return pFile;
-				}
+				return nullptr;
 			}
+
+			return pFolder;
 		}
 
 		return nullptr;
 	}
 	
+	bool Filesystem::FileExists(const String& filePath)
+	{
+		return GetFile(filePath) != nullptr;
+	}
+
+	bool Filesystem::FolderExists(const String& folderPath)
+	{
+		return GetFolder(folderPath) != nullptr;
+	}
+
 	bool Filesystem::CheckForChanges()
 	{
 		return false;

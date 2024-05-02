@@ -44,11 +44,11 @@ namespace Quartz
 
 	protected:
 		String		mPath;
-		uInt32		mNameIdx;
-		uInt32		mExtIdx;
+		uInt16		mNameIdx;
+		uInt16		mExtIdx;
+		FileFlags	mFlags;
 		uInt32		mSizeBytes;
 		uInt32		mOffsetBytes;
-		FileFlags	mFlags;
 
 		void*		mpNative;
 		Handler*	mpHandler;
@@ -88,12 +88,12 @@ namespace Quartz
 		friend QUARTZ_ENGINE_API bool operator==(const File& file0, const File& file1);
 		friend QUARTZ_ENGINE_API bool operator!=(const File& file0, const File& file1);
 		
-		const Substring Name() const { return mPath.Substring(mNameIdx); }
-		const Substring Extention() const { return mPath.Substring(mExtIdx); }
-		const String& Path() const { return mPath; }
-		uInt32 Size() const { return mSizeBytes; }
-		uInt32 Offset() const { return mOffsetBytes; }
-		FileFlags Flags() const { return mFlags; }
+		const Substring GetName() const { return mPath.Substring(mNameIdx); }
+		const Substring GetExtention() const { return mPath.Substring(mExtIdx); }
+		const String& GetPath() const { return mPath; }
+		uInt32 GetSize() const { return mSizeBytes; }
+		uInt32 GetOffset() const { return mOffsetBytes; }
+		FileFlags GetFlags() const { return mFlags; }
 		bool IsValid() const { return mFlags & FILE_VALID; }
 		bool IsOpen() const { return mFlags & FILE_OPEN; }
 		bool IsWritable() const { return mFlags & FILE_WRITE; }

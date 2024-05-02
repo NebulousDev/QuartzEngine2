@@ -60,7 +60,7 @@ namespace Quartz
 			dwAttrribs &= ~FILE_ATTRIBUTE_NORMAL;
 		}
 
-		HANDLE pFileHandle = CreateFile(file.Path().Str(),
+		HANDLE pFileHandle = CreateFile(file.GetPath().Str(),
 			dwAccess, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
 			dwCreation, dwAttrribs, NULL);
 
@@ -81,7 +81,7 @@ namespace Quartz
 		if (CloseHandle((HANDLE)file.GetNativeHandle()))
 		{
 			pOutHandle = nullptr;
-			outFlags = file.Flags() & ~FILE_OPEN;
+			outFlags = file.GetFlags() & ~FILE_OPEN;
 			return true;
 		}
 		
@@ -147,7 +147,7 @@ namespace Quartz
 	bool WinApiFilesystemHandler::PopulateChildren(Folder& folder, const Filesystem& filesystem,
 		Array<Folder*>& outFolders, Array<File*>& outFiles)
 	{
-		String folderPath = folder.Path() + "/*";
+		String folderPath = folder.GetPath() + "/*";
 
 		WIN32_FIND_DATA fileData;
 		HANDLE nextHandle = FindFirstFile(folderPath.Str(), &fileData);
@@ -169,7 +169,7 @@ namespace Quartz
 					continue;
 				}
 
-				String subFolderPath = folder.Path() + "/" + subFolderName;
+				String subFolderPath = folder.GetPath() + "/" + subFolderName;
 
 				// @TODO: find the correct handler rather than using the same one vvv
 				Folder* pSubFolder = mpFolderAllocator->Allocate(subFolderPath, *this, (void*)NULL, (FolderFlags)FOLDER_VALID, folder.GetPriority());
@@ -181,7 +181,7 @@ namespace Quartz
 				String fileName = fileData.cFileName;
 				uInt64 sizeBytes = ((uInt64)fileData.nFileSizeHigh << sizeof(DWORD) * 8) | fileData.nFileSizeLow;
 
-				String filePath = folder.Path() + "/" + fileName;
+				String filePath = folder.GetPath() + "/" + fileName;
 
 				File* pFile = mpFileAllocator->Allocate(filePath, *this, (void*)NULL, (FileFlags)FILE_VALID, (uSize)sizeBytes, (uSize)0);
 
