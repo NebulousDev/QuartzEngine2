@@ -23,6 +23,8 @@
 #include "Windows/WinApi.h"
 #include "Windows/WinFilesystem.h"
 
+#include <assert.h>
+
 namespace Quartz
 {
 	bool CreatePlatform(Application* pApplication, PlatformSingleton* pPlatform)
@@ -39,9 +41,10 @@ namespace Quartz
 
 	/////////////////////
 
-	Application*		gpApp;
-	PlatformSingleton*	gpPlatform;
-	RawInput			gRawInput;
+	Application*				gpApp;
+	PlatformSingleton*			gpPlatform;
+	RawInput					gRawInput;
+	WinApiFilesystemHandler*	gpFilesystemHandler;
 
 	void QuartzAppLogCallback(LogLevel level, const char* message)
 	{
@@ -155,6 +158,8 @@ extern "C"
 		Log::SetInstance(engineLog);
 		Engine::SetInstance(engine);
 
+		gpFilesystemHandler = new WinApiFilesystemHandler(nullptr);
+
 		return true;
 	}
 
@@ -162,10 +167,14 @@ extern "C"
 	{
 		DestroyApplication(gpApp);
 		DestroyPlatform(gpPlatform);
+
+		delete gpFilesystemHandler;
 	}
 
 	void QUARTZ_PLATFORM_API ModulePreInit()
 	{
+		Engine& engine = Engine::GetInstance();
+		
 		ApplicationInfo appInfo = {};
 
 		appInfo.appName     = "Quartz";
@@ -176,13 +185,16 @@ extern "C"
 		gpApp = CreateApplication(appInfo);
 		gpApp->UseRawInput(true);
 
-		gpPlatform = &Engine::GetWorld().CreateSingleton<PlatformSingleton>();
+		gpPlatform = &engine.GetWorld().CreateSingleton<PlatformSingleton>(); // @Deprecated
 		CreatePlatform(gpApp, gpPlatform);
 
 		gpPlatform->pApplication = gpApp;
 
-		FilesystemImpl& filesystem = static_cast<FilesystemImpl&>(Engine::GetFilesystem());
-		filesystem.SetPopulateFolderFunc(WinApiPopulateFolder);
+		if (!engine.GetFilesystem().AddRoot(".", *gpFilesystemHandler, 1000))
+		{
+			LogFatal("Failed to read filesystem!");
+			assert(false && "No filesystem!");
+		}
 	}
 
 	void CreateDevices()

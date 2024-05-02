@@ -1,21 +1,23 @@
 #pragma once
 
 #include "../EngineAPI.h"
+#include "FilesystemHandler.h"
 #include "Types/String.h"
 
 namespace Quartz
 {
 	enum FileFlagBits : uInt16
 	{
-		FILE_VALID		= 0x01,
-		FILE_OPEN		= 0x02,
-		FILE_READ		= 0x04,
-		FILE_WRITE		= 0x08,
-		FILE_BINARY		= 0x10,
-		FILE_VIRTUAL	= 0x20,
-		FILE_COMPRESSED	= 0x40,
-		FILE_HIDDEN		= 0x60,
-		FILE_TEMPORARY	= 0x80
+		FILE_VALID		= 0x001,
+		FILE_OPEN		= 0x002,
+		FILE_READ		= 0x004,
+		FILE_WRITE		= 0x008,
+		FILE_BINARY		= 0x010,
+		FILE_VIRTUAL	= 0x020,
+		FILE_COMPRESSED	= 0x040,
+		FILE_HIDDEN		= 0x060,
+		FILE_TEMPORARY	= 0x080,
+		FILE_IS_FOLDER	= 0x100,
 	};
 
 	using FileFlags = uInt16;
@@ -32,25 +34,13 @@ namespace Quartz
 
 	using FileOpenFlags = uSize;
 
-	class File;
-
-	struct FileFunctions
-	{
-		using OpenFunc	= bool (*)(File& file, FileOpenFlags openFlags, void*& pOutHandle, FileFlags& outFlags);
-		using CloseFunc = bool (*)(File& file);
-		using ReadFunc	= bool (*)(File& file, void* pOutData, uSize sizeBytes);
-		using WriteFunc = bool (*)(File& file, void* pOutData, uSize sizeBytes);
-
-		OpenFunc	openFunc;
-		CloseFunc	closeFunc;
-		ReadFunc	readFunc;
-		WriteFunc	writeFunc;
-	};
-
 	class QUARTZ_ENGINE_API File
 	{
 	public:
 		friend class Filesystem;
+		friend class FilesystemHandler;
+
+		using Handler = FilesystemHandler;
 
 	protected:
 		String		mPath;
@@ -59,15 +49,14 @@ namespace Quartz
 		uInt32		mSizeBytes;
 		uInt32		mOffsetBytes;
 		FileFlags	mFlags;
-		void*		mpHandle;
 
-	protected:
-		FileFunctions	mFuncs;
+		void*		mpNative;
+		Handler*	mpHandler;
 
 	public:
 		File();
-		File(const String& path, void* pHandle, FileFlags flags,
-			uSize sizeBytes, uSize offsetBytes, FileFunctions funcs);
+		File(const String& path, Handler& handler, void* pHandle, FileFlags flags,
+			uSize sizeBytes, uSize offsetBytes);
 
 		bool Open(FileOpenFlags openFlags);
 		bool Close();
@@ -81,7 +70,7 @@ namespace Quartz
 				return false;
 			}
 
-			return mFuncs.readFunc(*this, (void*)pOutData, count * sizeof(ValueType));
+			return mpHandler->ReadFile(*this, (void*)pOutData, count * sizeof(ValueType));
 		}
 
 		template<typename ValueType>
@@ -93,7 +82,7 @@ namespace Quartz
 				return false;
 			}
 
-			return mFuncs.writeFunc(*this, (void*)pData, count * sizeof(ValueType));
+			return mpHandler->WriteFile(*this, (void*)pData, count * sizeof(ValueType));
 		}
 
 		friend QUARTZ_ENGINE_API bool operator==(const File& file0, const File& file1);
@@ -104,6 +93,7 @@ namespace Quartz
 		const String& Path() const { return mPath; }
 		uInt32 Size() const { return mSizeBytes; }
 		uInt32 Offset() const { return mOffsetBytes; }
+		FileFlags Flags() const { return mFlags; }
 		bool IsValid() const { return mFlags & FILE_VALID; }
 		bool IsOpen() const { return mFlags & FILE_OPEN; }
 		bool IsWritable() const { return mFlags & FILE_WRITE; }
@@ -113,6 +103,6 @@ namespace Quartz
 		bool IsCompressed() const { return mFlags & FILE_COMPRESSED; }
 		bool IsHidden() const { return mFlags & FILE_HIDDEN; }
 		bool IsTemporary() const { return mFlags & FILE_TEMPORARY; }
-		void* GetNativeHandle() const { return mpHandle; }
+		void* GetNativeHandle() const { return mpNative; }
 	};
 }

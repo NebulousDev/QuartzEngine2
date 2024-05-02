@@ -1,44 +1,36 @@
 #pragma once
 
 #include "../EngineAPI.h"
-
-#include "File.h"
-#include "Folder.h"
+#include "FilesystemHandler.h"
 
 #include "Types/Array.h"
+#include "Types/Stack.h"
 #include "Types/Map.h"
+#include "Types/String.h"
 #include "Memory/PoolAllocator.h"
 
 namespace Quartz
 {
+	class File;
+	class Folder;
+
 	class QUARTZ_ENGINE_API Filesystem
 	{
-	public:
-		using PopulateFolderFunc = bool (*)(const String& rootPath, const String& path, 
-			Folder& outFolder, PoolAllocator<File>& fileAllocator);
-
 	protected:
-		PoolAllocator<File>	mFileAllocator;
-		Array<RootFolder>	mRoots;
-		Map<String, File*>	mFileMap;
+		Array<Folder*>			mRootFolders;
+		Map<String, File*>		mFileMap;
+		Stack<File*>			mChangedFiles;
 
-	protected:
-		PopulateFolderFunc	mPopulateFolderFunc;
-
-		bool PopulateSubfolders(const String& rootPath, Folder& folder);
+		void PopulateRecursive(Folder& folder, FilesystemHandler& handler);
 
 	public:
 		Filesystem();
 
-		bool AddRoot(const String& rootPath, uSize priority);
+		bool AddRoot(const String& rootPath, FilesystemHandler& handler, uSize priority);
 
 		const Folder* GetFolder(const String& folderPath);
 		File* GetFile(const String& path);
-	};
 
-	class QUARTZ_ENGINE_API FilesystemImpl : public Filesystem
-	{
-	public:
-		void SetPopulateFolderFunc(PopulateFolderFunc polulateFunc);
+		bool CheckForChanges();
 	};
 }

@@ -5,13 +5,11 @@
 namespace Quartz
 {
 	File::File() : 
-		mPath(), mFlags(FileFlags(0)), mpHandle(nullptr),
-		mSizeBytes(0), mOffsetBytes(0), mFuncs() {};
+		mPath(), mFlags(FileFlags(0)), mpNative(nullptr),
+		mSizeBytes(0), mOffsetBytes(0) {};
 
-	File::File(const String& path,void* pHandle, FileFlags flags, 
-		uSize sizeBytes, uSize offsetBytes, FileFunctions funcs) :
-		mPath(path), mFlags(flags), mpHandle(pHandle), 
-		mSizeBytes(sizeBytes), mOffsetBytes(offsetBytes), mFuncs(funcs)
+	File::File(const String& path, Handler& handler, void* pHandle, FileFlags flags, uSize sizeBytes, uSize offsetBytes) :
+		mPath(path), mpHandler(&handler), mpNative(pHandle), mFlags(flags), mSizeBytes(sizeBytes), mOffsetBytes(offsetBytes)
 	{
 		uSize extIdx = path.FindReverse(".");
 
@@ -47,7 +45,7 @@ namespace Quartz
 
 	bool File::Open(FileOpenFlags openFlags)
 	{
-		bool result = mFuncs.openFunc(*this, openFlags, mpHandle, mFlags);
+		bool result = mpHandler->OpenFile(*this, openFlags, mpNative, mFlags);
 
 		if (!result)
 		{
@@ -55,29 +53,24 @@ namespace Quartz
 			return false;
 		}
 
-		mFlags |= FILE_OPEN | FILE_VALID; // Not needed, but just in case
-
 		return true;
 	}
 
 	bool File::Close()
 	{
-		bool result = mFuncs.closeFunc(*this);
+		bool result = mpHandler->CloseFile(*this, mpNative, mFlags);
 
 		if (!result)
 		{
 			LogError("Failed to load file [%s].", mPath.Str());
 		}
 
-		mpHandle = nullptr;
-		mFlags &= ~FILE_OPEN;
-
 		return result;
 	}
 
 	bool operator==(const File& file0, const File& file1)
 	{
-		return file0.mpHandle == file1.mpHandle && file0.mPath == file1.mPath;
+		return file0.mpNative == file1.mpNative && file0.mPath == file1.mPath;
 	}
 
 	bool operator!=(const File& file0, const File& file1)

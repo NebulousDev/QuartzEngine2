@@ -64,32 +64,32 @@ int main()
 
 	/* Create Filesystem */
 
-	Filesystem filesystem					= world.CreateSingleton<Filesystem>();
+	Filesystem filesystem;
 
 	/////////////////////////////////////////////////////////////////////////////////
 
 	/* Create Config */
 
-	EngineConfig config						= world.CreateSingleton<EngineConfig>();
+	EngineConfig config;
 
 	/////////////////////////////////////////////////////////////////////////////////
 
 	/* Create Runtime */
 
-	Runtime& runtime						= world.CreateSingleton<Runtime>();
+	Runtime runtime;
 
 	/////////////////////////////////////////////////////////////////////////////////
 
 	/* Create Input */
 
-	Input& input							= world.CreateSingleton<Input>();
-	InputDeviceRegistry& deviceRegistry		= world.CreateSingleton<InputDeviceRegistry>();
+	Input input;
+	InputDeviceRegistry deviceRegistry;
 
 	/////////////////////////////////////////////////////////////////////////////////
 
 	/* Create Module Admin */
 
-	ModuleRegistry& moduleRegistry			= world.CreateSingleton<ModuleRegistry>();
+	ModuleRegistry moduleRegistry;
 
 	/////////////////////////////////////////////////////////////////////////////////
 
@@ -129,15 +129,6 @@ int main()
 	moduleRegistry.PreInitAll();
 
 	/////////////////////////////////////////////////////////////////////////////////
-
-	/* Setup Relative Filesystem */
-
-	// We must set up the filesystem here to allow module init functions access to files
-	if (!filesystem.AddRoot(".", 1000))
-	{
-		LogFatal("Failed to read filesystem! Exiting...");
-		return 1;
-	}
 
 	/* Setup Config Files */
 

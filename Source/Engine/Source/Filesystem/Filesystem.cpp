@@ -1,74 +1,81 @@
 #include "Filesystem/Filesystem.h"
 
+#include "Filesystem/File.h"
+#include "Filesystem/Folder.h"
+
 #include "Log.h"
 #include "assert.h"
 
 namespace Quartz
 {
-	void FilesystemImpl::SetPopulateFolderFunc(PopulateFolderFunc polulateFunc)
+	//bool Filesystem::PopulateSubfolders(const String& rootPath, Folder& folder)
+	//{
+	//	bool anyError = false;
+	//
+	//	for (Folder* pSubFolder : folder.mFolders)
+	//	{
+	//		String folderPath = pSubFolder->mPath + "/" + pSubFolder->Name();
+	//
+	//		if (folder.mPath.IsEmpty())
+	//		{
+	//			folderPath = pSubFolder->Name();
+	//		}
+	//
+	//		if (!mPopulateFolderFunc(rootPath, folderPath, *pSubFolder, mFileAllocator, mFolderAllocator))
+	//		{
+	//			LogWarning("Failed to read directory [%s]!", folderPath.Str());
+	//			anyError = true;
+	//		}
+	//
+	//		if (!PopulateSubfolders(rootPath, *pSubFolder))
+	//		{
+	//			anyError = true;
+	//		}
+	//	}
+	//
+	//	for (File* pFile : folder.mFiles)
+	//	{
+	//		mFileMap.Put(pFile->Path(), pFile);
+	//	}
+	//
+	//	return !anyError;
+	//}
+
+	Filesystem::Filesystem()
 	{
-		mPopulateFolderFunc = polulateFunc;
+		mFileMap.Reserve(8192 * 2);
 	}
 
-	bool Filesystem::PopulateSubfolders(const String& rootPath, Folder& folder)
+	void Filesystem::PopulateRecursive(Folder& folder, FilesystemHandler& handler)
 	{
-		bool anyError = false;
+		handler.PopulateChildren(folder, *this, folder.mFolders, folder.mFiles);
 
-		for (Folder& subFolder : folder.folders)
+		for (Folder* pSubFolder : folder.mFolders)
 		{
-			String folderPath = folder.path + "/" + subFolder.name;
-
-			if (folder.path.IsEmpty())
-			{
-				folderPath = subFolder.name;
-			}
-
-			if (!mPopulateFolderFunc(rootPath, folderPath, subFolder, mFileAllocator))
-			{
-				LogWarning("Failed to read directory [%s]!", folderPath.Str());
-				anyError = true;
-			}
-
-			if (!PopulateSubfolders(rootPath, subFolder))
-			{
-				anyError = true;
-			}
+			PopulateRecursive(*pSubFolder, handler);
 		}
 
-		for (File* pFile : folder.files)
+		for (File* pFile : folder.mFiles)
 		{
 			mFileMap.Put(pFile->Path(), pFile);
 		}
-
-		return !anyError;
 	}
 
-	Filesystem::Filesystem() :
-		mFileAllocator(8192 * sizeof(File))
-	{
-		mFileMap.Reserve(8192);
-	}
-
-	bool Filesystem::AddRoot(const String& rootPath, uSize priority)
+	bool Filesystem::AddRoot(const String& rootPath, FilesystemHandler& handler, uSize priority)
 	{
 		// @TODO: check valid root
 
-		RootFolder& rootFolder = mRoots.PushBack(RootFolder());
-		
-		if (!mPopulateFolderFunc(rootPath, String(), rootFolder, mFileAllocator))
+		Folder* pRootFolder;
+
+		if(!handler.CreateFolder(rootPath, pRootFolder, priority))
 		{
 			LogError("Failed to add root directory [%s]!", rootPath.Str());
-			mRoots.FastRemove(rootFolder);
 			return false;
 		}
+	
+		PopulateRecursive(*pRootFolder, handler);
 
-		PopulateSubfolders(rootPath, rootFolder);
-
-		// Note: must be assigned after PopulateSubfolders 
-		// to keep the root path out of the the file paths
-		rootFolder.path		= rootPath;
-		rootFolder.name		= rootPath; // TODO
-		rootFolder.priority = priority;
+		mRootFolders.PushBack(pRootFolder);
 
 		return true;
 	}
@@ -92,7 +99,31 @@ namespace Quartz
 
 			return pFile;
 		}
+		else
+		{
+			for (Folder* pRoot : mRootFolders)
+			{
+				const String& fullPath = pRoot->Path() + "/" + path;
+				fileIt = mFileMap.Find(fullPath);
+				if (fileIt != mFileMap.End())
+				{
+					File* pFile = fileIt->value;
+
+					if (!pFile->IsValid())
+					{
+						return nullptr;
+					}
+
+					return pFile;
+				}
+			}
+		}
 
 		return nullptr;
+	}
+	
+	bool Filesystem::CheckForChanges()
+	{
+		return false;
 	}
 }

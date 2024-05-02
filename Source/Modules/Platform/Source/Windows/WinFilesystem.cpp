@@ -5,88 +5,25 @@
 
 namespace Quartz
 {
-	bool WinApiPopulateFolder(const String& rootPath, const String& path, 
-		Folder& outFolder, PoolAllocator<File>& fileAllocator)
+	WinApiFilesystemHandler::WinApiFilesystemHandler(Allocator* pAllocator)
 	{
-		String folderPath = rootPath + "/" + path + "/*";
-
-		if (path.IsEmpty())
-		{
-			folderPath = rootPath + "/*";
-		}
-
-		WIN32_FIND_DATA fileData;
-		HANDLE nextHandle = FindFirstFile(folderPath.Str(), &fileData);
-
-		if (nextHandle == INVALID_HANDLE_VALUE)
-		{
-			WinApiPrintError();
-			return false;
-		}
-
-		do
-		{
-			if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-			{
-				String subFolderName = fileData.cFileName;
-
-				if (subFolderName == "." || subFolderName == "..")
-				{
-					continue;
-				}
-
-				String subFolderPath = path + "/" + subFolderName;
-
-				if (path.IsEmpty())
-				{
-					subFolderPath = subFolderName;
-				}
-
-				Folder& subFolder = outFolder.folders.PushBack(Folder());
-				subFolder.name = subFolderName;
-				subFolder.path = subFolderPath;
-				subFolder.flags |= FOLDER_VALID;
-
-				if (!outFolder.folders.Contains(subFolder))
-				{
-					outFolder.folders.PushBack(subFolder);
-				}
-			}
-			else
-			{
-				String fileName = fileData.cFileName;
-				uInt64 sizeBytes = ((uInt64)fileData.nFileSizeHigh << sizeof(DWORD) * 8) | fileData.nFileSizeLow;
-
-				FileFunctions fileFunctions = {};
-				fileFunctions.openFunc	= WinApiOpenFile;
-				fileFunctions.closeFunc = WinApiCloseFile;
-				fileFunctions.readFunc	= WinApiReadFile;
-				fileFunctions.writeFunc = WinApiWriteFile;
-
-				String filePath = path + "/" + fileName;
-
-				if (path.IsEmpty())
-				{
-					filePath = fileName;
-				}
-
-				File* pFile = fileAllocator.Allocate(filePath, (void*)NULL, (FileFlags)FILE_VALID, (uSize)sizeBytes, (uSize)0, fileFunctions);
-
-				outFolder.files.PushBack(pFile);
-			}
-		}
-		while (FindNextFile(nextHandle, &fileData));
-
-		return true;
+		mpFileAllocator = new PoolAllocator<File>(8192 * sizeof(File), pAllocator);
+		mpFolderAllocator = new PoolAllocator<Folder>(8192 * sizeof(Folder), pAllocator);
 	}
 
-	bool WinApiOpenFile(File& file, FileOpenFlags openFlags, void*& pOutHandle, FileFlags& outFlags)
+	WinApiFilesystemHandler::~WinApiFilesystemHandler()
+	{
+		delete mpFileAllocator;
+		delete mpFolderAllocator;
+	}
+
+	bool WinApiFilesystemHandler::OpenFile(File& file, FileOpenFlags openFlags, void*& pOutHandle, FileFlags& outFlags)
 	{
 		DWORD dwAccess = NULL;
 		DWORD dwCreation = OPEN_EXISTING;
 		DWORD dwAttrribs = FILE_ATTRIBUTE_NORMAL;
 
-		FileFlags fileFlags = FILE_VALID;
+		FileFlags fileFlags = FILE_VALID | FILE_OPEN;
 
 		if (openFlags & FILE_OPEN_READ)
 		{
@@ -123,7 +60,7 @@ namespace Quartz
 			dwAttrribs &= ~FILE_ATTRIBUTE_NORMAL;
 		}
 
-		HANDLE pFileHandle = CreateFile(file.Path().Str(), 
+		HANDLE pFileHandle = CreateFile(file.Path().Str(),
 			dwAccess, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
 			dwCreation, dwAttrribs, NULL);
 
@@ -133,20 +70,56 @@ namespace Quartz
 			return false;
 		}
 
-		pOutHandle = pFileHandle;
+		pOutHandle	= pFileHandle;
+		outFlags	= fileFlags;
 
 		return true;
 	}
 
-	bool WinApiCloseFile(File& file)
+	bool WinApiFilesystemHandler::CloseFile(File& file, void*& pOutHandle, FileFlags& outFlags)
 	{
-		return CloseHandle((HANDLE)file.GetNativeHandle());
+		if (CloseHandle((HANDLE)file.GetNativeHandle()))
+		{
+			pOutHandle = nullptr;
+			outFlags = file.Flags() & ~FILE_OPEN;
+			return true;
+		}
+		
+		return false;
 	}
 
-	bool WinApiReadFile(File& file, void* pOutData, uSize sizeBytes)
+	bool WinApiFilesystemHandler::OpenFolder(Folder& folder, void*& pOutHandle)
+	{
+		return false;
+	}
+
+	bool WinApiFilesystemHandler::CloseFolder(Folder& folder, void*& pOutHandle)
+	{
+		return false;
+	}
+
+
+	//bool WinApiFilesystemHandler::CreateFile() const = 0;
+	//bool WinApiFilesystemHandler::DeleteFile() const = 0;
+
+	bool WinApiFilesystemHandler::CreateFolder(const String& path, Folder*& pOutFolder, uSize priority)
+	{
+		Folder* pSubFolder = mpFolderAllocator->Allocate(path, *this, (void*)NULL, (FolderFlags)FOLDER_VALID, priority);
+
+		pOutFolder = pSubFolder;
+
+		return true;
+	}
+
+	bool WinApiFilesystemHandler::DeleteFolder(Folder& folder)
+	{
+		return false;
+	}
+
+	bool WinApiFilesystemHandler::ReadFile(File& file, void* pOutData, uSize sizeBytes)
 	{
 		DWORD dwBytesRead = 0;
-		BOOL result = ReadFile(file.GetNativeHandle(), pOutData, sizeBytes, &dwBytesRead, NULL);
+		BOOL result = ::ReadFile((HANDLE)file.GetNativeHandle(), pOutData, sizeBytes, &dwBytesRead, NULL);
 
 		if (!result || dwBytesRead != sizeBytes)
 		{
@@ -157,10 +130,10 @@ namespace Quartz
 		return true;
 	}
 
-	bool WinApiWriteFile(File& file, void* pInData, uSize sizeBytes)
+	bool WinApiFilesystemHandler::WriteFile(File& file, void* pInData, uSize sizeBytes)
 	{
 		DWORD dwBytesWritten = 0;
-		BOOL result = WriteFile(file.GetNativeHandle(), pInData, sizeBytes, &dwBytesWritten, NULL);
+		BOOL result = ::WriteFile((HANDLE)file.GetNativeHandle(), pInData, sizeBytes, &dwBytesWritten, NULL);
 
 		if (!result || dwBytesWritten != sizeBytes)
 		{
@@ -169,5 +142,65 @@ namespace Quartz
 		}
 
 		return true;
+	}
+
+	bool WinApiFilesystemHandler::PopulateChildren(Folder& folder, const Filesystem& filesystem,
+		Array<Folder*>& outFolders, Array<File*>& outFiles)
+	{
+		String folderPath = folder.Path() + "/*";
+
+		WIN32_FIND_DATA fileData;
+		HANDLE nextHandle = FindFirstFile(folderPath.Str(), &fileData);
+
+		if (nextHandle == INVALID_HANDLE_VALUE)
+		{
+			WinApiPrintError();
+			return false;
+		}
+
+		do
+		{
+			if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				String subFolderName = fileData.cFileName;
+
+				if (subFolderName == "." || subFolderName == "..")
+				{
+					continue;
+				}
+
+				String subFolderPath = folder.Path() + "/" + subFolderName;
+
+				// @TODO: find the correct handler rather than using the same one vvv
+				Folder* pSubFolder = mpFolderAllocator->Allocate(subFolderPath, *this, (void*)NULL, (FolderFlags)FOLDER_VALID, folder.GetPriority());
+
+				outFolders.PushBack(pSubFolder);
+			}
+			else
+			{
+				String fileName = fileData.cFileName;
+				uInt64 sizeBytes = ((uInt64)fileData.nFileSizeHigh << sizeof(DWORD) * 8) | fileData.nFileSizeLow;
+
+				String filePath = folder.Path() + "/" + fileName;
+
+				File* pFile = mpFileAllocator->Allocate(filePath, *this, (void*)NULL, (FileFlags)FILE_VALID, (uSize)sizeBytes, (uSize)0);
+
+				outFiles.PushBack(pFile);
+			}
+		}
+		while (FindNextFile(nextHandle, &fileData));
+
+		return true;
+	}
+
+	bool WinApiFilesystemHandler::IsVirtual() const
+	{
+		return false;
+	}
+
+	bool WinApiCheckChanges(const Folder& rootFolder, const Stack<File*>& changedFiles)
+	{
+		//ReadDirectoryChangesW
+		return false;
 	}
 }

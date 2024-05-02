@@ -1,34 +1,57 @@
 #pragma once
 
-#include "Filesystem/File.h"
+#include "EngineAPI.h"
+#include "Types/String.h"
 #include "Types/Array.h"
 
 namespace Quartz
 {
+	class File;
+
 	enum FolderFlagBits
 	{
 		FOLDER_VALID	= 0x1,
-		FOLDER_VIRTUAL	= 0x2
+		FOLDER_VIRTUAL	= 0x2,
+		FOLDER_IS_ROOT	= 0x4
 	};
 
 	using FolderFlags = uSize;
 
-	struct QUARTZ_ENGINE_API Folder
+	class QUARTZ_ENGINE_API Folder
 	{
-		String			name;	// @TODO: make substring idx
-		String			path;
-		Array<Folder>	folders;
-		Array<File*>	files;
-		FolderFlags		flags;
+	public:
+		friend class Filesystem;
+		friend class FilesystemHandler;
+
+		using Handler = FilesystemHandler;
+
+	protected:
+		String			mPath;
+		uInt32			mNameIdx;
+		FolderFlags		mFlags;
+		uSize			mPriority;
+
+		Array<Folder*>	mFolders;
+		Array<File*>	mFiles;
+
+		void*			mpNative;
+		Handler*		mpHandler;
+
+	public:
+		Folder() = default;
+		Folder(const String& path, Handler& handler, void* pHandle, FolderFlags flags, uSize priority = 0);
 
 		friend QUARTZ_ENGINE_API bool operator==(const Folder& folder0, const Folder& folder1);
+		friend QUARTZ_ENGINE_API bool operator!=(const Folder& folder0, const Folder& folder1);
 
-		bool IsValid() const { return flags & FOLDER_VALID; }
-		bool IsVirtual() const { return flags & FOLDER_VIRTUAL; }
-	};
-
-	struct QUARTZ_ENGINE_API RootFolder : public Folder
-	{
-		uSize priority;
+		const Substring Name() const { return mPath.Substring(mNameIdx); }
+		const String& Path() const { return mPath; }
+		FolderFlags Flags() const { return mFlags; }
+		const Array<Folder*>& GetChildFolders() const { return mFolders; }
+		const Array<File*>& GetChildFiles() const { return mFiles; }
+		bool IsValid() const { return mFlags & FOLDER_VALID; }
+		bool IsVirtual() const { return mFlags & FOLDER_VIRTUAL; }
+		void* GetNativeHandle() const { return mpNative; }
+		uSize GetPriority() const { return mPriority; }
 	};
 }
