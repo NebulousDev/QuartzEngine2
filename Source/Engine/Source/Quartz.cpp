@@ -5,6 +5,7 @@
 #include "Module/ModuleRegistry.h"
 #include "Sinks/Windows/WinApiConsoleSink.h"
 #include "Module/LibraryLoader.h"
+#include "Resource/Loaders/ConfigLoader.h"
 
 #include "Banner.h"
 
@@ -19,17 +20,9 @@ public:
 	Engine::mpDeviceRegistry;
 	Engine::mpModuleRegistry;
 	Engine::mpFilesystem;
+	Engine::mpAssetManager;
 	Engine::mpConfig;
 	Engine::mpLog;
-
-	inline void SetWorld(EntityWorld* pWorld) { mpWorld = pWorld; }
-	inline void SetRuntime(Runtime* pRuntime) { mpRuntime = pRuntime; }
-	inline void SetInput(Input* pInput) { mpInput = pInput; }
-	inline void SetDeviceRegistry(InputDeviceRegistry* pDeviceRegistry) { mpDeviceRegistry = pDeviceRegistry; }
-	inline void SetModuleRegistry(ModuleRegistry* pModuleRegistry) { mpModuleRegistry = pModuleRegistry; }
-	inline void SetFilesystem(Filesystem* pFilesystem) { mpFilesystem = pFilesystem; }
-	inline void SetConfig(EngineConfig* pConfig) { mpConfig = pConfig; }
-	inline void SetLog(Log* pLog) { mpLog = pLog; }
 };
 
 int main()
@@ -68,9 +61,9 @@ int main()
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	/* Create Config */
+	/* Create Asset Manager */
 
-	EngineConfig config;
+	AssetManager assetManager;
 
 	/////////////////////////////////////////////////////////////////////////////////
 
@@ -102,7 +95,7 @@ int main()
 	engineImpl.mpDeviceRegistry = &deviceRegistry;
 	engineImpl.mpModuleRegistry	= &moduleRegistry;
 	engineImpl.mpFilesystem		= &filesystem;
-	engineImpl.mpConfig			= &config;
+	engineImpl.mpAssetManager	= &assetManager;
 	engineImpl.mpLog			= &engineLog;
 
 	Engine::SetInstance(engineImpl);
@@ -130,13 +123,15 @@ int main()
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	/* Setup Config Files */
+	/* Setup Config */
 
 	// We must set up configs here to allow module init functions access to engine.ini
-	File* pEngineConfigFile = filesystem.GetFile("engine.ini");
-	config.SetConfigFile(pEngineConfigFile);
-	config.Read();
-	config.PrintConfigs();
+	ConfigLoader configLoader;
+	assetManager.RegisterAssetLoader("ini", &configLoader);
+
+	Config* pConfig = assetManager.LoadAsset<Config>("engine.ini");
+	engineImpl.mpConfig = pConfig;
+	pConfig->PrintConfigs();
 
 	/////////////////////////////////////////////////////////////////////////////////
 
@@ -153,7 +148,7 @@ int main()
 
 	/* Shutdown */
 
-	pEngineConfigFile->Close();
+	assetManager.UnloadAsset<Config>(pConfig);
 
 	moduleRegistry.UnloadAll();
 	moduleRegistry.DestroyAll();

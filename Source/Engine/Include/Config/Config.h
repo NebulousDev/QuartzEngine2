@@ -2,6 +2,7 @@
 
 #include "../EngineAPI.h"
 #include "../Filesystem/File.h"
+#include "../Resource/Asset.h"
 
 #include "Types/String.h"
 #include "Types/Map.h"
@@ -9,7 +10,7 @@
 
 namespace Quartz
 {
-	class QUARTZ_ENGINE_API EngineConfig
+	class QUARTZ_ENGINE_API Config : public Asset
 	{
 	public:
 		using ConfigHash = uInt64;
@@ -17,11 +18,10 @@ namespace Quartz
 	private:
 		Map<String, Set<String>>	mCategories;
 		Map<String, String>			mConfigs;
-		File*						mpConfigFile;
 
 	public:
-		EngineConfig() = default;
-		EngineConfig(File* pConfigFile);
+		Config() = default;
+		Config(File* pConfigFile);
 
 		// Returns true if the given name is new, false otherwise
 		bool SetValue(const String& name, const String& inValue, const String& category = "General");

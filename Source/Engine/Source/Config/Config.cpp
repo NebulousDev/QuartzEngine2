@@ -6,17 +6,17 @@
 
 namespace Quartz
 {
-	EngineConfig::EngineConfig(File* pConfigFile) : mpConfigFile(pConfigFile)
+	Config::Config(File* pConfigFile) : Asset(pConfigFile)
 	{
-		assert(pConfigFile->IsValid());
+		assert(mpSourceFile->IsValid());
 
-		if (!mpConfigFile->IsOpen())
+		if (!mpSourceFile->IsOpen())
 		{
-			mpConfigFile->Open(FILE_OPEN_READ | FILE_OPEN_WRITE);
+			mpSourceFile->Open(FILE_OPEN_READ | FILE_OPEN_WRITE);
 		}
 	}
 
-	bool EngineConfig::SetValue(const String& name, const String& inValue, const String& category)
+	bool Config::SetValue(const String& name, const String& inValue, const String& category)
 	{
 		bool found = false;
 
@@ -45,7 +45,7 @@ namespace Quartz
 		return found;
 	}
 
-	bool EngineConfig::GetValue(const String& name, String& outValue) const
+	bool Config::GetValue(const String& name, String& outValue) const
 	{
 		auto& configIt = mConfigs.Find(name);
 		if (configIt != mConfigs.End())
@@ -57,14 +57,14 @@ namespace Quartz
 		return false;
 	}
 
-	bool EngineConfig::Read()
+	bool Config::Read()
 	{
-		const uSize fileSizeBytes = mpConfigFile->GetSize();
+		const uSize fileSizeBytes = mpSourceFile->GetSize();
 		const char* pFileData = new char[fileSizeBytes];
 		
-		if (!mpConfigFile->Read(pFileData, fileSizeBytes))
+		if (!mpSourceFile->Read(pFileData, fileSizeBytes))
 		{
-			LogError("Failed to read config file [%s]!", mpConfigFile->GetPath());
+			LogError("Failed to read config file [%s]!", mpSourceFile->GetPath());
 			return false;
 		}
 
@@ -90,7 +90,7 @@ namespace Quartz
 				if (endIdx == line.Length())
 				{
 					LogError("Error loading Config. File [%s] is missing a closing bracket ']' on line %d.", 
-						mpConfigFile->GetPath(), lineNumber);
+						mpSourceFile->GetPath(), lineNumber);
 
 					//mConfigs.Clear();
 					//mCategories.Clear();
@@ -115,7 +115,7 @@ namespace Quartz
 				if (assignIdx == line.Length())
 				{
 					LogError("Error loading Config. File [%s] is missing an assignment '=' on line %d.",
-						mpConfigFile->GetPath(), lineNumber);
+						mpSourceFile->GetPath(), lineNumber);
 
 					//mConfigs.Clear();
 					//mCategories.Clear();
@@ -134,28 +134,28 @@ namespace Quartz
 		return true;
 	}
 
-	bool EngineConfig::Save() const
+	bool Config::Save() const
 	{
 		return false;
 	}
 
-	void EngineConfig::SetConfigFile(File* pConfigFile)
+	void Config::SetConfigFile(File* pConfigFile)
 	{
 		assert(pConfigFile);
 		assert(pConfigFile->IsValid());
 		assert(pConfigFile->GetExtention() == "ini"_STR);
 
-		mpConfigFile = pConfigFile;
+		mpSourceFile = pConfigFile;
 
-		if (!mpConfigFile->IsOpen())
+		if (!mpSourceFile->IsOpen())
 		{
-			mpConfigFile->Open(FILE_OPEN_READ | FILE_OPEN_WRITE);
+			mpSourceFile->Open(FILE_OPEN_READ | FILE_OPEN_WRITE);
 		}
 	}
 
-	void EngineConfig::PrintConfigs()
+	void Config::PrintConfigs()
 	{
-		LogInfo("Config file [%s]:", mpConfigFile->GetPath().Str());
+		LogInfo("Config file [%s]:", mpSourceFile->GetPath().Str());
 
 		for (auto& categoryIt : mCategories)
 		{

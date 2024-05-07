@@ -8,6 +8,7 @@
 #include "Input/InputDeviceRegistry.h"
 #include "Module/ModuleRegistry.h"
 #include "Filesystem/Filesystem.h"
+#include "Resource/AssetManager.h"
 #include "Config/Config.h"
 #include "Log.h"
 
@@ -24,7 +25,8 @@ namespace Quartz
 		InputDeviceRegistry*	mpDeviceRegistry;
 		ModuleRegistry*			mpModuleRegistry;
 		Filesystem*				mpFilesystem;
-		EngineConfig*			mpConfig;
+		AssetManager*			mpAssetManager;
+		Config*					mpConfig;
 		Log*					mpLog;
 
 	public:
@@ -34,7 +36,8 @@ namespace Quartz
 		static InputDeviceRegistry& GetDeviceRegistry();
 		static ModuleRegistry&		GetModuleRegistry();
 		static Filesystem&			GetFilesystem();
-		static EngineConfig&		GetConfig();
+		static AssetManager&		GetAssetManager();
+		static Config&				GetConfig();
 		static Log&					GetLog();
 
 		static Engine&				GetInstance();

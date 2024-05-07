@@ -34,7 +34,7 @@ namespace Quartz
 		return *spInstance->mpFilesystem;
 	}
 
-	EngineConfig& Engine::GetConfig()
+	Config& Engine::GetConfig()
 	{
 		return *spInstance->mpConfig;
 	}
@@ -48,6 +48,7 @@ namespace Quartz
 	{
 		return *spInstance;
 	}
+
 	void Engine::SetInstance(Engine& engine)
 	{
 		spInstance = &engine;

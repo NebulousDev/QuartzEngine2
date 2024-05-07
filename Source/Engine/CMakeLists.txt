@@ -49,7 +49,7 @@ elseif(UNIX)
 
 endif()
 
-add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES} )
+add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES}  "Source/Resource/Loaders/ConfigLoader.cpp" )
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC 
