@@ -34,6 +34,11 @@ namespace Quartz
 		return *spInstance->mpFilesystem;
 	}
 
+	AssetManager& Engine::GetAssetManager()
+	{
+		return *spInstance->mpAssetManager;
+	}
+
 	Config& Engine::GetConfig()
 	{
 		return *spInstance->mpConfig;

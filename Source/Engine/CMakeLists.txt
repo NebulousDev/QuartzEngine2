@@ -24,6 +24,7 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Filesystem/File.cpp"
     "Source/Filesystem/Folder.cpp"
     "Source/Filesystem/Filesystem.cpp"
+    "Source/Resource/Loaders/ConfigLoader.cpp"
 )
 
 if(WIN32)
@@ -49,7 +50,7 @@ elseif(UNIX)
 
 endif()
 
-add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES}  "Source/Resource/Loaders/ConfigLoader.cpp" )
+add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC 

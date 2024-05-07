@@ -129,7 +129,7 @@ int main()
 	ConfigLoader configLoader;
 	assetManager.RegisterAssetLoader("ini", &configLoader);
 
-	Config* pConfig = assetManager.LoadAsset<Config>("engine.ini");
+	Config* pConfig = assetManager.GetOrLoadAsset<Config>("engine.ini");
 	engineImpl.mpConfig = pConfig;
 	pConfig->PrintConfigs();
 

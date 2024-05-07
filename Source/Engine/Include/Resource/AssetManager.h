@@ -11,9 +11,13 @@ namespace Quartz
 	class QUARTZ_ENGINE_API AssetManager
 	{
 	private:
-		Map<String, AssetLoader*> mLoaders;
+		Map<String, AssetLoader*>	mLoaders;
+		Map<String, Asset*>			mAssets;
 
 	public:
+		AssetManager() :
+			mLoaders(128), mAssets(8196) {}
+
 		template<typename AssetLoaderType>
 		bool RegisterAssetLoader(const String& ext, AssetLoaderType* pAssetLoader)
 		{
@@ -22,8 +26,14 @@ namespace Quartz
 		}
 
 		template<typename AssetType>
-		AssetType* LoadAsset(File& assetFile)
+		AssetType* GetOrLoadAsset(File& assetFile)
 		{
+			auto& assetIt = mAssets.Find(assetFile.GetPath());
+			if (assetIt != mAssets.End())
+			{
+				return static_cast<AssetType*>(assetIt->value);
+			}
+
 			const String ext = assetFile.GetExtention();
 			AssetLoader* pLoader = nullptr;
 			Asset* pAsset = nullptr;
@@ -46,11 +56,13 @@ namespace Quartz
 				return nullptr;
 			}
 
+			mAssets.Put(assetFile.GetPath(), pAsset);
+
 			return static_cast<AssetType*>(pAsset);
 		}
 
 		template<typename AssetType>
-		AssetType* LoadAsset(const String& path)
+		AssetType* GetOrLoadAsset(const String& path)
 		{
 			File* pAssetFile = Engine::GetFilesystem().GetFile(path);
 
@@ -60,7 +72,7 @@ namespace Quartz
 				return nullptr;
 			}
 
-			return LoadAsset<AssetType>(*pAssetFile);
+			return GetOrLoadAsset<AssetType>(*pAssetFile);
 		}
 
 		template<typename AssetType>
@@ -72,15 +84,24 @@ namespace Quartz
 			}
 
 			const String ext = pAsset->GetSourceFile()->GetExtention();
+			AssetLoader* pLoader;
+			bool result = true;
 
 			auto& loaderIt = mLoaders.Find(ext);
 			if (loaderIt != mLoaders.End())
 			{
-				AssetLoader* pLoader = loaderIt->value;
-				return pLoader->UnloadAsset(pAsset);
+				pLoader = loaderIt->value;
 			}
+			else
+			{
+				// No loader
+				return false;
+			}
+
+			result = pLoader->UnloadAsset(pAsset);
+			mAssets.Remove(pAsset->GetSourceFile()->GetPath());
 			
-			return false;
+			return result;
 		}
 	};
 }
