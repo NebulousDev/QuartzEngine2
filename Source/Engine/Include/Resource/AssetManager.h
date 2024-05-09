@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AssetLoader.h"
+#include "AssetHandler.h"
 #include "Filesystem/Filesystem.h"
 #include "Engine.h"
 #include "Log.h"
@@ -11,17 +11,17 @@ namespace Quartz
 	class QUARTZ_ENGINE_API AssetManager
 	{
 	private:
-		Map<String, AssetLoader*>	mLoaders;
+		Map<String, AssetHandler*>	mHandlers;
 		Map<String, Asset*>			mAssets;
 
 	public:
 		AssetManager() :
-			mLoaders(128), mAssets(8196) {}
+			mHandlers(128), mAssets(8196) {}
 
-		template<typename AssetLoaderType>
-		bool RegisterAssetLoader(const String& ext, AssetLoaderType* pAssetLoader)
+		template<typename AssetHandlerType>
+		bool RegisterAssetHandler(const String& ext, AssetHandlerType* pAssetHandler)
 		{
-			mLoaders.Put(ext, static_cast<AssetLoader*>(pAssetLoader));
+			mHandlers.Put(ext, static_cast<AssetHandler*>(pAssetHandler));
 			return true;
 		}
 
@@ -35,13 +35,13 @@ namespace Quartz
 			}
 
 			const String ext = assetFile.GetExtention();
-			AssetLoader* pLoader = nullptr;
+			AssetHandler* pHandler = nullptr;
 			Asset* pAsset = nullptr;
 
-			auto& loaderIt = mLoaders.Find(ext);
-			if (loaderIt != mLoaders.End())
+			auto& loaderIt = mHandlers.Find(ext);
+			if (loaderIt != mHandlers.End())
 			{
-				pLoader = loaderIt->value;
+				pHandler = loaderIt->value;
 			}
 			else
 			{
@@ -50,7 +50,7 @@ namespace Quartz
 				return nullptr;
 			}
 
-			if (!pLoader->LoadAsset(assetFile, pAsset))
+			if (!pHandler->LoadAsset(assetFile, pAsset))
 			{
 				// Error message in LoadAsset()
 				return nullptr;
@@ -84,13 +84,13 @@ namespace Quartz
 			}
 
 			const String ext = pAsset->GetSourceFile()->GetExtention();
-			AssetLoader* pLoader;
+			AssetHandler* pHandler;
 			bool result = true;
 
-			auto& loaderIt = mLoaders.Find(ext);
-			if (loaderIt != mLoaders.End())
+			auto& loaderIt = mHandlers.Find(ext);
+			if (loaderIt != mHandlers.End())
 			{
-				pLoader = loaderIt->value;
+				pHandler = loaderIt->value;
 			}
 			else
 			{
@@ -98,7 +98,7 @@ namespace Quartz
 				return false;
 			}
 
-			result = pLoader->UnloadAsset(pAsset);
+			result = pHandler->UnloadAsset(pAsset);
 			mAssets.Remove(pAsset->GetSourceFile()->GetPath());
 			
 			return result;

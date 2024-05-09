@@ -5,7 +5,7 @@
 #include "Module/ModuleRegistry.h"
 #include "Sinks/Windows/WinApiConsoleSink.h"
 #include "Module/LibraryLoader.h"
-#include "Resource/Loaders/ConfigLoader.h"
+#include "Resource/Loaders/ConfigHandler.h"
 
 #include "Banner.h"
 
@@ -126,8 +126,8 @@ int main()
 	/* Setup Config */
 
 	// We must set up configs here to allow module init functions access to engine.ini
-	ConfigLoader configLoader;
-	assetManager.RegisterAssetLoader("ini", &configLoader);
+	ConfigHandler configHandler;
+	assetManager.RegisterAssetHandler("ini", &configHandler);
 
 	Config* pConfig = assetManager.GetOrLoadAsset<Config>("engine.ini");
 	engineImpl.mpConfig = pConfig;

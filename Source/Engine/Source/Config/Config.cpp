@@ -68,7 +68,7 @@ namespace Quartz
 			return false;
 		}
 
-		StringReader<String> reader(String(pFileData, fileSizeBytes));
+		StringReader reader(String(pFileData, fileSizeBytes));
 		uSize lineNumber = 0;
 		Substring category;
 
