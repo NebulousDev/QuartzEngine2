@@ -152,8 +152,8 @@ namespace Quartz
 	{
 		constexpr const uSize maxVertexBufferSize = 16;
 
-		VkBuffer		vkBuffers[maxVertexBufferSize] = {};
-		VkDeviceSize	vkOffsetSizes[maxVertexBufferSize] = {};
+		Array<VkBuffer, maxVertexBufferSize>		vkBuffers(maxVertexBufferSize);
+		Array<VkDeviceSize, maxVertexBufferSize>	vkOffsetSizes(maxVertexBufferSize);
 
 		if (bufferCount > maxVertexBufferSize) // @TODO: should be debug_assert
 		{
@@ -166,7 +166,7 @@ namespace Quartz
 			vkOffsetSizes[i]	= pBuffers[i].offset;
 		}
 
-		vkCmdBindVertexBuffers(mpCommandBuffer->vkCommandBuffer, 0, bufferCount, vkBuffers, vkOffsetSizes);
+		vkCmdBindVertexBuffers(mpCommandBuffer->vkCommandBuffer, 0, bufferCount, vkBuffers.Data(), vkOffsetSizes.Data());
 	}
 
 	void VulkanCommandRecorder::SetIndexBuffer(VulkanBuffer* pIndexBuffer, uSize offset, VkIndexType indexType)
@@ -180,9 +180,9 @@ namespace Quartz
 	{
 		constexpr const uSize maxWriteDescriptorSets = 16;
 
-		VkWriteDescriptorSet	writeDescriptorSets[maxWriteDescriptorSets] = {};
-		VkDescriptorBufferInfo	bufferInfos[maxWriteDescriptorSets] = {};
-		VkDescriptorImageInfo	imageInfos[maxWriteDescriptorSets] = {};
+		Array<VkWriteDescriptorSet, maxWriteDescriptorSets>		writeDescriptorSets(maxWriteDescriptorSets);
+		Array<VkDescriptorBufferInfo, maxWriteDescriptorSets>	bufferInfos(maxWriteDescriptorSets);
+		Array<VkDescriptorImageInfo, maxWriteDescriptorSets>	imageInfos(maxWriteDescriptorSets);
 
 		if (bufferCount + imageCount > maxWriteDescriptorSets) // @TODO: should be debug_assert
 		{
@@ -195,6 +195,7 @@ namespace Quartz
 			bufferInfos[i].offset	= pBufferBinds[i].offset;
 			bufferInfos[i].range	= pBufferBinds[i].range;
 
+			writeDescriptorSets[i] = {};
 			writeDescriptorSets[i].sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			writeDescriptorSets[i].dstSet			= 0; // Ignored
 			writeDescriptorSets[i].dstBinding		= pBufferBinds[i].binding;
@@ -209,6 +210,7 @@ namespace Quartz
 			imageInfos[i].imageView		= pImageBinds[i].pImageView->vkImageView;
 			imageInfos[i].imageLayout	= pImageBinds[i].vkLayout;
 
+			writeDescriptorSets[bufferCount + i] = {};
 			writeDescriptorSets[bufferCount + i].sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			writeDescriptorSets[bufferCount + i].dstSet				= 0; // Ignored
 			writeDescriptorSets[bufferCount + i].dstBinding			= pImageBinds[i].binding;
@@ -221,7 +223,7 @@ namespace Quartz
 			(PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(pPipeline->pDevice->vkDevice, "vkCmdPushDescriptorSetKHR");
 
 		vkCmdPushDescriptorSetKHR2(mpCommandBuffer->vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			pPipeline->vkPipelineInfo.layout, set, bufferCount + imageCount, writeDescriptorSets);
+			pPipeline->vkPipelineInfo.layout, set, bufferCount + imageCount, writeDescriptorSets.Data());
 	}
 
 	void VulkanCommandRecorder::SetViewport(const VkViewport& viewport, const VkRect2D scissor)

@@ -130,7 +130,7 @@ namespace Quartz
 		vkAppInfo.pEngineName		= "Quartz Engine 2";
 		vkAppInfo.pApplicationName	= "Quartz Sandbox";
 
-		Array<const char*> extentions =
+		Array<const char*, 8> extentions =
 		{
 #if DEBUG_EXT
 			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
@@ -146,7 +146,7 @@ namespace Quartz
 		Array<VkLayerProperties> availableLayers(layerCount);
 		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.Data());
 
-		Array<const char*> enabledLayers =
+		Array<const char*, 8> enabledLayers =
 		{
 #ifndef NDEBUG
 			"VK_LAYER_KHRONOS_validation"
@@ -285,7 +285,7 @@ namespace Quartz
 	{
 		float queuePriorities[1] = { 1.0f };
 
-		Array<const char*> deviceExtensions =
+		Array<const char*, 8> deviceExtensions =
 		{
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
@@ -457,7 +457,7 @@ namespace Quartz
 		vkAppInfo.pEngineName		= "Quartz Vulkan Test";
 		vkAppInfo.pApplicationName	= "Quartz Vulkan Test";
 
-		Array<const char*> extentions =
+		Array<const char*, 8> extentions =
 		{
 #if DEBUG_EXT
 			VK_EXT_DEBUG_UTILS_EXTENSION_NAME

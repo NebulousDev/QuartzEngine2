@@ -10,9 +10,9 @@ namespace Quartz
 		mpSkyPerFrameData->mieScattering		= atmosphere.mieScattering;
 		mpSkyPerFrameData->mieAbsorbtion		= atmosphere.mieAbsorbtion;
 		mpSkyPerFrameData->ozoneScattering		= atmosphere.ozoneScattering;
-		mpSkyPerFrameData->_pad0_				= (float)'H';
+		mpSkyPerFrameData->_pad0_				= (float)'N';
 		mpSkyPerFrameData->ozoneAbsorbtion		= atmosphere.ozoneAbsorbtion;
-		mpSkyPerFrameData->_pad1_				= (float)'I';
+		mpSkyPerFrameData->_pad1_				= (float)'D';
 		mpSkyPerFrameData->suns[0]				= atmosphere.suns[0];
 		mpSkyPerFrameData->suns[1]				= atmosphere.suns[1];
 
@@ -254,22 +254,22 @@ namespace Quartz
 
 		/* Create Shader Pipelines */
 
-		Array<VulkanAttachment> transmittanceAttachments =
+		Array<VulkanAttachment, 1> transmittanceAttachments =
 		{
 			{ "TransmittanceLUT", VULKAN_ATTACHMENT_TYPE_COLOR, LUT_FORMAT }
 		};
 
-		Array<VulkanAttachment> scatterAttachments =
+		Array<VulkanAttachment, 1> scatterAttachments =
 		{
 			{ "ScatterLUT", VULKAN_ATTACHMENT_TYPE_COLOR, LUT_FORMAT }
 		};
 
-		Array<VulkanAttachment> viewAttachments =
+		Array<VulkanAttachment, 1> viewAttachments =
 		{
 			{ "ViewLUT", VULKAN_ATTACHMENT_TYPE_COLOR, LUT_FORMAT }
 		};
 
-		Array<VulkanAttachment> attachments =
+		Array<VulkanAttachment, 2> attachments =
 		{
 			{ "Swapchain",			VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
 			{ "Depth-Stencil",		VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }

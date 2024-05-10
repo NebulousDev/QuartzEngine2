@@ -56,8 +56,8 @@ namespace Quartz
 		const Array<VulkanShader*>& shaders,
 		const Array<VulkanAttachment>& attachments)
 	{
-		Array<VkVertexInputAttributeDescription> vertexAttributes;
-		Array<VkVertexInputBindingDescription> vertexBindings;
+		Array<VkVertexInputAttributeDescription, 32> vertexAttributes;
+		Array<VkVertexInputBindingDescription, 32> vertexBindings;
 
 		uSize totalSize = 0;
 

@@ -42,9 +42,9 @@ namespace Quartz
 		renderSettings.useUniqueMeshStagingBuffers		= false;
 		renderSettings.useUniqueUniformBuffers			= false;
 		renderSettings.useUniqueUniformStagingBuffers	= false;
-		renderSettings.vertexBufferSizeMb				= 32;
-		renderSettings.indexBufferSizeMb				= 16;
-		renderSettings.perInstanceBufferSizeMb			= 16;
+		renderSettings.vertexBufferSizeMb				= 128; // 32
+		renderSettings.indexBufferSizeMb				= 64;  // 16
+		renderSettings.perInstanceBufferSizeMb			= 64;  // 16
 		renderSettings.perModelBufferSizeMb				= 32;
 		renderSettings.globalBufferSizeBytes			= 128;
 		renderSettings.uniquePerInstanceBufferSizeBytes	= 128; //

@@ -453,12 +453,12 @@ namespace Quartz
 			return nullptr;
 		}
 
-		Array<VulkanImage*>		images;
-		Array<VulkanImageView*>	imageViews;
-		Array<VkSemaphore>		imageAvailableSemaphores;
-		Array<VkSemaphore>		imageCompleteSemaphores;
-		Array<VkFence>			imageFences;
-		Array<VkFence>			inFlightFences;
+		Array<VulkanImage*, 8>		images;
+		Array<VulkanImageView*, 8>	imageViews;
+		Array<VkSemaphore, 8>		imageAvailableSemaphores;
+		Array<VkSemaphore, 8>		imageCompleteSemaphores;
+		Array<VkFence, 8>			imageFences;
+		Array<VkFence, 8>			inFlightFences;
 
 		images.Resize(swapChainImageCount);
 		imageViews.Resize(swapChainImageCount);
@@ -1184,7 +1184,7 @@ namespace Quartz
 			vkPipelineInfo.pNext				= nullptr;
 		}
 
-		VkDynamicState pDynamicStates[16] = {};
+		Array<VkDynamicState, 16> pDynamicStates(16);
 		VkPipelineDynamicStateCreateInfo vkDynamicStateCreateInfo = {};
 		vkDynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 
@@ -1194,7 +1194,7 @@ namespace Quartz
 			pDynamicStates[1] = VK_DYNAMIC_STATE_SCISSOR;
 
 			vkDynamicStateCreateInfo.dynamicStateCount	= 2;
-			vkDynamicStateCreateInfo.pDynamicStates		= pDynamicStates;
+			vkDynamicStateCreateInfo.pDynamicStates		= pDynamicStates.Data();
 
 			vkViewportInfo.pViewports = nullptr;
 			vkViewportInfo.pScissors  = nullptr;
@@ -1423,7 +1423,7 @@ namespace Quartz
 	{
 		constexpr const uSize maxDescriptorSetAllocations = 16;
 
-		VkDescriptorSetLayout vkDescriptorSetLayouts[maxDescriptorSetAllocations] = {};
+		Array<VkDescriptorSetLayout, maxDescriptorSetAllocations> vkDescriptorSetLayouts;
 
 		for(uSize i = 0; i < info.setLayouts.Size(); i++)
 		{
@@ -1434,7 +1434,7 @@ namespace Quartz
 		setAllocateInfo.sType				= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		setAllocateInfo.descriptorPool		= info.pDescriptorPool->vkDescriptorPool;
 		setAllocateInfo.descriptorSetCount	= info.setLayouts.Size();
-		setAllocateInfo.pSetLayouts			= vkDescriptorSetLayouts;
+		setAllocateInfo.pSetLayouts			= vkDescriptorSetLayouts.Data();
 		setAllocateInfo.pNext				= nullptr;
 
 		VkDescriptorSet vkDescriptorSets[maxDescriptorSetAllocations];
@@ -1465,7 +1465,7 @@ namespace Quartz
 	{
 		constexpr const uSize maxDescriptorSetLayoutBindings = 16;
 
-		VkDescriptorSetLayoutBinding vkBindings[maxDescriptorSetLayoutBindings] = {};
+		Array<VkDescriptorSetLayoutBinding, maxDescriptorSetLayoutBindings> vkBindings;
 		
 		uSize sizeBytes = 0;
 
@@ -1479,7 +1479,7 @@ namespace Quartz
 		vkDescriptorSetLayoutInfo.sType			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		vkDescriptorSetLayoutInfo.flags			= 0;
 		vkDescriptorSetLayoutInfo.bindingCount	= info.setBindings.Size();
-		vkDescriptorSetLayoutInfo.pBindings		= vkBindings;
+		vkDescriptorSetLayoutInfo.pBindings		= vkBindings.Data();
 		vkDescriptorSetLayoutInfo.pNext			= nullptr;
 
 		VkDescriptorSetLayout vkDescriptorSetLayout;

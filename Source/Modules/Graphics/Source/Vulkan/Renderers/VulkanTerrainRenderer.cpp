@@ -534,7 +534,7 @@ namespace Quartz
 		VulkanShader* pTerrainVertexShader = shaderCache.FindOrCreateShader("Shaders/terrain.vert", VK_SHADER_STAGE_VERTEX_BIT);
 		VulkanShader* pTerrainFragmentShader = shaderCache.FindOrCreateShader("Shaders/terrain.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		Array<VulkanAttachment> attachments =
+		Array<VulkanAttachment, 2> attachments =
 		{
 			{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
 			{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }

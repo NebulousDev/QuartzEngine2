@@ -17,7 +17,7 @@ namespace Quartz
 		VulkanShader* pVertexShader = shaderCache.FindOrCreateShader("Shaders/default.vert", VK_SHADER_STAGE_VERTEX_BIT);
 		VulkanShader* pFragmentShader = shaderCache.FindOrCreateShader("Shaders/default.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		Array<VulkanAttachment> attachments =
+		Array<VulkanAttachment, 2> attachments =
 		{
 			{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
 			{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
@@ -117,7 +117,7 @@ namespace Quartz
 				VulkanShader* pVertexShader		= shaderCache.FindOrCreateShader(materialComponent.vertexURI, VK_SHADER_STAGE_VERTEX_BIT);
 				VulkanShader* pFragmentShader	= shaderCache.FindOrCreateShader(materialComponent.fragmentURI, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-				Array<VulkanAttachment> attachments =
+				Array<VulkanAttachment, 2> attachments =
 				{
 					{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
 					{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }

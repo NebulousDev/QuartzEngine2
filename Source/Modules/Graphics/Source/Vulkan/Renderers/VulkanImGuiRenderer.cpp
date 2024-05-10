@@ -52,7 +52,7 @@ namespace Quartz
 			return;
 		}
 
-		VkDescriptorPoolSize pool_sizes[] =
+		Array<VkDescriptorPoolSize, 11> poolSizes =
 		{
 			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
@@ -71,8 +71,8 @@ namespace Quartz
 		poolInfo.sType			= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.flags			= VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 		poolInfo.maxSets		= 1000;
-		poolInfo.poolSizeCount	= std::size(pool_sizes);
-		poolInfo.pPoolSizes		= pool_sizes;
+		poolInfo.poolSizeCount	= poolSizes.Size();
+		poolInfo.pPoolSizes		= poolSizes.Data();
 
 		vkCreateDescriptorPool(device.vkDevice, &poolInfo, VK_NULL_HANDLE, &mvkDescriptorPool);
 
