@@ -24,7 +24,8 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Filesystem/File.cpp"
     "Source/Filesystem/Folder.cpp"
     "Source/Filesystem/Filesystem.cpp"
-    "Source/Resource/Loaders/ConfigLoader.cpp"
+    "Source/Resource/Loaders/ConfigHandler.cpp"
+    "Source/Resource/Loaders/ModelHandler.cpp"
 )
 
 if(WIN32)

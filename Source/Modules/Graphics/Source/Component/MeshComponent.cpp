@@ -3,13 +3,10 @@
 namespace Quartz
 {
 	MeshComponent::MeshComponent() :
-		modelURI(), modelURIHash(0)
-	{
-		modelData = {};
-	}
+		modelURI(), modelURIHash(0), pCachedModel(nullptr) { }
 
-	MeshComponent::MeshComponent(const String& uri, const ModelData& modelData) :
-		modelURI(uri), modelURIHash(0), modelData(modelData)
+	MeshComponent::MeshComponent(const String& uri) :
+		modelURI(uri), modelURIHash(0), pCachedModel(nullptr)
 	{
 		modelURIHash = Hash(uri);
 	}

@@ -28,6 +28,7 @@ namespace Quartz
 		float					distance;
 		uInt32					indexStart;
 		uInt32					indexCount;
+		VkIndexType				vkIndexType;
 
 		//temp
 		bool					isTerrain;

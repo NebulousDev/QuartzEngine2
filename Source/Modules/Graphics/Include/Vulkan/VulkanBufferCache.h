@@ -81,8 +81,8 @@ namespace Quartz
 	private:
 		void					InitializeDefaultBuffers();
 
-		MeshBufferLocation		GetOrAllocateMeshBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound);
-		MeshBufferLocation		GetOrAllocateMeshStagingBuffers(uInt64 meshHash, const ModelData* pModelData, bool& outFound);
+		MeshBufferLocation		GetOrAllocateMeshBuffers(uInt64 meshHash, const VertexData& vertexData, bool& outFound);
+		MeshBufferLocation		GetOrAllocateMeshStagingBuffers(uInt64 meshHash, const VertexData& vertexData, bool& outFound);
 		PerModelBufferLocation	AllocatePerModelBuffer(void* pPerModelData, uSize perModelSizeBytes);
 		PerModelBufferLocation	AllocatePerModelStagingBuffer(void* pPerModelData, uSize perModelSizeBytes);
 
@@ -91,7 +91,7 @@ namespace Quartz
 
 		void					ResetPerModelBuffers();
 
-		void					FillRenderableVertexData(VulkanRenderable& renderable, uInt64 meshHash, const ModelData* pModelData, bool& outFound);
+		void					FillRenderableVertexData(VulkanRenderable& renderable, uInt64 meshHash, const VertexData& vertexData, bool& outFound);
 		void					FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes);
 
 		void					RecordTransfers(VulkanCommandRecorder& recorder);

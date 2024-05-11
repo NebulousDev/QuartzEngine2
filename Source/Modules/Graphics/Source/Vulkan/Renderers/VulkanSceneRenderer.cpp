@@ -3,6 +3,8 @@
 #include "Component/MeshComponent.h"
 #include "Component/MaterialComponent.h"
 
+#include "Engine.h"
+
 namespace Quartz
 {
 	void VulkanSceneRenderer::Initialize(VulkanGraphics& graphics, VulkanDevice& device, VulkanShaderCache& shaderCache,
@@ -100,8 +102,26 @@ namespace Quartz
 
 			VulkanRenderable renderable = {};
 
+			Model* pModel = meshComponent.pCachedModel;
+
+			if (!pModel)
+			{
+				pModel = Engine::GetAssetManager().GetOrLoadAsset<Model>(meshComponent.modelURI);
+
+				if (!pModel)
+				{
+					// Failed to load model
+					continue;
+				}
+
+				meshComponent.pCachedModel = pModel;
+			}
+
 			bool vertexDataFound;
-			bufferCache.FillRenderableVertexData(renderable, meshComponent.modelURIHash, &meshComponent.modelData, vertexDataFound);
+			bufferCache.FillRenderableVertexData(renderable, meshComponent.modelURIHash, pModel->data, vertexDataFound);
+
+			IndexType indexType = pModel->data.index.type;
+			renderable.vkIndexType = indexType == INDEX_TYPE_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
 
 			VulkanRenderablePerModelUBO perModelUbo = {};
 			perModelUbo.model	= transformComponent.GetMatrix();
@@ -152,7 +172,7 @@ namespace Quartz
 			recorder.SetGraphicsPipeline(renderable.pPipeline);
 
 			recorder.SetIndexBuffer(renderable.meshLocation.pIndexBuffer->GetVulkanBuffer(),
-				renderable.meshLocation.indexEntry.offset, VK_INDEX_TYPE_UINT16);
+				renderable.meshLocation.indexEntry.offset, renderable.vkIndexType);
 
 			VulkanBufferBind pVertexBufferBinds[] = 
 			{ 
@@ -171,7 +191,7 @@ namespace Quartz
 			
 			recorder.BindUniforms(renderable.pPipeline, 0, pBufferBinds, 1, nullptr, 0);
 
-			recorder.DrawIndexed(1, renderable.indexCount, 0, 0); //renderable.meshLocation.indexEntry.offset / sizeof(uInt16)
+			recorder.DrawIndexed(1, renderable.indexCount, 0, 0);
 		}
 	}
 }

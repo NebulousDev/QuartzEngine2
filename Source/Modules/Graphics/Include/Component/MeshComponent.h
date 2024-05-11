@@ -1,18 +1,18 @@
 #pragma once
 
 #include "GfxAPI.h"
-#include "../ModelData.h"
 #include "Entity/Component.h"
+#include "Resource/Assets/Model.h"
 
 namespace Quartz
 {
 	struct QUARTZ_GRAPHICS_API MeshComponent : public Component<MeshComponent>
 	{
-		String		modelURI;
-		uInt64		modelURIHash;
-		ModelData	modelData;
+		String modelURI;
+		uInt64 modelURIHash;
+		Model* pCachedModel;
 
 		MeshComponent();
-		MeshComponent(const String& uri, const ModelData& modelData);
+		MeshComponent(const String& uri);
 	};
 }

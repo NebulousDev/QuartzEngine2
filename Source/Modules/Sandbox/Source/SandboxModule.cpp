@@ -28,6 +28,8 @@
 #include "Memory/Allocator.h"
 #include "Utility/StringReader.h"
 
+#include "Resource/Loaders/ModelHandler.h"
+
 namespace Quartz
 {
 	extern "C"
@@ -147,14 +149,14 @@ namespace Quartz
 		(
 			{ 0.0f, 52.0f, 0.0f },
 			Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
-			{ 2.0f, 1.0f, 1.0f }
+			{ 1.0f, 1.0f, 1.0f }
 		);
 
 		TransformComponent transformCube2
 		(
 			{ 0.0f, 60.0f, 0.0f },
 			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
-			{ 2.0f, 3.0f, 2.0f }
+			{ 2.0f, 2.0f, 2.0f }
 		);
 
 		TransformComponent transformTri
@@ -217,10 +219,10 @@ namespace Quartz
 			"Shaders/default3.frag"
 		};
 
-		MeshComponent renderable1("simpleTri", triData);
-		MeshComponent renderable2("simpleCube", cubeData);
-		MeshComponent renderable3("simplePlane", planeData);
-		MeshComponent renderable4("simplePlane2", planeData2);
+		//MeshComponent renderable1("simpleTri", triData);
+		//MeshComponent renderable2("simpleCube", cubeData);
+		//MeshComponent renderable3("simplePlane", planeData);
+		//MeshComponent renderable4("simplePlane2", planeData2);
 
 		RigidBody cubeRigidBody(0.1f, 0.6f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		RectCollider cubeCollider(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
@@ -275,9 +277,12 @@ namespace Quartz
 
 			gPhysics.Initialize();
 
-			//gCube = world.CreateEntity(transformCube, renderable2, material1, cubePhysics);
-			gCube2 = world.CreateEntity(transformCube2, renderable2, material1, cubePhysics2);
-			Entity plane = world.CreateEntity(transformPlane, renderable3, material1, planePhysics);
+			ModelHandler* pModelHandler = new ModelHandler; // TODO
+			Engine::GetAssetManager().RegisterAssetHandler("obj", pModelHandler);
+
+			gCube = world.CreateEntity(transformCube, MeshComponent("Assets/Models/sponza.obj"), material1);
+			gCube2 = world.CreateEntity(transformCube2, MeshComponent("Assets/Models/dva.obj"), material1);// , cubePhysics2);
+			Entity plane = world.CreateEntity(transformPlane, material1, planePhysics);
 			//Entity planeL = world.CreateEntity(transformPlaneL, renderable4, material1, planePhysics2);
 			//Entity planeR = world.CreateEntity(transformPlaneR, renderable4, material1, planePhysics2);
 			//Entity planeF = world.CreateEntity(transformPlaneF, renderable4, material1, planePhysics2);
@@ -468,7 +473,7 @@ namespace Quartz
 
 					if (Engine::GetWorld().EntityCount() < 256)
 					{
-						Entity entity = Engine::GetWorld().CreateEntity(transform, renderable2, material1, physics);
+						//Entity entity = Engine::GetWorld().CreateEntity(transform, renderable2, material1, physics);
 					}
 
 				}

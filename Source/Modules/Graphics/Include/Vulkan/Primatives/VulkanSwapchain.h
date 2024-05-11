@@ -13,10 +13,10 @@ namespace Quartz
 		VulkanDevice*			pDevice;
 		uInt32					backbufferCount;
 
-		Array<VulkanImage*>		images;
-		Array<VulkanImageView*>	imageViews;
-		Array<VkSemaphore>		imageAvailableSemaphores;
-		Array<VkSemaphore>		imageCompleteSemaphores;
-		Array<VkFence>			imageFences;
+		Array<VulkanImage*, 8>		images;
+		Array<VulkanImageView*, 8>	imageViews;
+		Array<VkSemaphore, 8>		imageAvailableSemaphores;
+		Array<VkSemaphore, 8>		imageCompleteSemaphores;
+		Array<VkFence, 8>			imageFences;
 	};
 }
