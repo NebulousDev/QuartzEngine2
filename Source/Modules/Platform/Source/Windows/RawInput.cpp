@@ -249,6 +249,8 @@ namespace Quartz
 		default:
 			break;
 		}
+
+		return true;
 	}
 
 	bool RawInput::RegisterUsage(uInt16 usagePage, uInt16 usage, DWORD flags)
