@@ -6,6 +6,11 @@
 
 namespace Quartz
 {
+#ifdef CreateFile
+#define SysCreateFile CreateFile
+#undef CreateFile
+#endif
+
 	class WinApiFilesystemHandler : public FilesystemHandler
 	{
 	private:
@@ -21,7 +26,7 @@ namespace Quartz
 		bool OpenFolder(Folder& folder, void*& pOutHandle) override;
 		bool CloseFolder(Folder& folder, void*& pOutHandle) override;
 
-		//bool CreateFile() const = 0;
+		bool CreateFile(const String& path, File*& pOutFile, FileOpenFlags openFlags) override;
 		//bool DeleteFile() const = 0;
 		bool CreateFolder(const String& path, Folder*& pOutFolder, uSize priority) override;
 		bool DeleteFolder(Folder& Folder) override;
@@ -34,4 +39,8 @@ namespace Quartz
 
 		bool IsVirtual() const override;
 	};
+
+#ifdef SysCreateFile
+#define CreateFile SysCreateFile
+#endif
 }

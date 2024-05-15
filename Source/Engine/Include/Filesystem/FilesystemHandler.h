@@ -10,7 +10,7 @@ namespace Quartz
 	class Folder;
 	class Filesystem;
 
-	using FileOpenFlags = uSize;
+	using FileOpenFlags = uInt32;
 	using FileFlags = uInt16;
 
 	class QUARTZ_ENGINE_API FilesystemHandler
@@ -21,7 +21,7 @@ namespace Quartz
 		virtual bool OpenFolder(Folder& folder, void*& pOutHandle) = 0;
 		virtual bool CloseFolder(Folder& folder, void*& pOutHandle) = 0;
 
-		//virtual bool CreateFile() const = 0;
+		virtual bool CreateFile(const String& path, File*& pOutFile, FileOpenFlags openFlags) = 0;
 		//virtual bool DeleteFile() const = 0;
 		virtual bool CreateFolder(const String& path, Folder*& pOutFolder, uSize priority) = 0;
 		virtual bool DeleteFolder(Folder& Folder) = 0;

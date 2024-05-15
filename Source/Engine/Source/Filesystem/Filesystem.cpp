@@ -132,6 +132,69 @@ namespace Quartz
 
 		return nullptr;
 	}
+
+	File* Filesystem::CreateFile(const String& filePath)
+	{
+		File* pFoundFile = GetFile(filePath);
+		if (pFoundFile)
+		{
+			return pFoundFile;
+		}
+
+		if (mRootFolders.Size() == 0)
+		{
+			LogError("Error creating file [%s]. No root folders assigned.", filePath.Str());
+			return nullptr;
+		}
+
+		FilesystemHandler* pHandler = nullptr;
+		String fullPath;
+
+		uSize folderPathIndexF = filePath.FindReverse("/");
+		uSize folderPathIndexB = filePath.FindReverse("\\");
+
+		uSize folderPathIndex = 
+			folderPathIndexF > folderPathIndexB ? folderPathIndexF : folderPathIndexB;
+
+		Substring folderPath = filePath.Substring(0, folderPathIndex);
+		Substring fileName = filePath.Substring(folderPathIndex + 1);
+
+		Folder* pFolder = GetFolder(folderPath);
+
+		if (!pFolder)
+		{
+			LogError("Error creating file [%s]. No valid root folder contains the path '%s'.",
+				filePath.Str(), folderPath.Str());
+			return nullptr;
+		}
+
+		pHandler = pFolder->mpHandler;
+		fullPath = pFolder->mPath + "/" + fileName;
+
+		if (pHandler == nullptr)
+		{
+			LogError("Error creating file [%s]. No valid root folder contains the path '%s'.", 
+				filePath.Str(), folderPath.Str());
+			return nullptr;
+		}
+
+		File* pFile = nullptr;
+
+		if (!pHandler->CreateFile(fullPath, pFile, 0))
+		{
+			LogError("Error creating file [%s]. FilesystemHandler failed to create the file.", filePath.Str());
+			return nullptr;
+		}
+
+		mFileMap.Put(filePath, pFile);
+
+		return pFile;
+	}
+
+	bool Filesystem::DeleteFile(File& file)
+	{
+		return false;
+	}
 	
 	bool Filesystem::FileExists(const String& filePath)
 	{

@@ -15,24 +15,26 @@ namespace Quartz
 		FILE_BINARY		= 0x010,
 		FILE_VIRTUAL	= 0x020,
 		FILE_COMPRESSED	= 0x040,
-		FILE_HIDDEN		= 0x060,
-		FILE_TEMPORARY	= 0x080,
-		FILE_IS_FOLDER	= 0x100,
+		FILE_HIDDEN		= 0x080,
+		FILE_TEMPORARY	= 0x100,
+		FILE_IS_FOLDER	= 0x200,
 	};
 
 	using FileFlags = uInt16;
 
-	enum FileOpenFlagBits : uSize
+	enum FileOpenFlagBits : uInt32
 	{
 		FILE_OPEN_READ		= 0x01,
 		FILE_OPEN_WRITE		= 0x02,
 		FILE_OPEN_BINARY	= 0x04,
-		FILE_OPEN_CREATE	= 0x06,
-		FILE_OPEN_HIDDEN	= 0x08,
-		FILE_OPEN_TEMPORARY	= 0x10
+		FILE_OPEN_CREATE	= 0x08,
+		FILE_OPEN_HIDDEN	= 0x10,
+		FILE_OPEN_TEMPORARY	= 0x20,
+		FILE_OPEN_CLEAR		= 0x40,
+		FILE_OPEN_APPEND	= 0x80
 	};
 
-	using FileOpenFlags = uSize;
+	using FileOpenFlags = uInt32;
 
 	class QUARTZ_ENGINE_API File
 	{
@@ -61,28 +63,19 @@ namespace Quartz
 		bool Open(FileOpenFlags openFlags);
 		bool Close();
 
-		template<typename ValueType>
-		bool Read(ValueType* pOutData, uSize count)
-		{
-			if (!IsOpen())
-			{
-				// TODO
-				return false;
-			}
+		bool Read(const uInt8* pOutData, uSize sizeBytes);
+		bool Write(const uInt8* pData, uSize sizeBytes);
 
-			return mpHandler->ReadFile(*this, (void*)pOutData, count * sizeof(ValueType));
+		template<typename ValueType>
+		bool ReadValues(ValueType* pOutData, uSize count)
+		{
+			return Read(reinterpret_cast<uInt8*>(pOutData), count * sizeof(ValueType));
 		}
 
 		template<typename ValueType>
-		bool Write(ValueType* pData, uSize count)
+		bool WriteValues(ValueType* pData, uSize count)
 		{
-			if (!IsOpen())
-			{
-				// TODO
-				return false;
-			}
-
-			return mpHandler->WriteFile(*this, (void*)pData, count * sizeof(ValueType));
+			return Write(reinterpret_cast<uInt8*>(pData), count * sizeof(ValueType));
 		}
 
 		friend QUARTZ_ENGINE_API bool operator==(const File& file0, const File& file1);

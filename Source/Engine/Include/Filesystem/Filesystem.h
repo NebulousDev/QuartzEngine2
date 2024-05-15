@@ -32,6 +32,9 @@ namespace Quartz
 		File* GetFile(const String& filePath);
 		Folder* GetFolder(const String& folderPath);
 
+		File* CreateFile(const String& filePath);
+		bool DeleteFile(File& file);
+
 		bool FileExists(const String& filePath);
 		bool FolderExists(const String& folderPath);
 

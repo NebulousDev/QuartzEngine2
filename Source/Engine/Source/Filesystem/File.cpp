@@ -51,7 +51,7 @@ namespace Quartz
 
 		if (!result)
 		{
-			LogError("Failed to load file [%s].", mPath.Str());
+			LogError("Failed to open file [%s].", mPath.Str());
 			return false;
 		}
 
@@ -64,10 +64,44 @@ namespace Quartz
 
 		if (!result)
 		{
-			LogError("Failed to load file [%s].", mPath.Str());
+			LogError("Failed to close file [%s].", mPath.Str());
 		}
 
 		return result;
+	}
+
+	bool File::Read(const uInt8* pOutData, uSize sizeBytes)
+	{
+		if (!IsOpen())
+		{
+			// TODO
+			return false;
+		}
+
+		if (!mpHandler->ReadFile(*this, (void*)pOutData, sizeBytes))
+		{
+			LogError("Error reading from file [%s]. mpHandler->WriteFile() failed.", mPath.Str());
+			return false;
+		}
+
+		return true;
+	}
+
+	bool File::Write(const uInt8* pData, uSize sizeBytes)
+	{
+		if (!IsOpen())
+		{
+			// TODO
+			return false;
+		}
+
+		if (!mpHandler->WriteFile(*this, (void*)pData, sizeBytes))
+		{
+			LogError("Error writing to file [%s]. mpHandler->WriteFile() failed.", mPath.Str());
+			return false;
+		}
+
+		return true;
 	}
 
 	bool operator==(const File& file0, const File& file1)

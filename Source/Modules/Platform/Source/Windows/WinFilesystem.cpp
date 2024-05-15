@@ -20,7 +20,7 @@ namespace Quartz
 	bool WinApiFilesystemHandler::OpenFile(File& file, FileOpenFlags openFlags, void*& pOutHandle, FileFlags& outFlags)
 	{
 		DWORD dwAccess = NULL;
-		DWORD dwCreation = OPEN_EXISTING;
+		DWORD dwCreation = OPEN_ALWAYS;
 		DWORD dwAttrribs = FILE_ATTRIBUTE_NORMAL;
 
 		FileFlags fileFlags = FILE_VALID | FILE_OPEN;
@@ -37,9 +37,19 @@ namespace Quartz
 			fileFlags |= FILE_WRITE;
 		}
 
+		if (openFlags & FILE_OPEN_APPEND)
+		{
+			dwAccess |= FILE_APPEND_DATA;
+		}
+
+		if (openFlags & FILE_OPEN_CLEAR)
+		{
+			dwCreation = TRUNCATE_EXISTING;
+		}
+
 		if (openFlags & FILE_OPEN_CREATE)
 		{
-			dwCreation |= CREATE_NEW;
+			dwCreation = CREATE_NEW;
 		}
 
 		if (openFlags & FILE_OPEN_HIDDEN)
@@ -60,7 +70,7 @@ namespace Quartz
 			dwAttrribs &= ~FILE_ATTRIBUTE_NORMAL;
 		}
 
-		HANDLE pFileHandle = CreateFile(file.GetPath().Str(),
+		HANDLE pFileHandle = ::CreateFile(file.GetPath().Str(),
 			dwAccess, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
 			dwCreation, dwAttrribs, NULL);
 
@@ -98,15 +108,33 @@ namespace Quartz
 		return false;
 	}
 
+#undef CreateFile
 
-	//bool WinApiFilesystemHandler::CreateFile() const = 0;
-	//bool WinApiFilesystemHandler::DeleteFile() const = 0;
+	bool WinApiFilesystemHandler::CreateFile(const String& path, File*& pOutFile, FileOpenFlags openFlags)
+	{
+		File* pFile = mpFileAllocator->Allocate(path, *this, (void*)NULL, (FileFlags)FILE_VALID, (uSize)0, (uSize)0);
+
+		void* pNativeHandle = nullptr;
+		FileFlags fileFlags = 0;
+
+		if (!OpenFile(*pFile, openFlags, pNativeHandle, fileFlags))
+		{
+			mpFileAllocator->Free(pFile);
+			return false;
+		}
+
+		CloseFile(*pFile, pNativeHandle, fileFlags);
+
+		pOutFile = pFile;
+
+		return true;
+	}
 
 	bool WinApiFilesystemHandler::CreateFolder(const String& path, Folder*& pOutFolder, uSize priority)
 	{
-		Folder* pSubFolder = mpFolderAllocator->Allocate(path, *this, (void*)NULL, (FolderFlags)FOLDER_VALID, priority);
+		Folder* pFolder = mpFolderAllocator->Allocate(path, *this, (void*)NULL, (FolderFlags)FOLDER_VALID, priority);
 
-		pOutFolder = pSubFolder;
+		pOutFolder = pFolder;
 
 		return true;
 	}

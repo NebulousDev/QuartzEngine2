@@ -62,7 +62,7 @@ namespace Quartz
 		const uSize fileSizeBytes = mpSourceFile->GetSize();
 		const char* pFileData = new char[fileSizeBytes];
 		
-		if (!mpSourceFile->Read(pFileData, fileSizeBytes))
+		if (!mpSourceFile->Read((uInt8*)pFileData, fileSizeBytes))
 		{
 			LogError("Failed to read config file [%s]!", mpSourceFile->GetPath());
 			return false;
