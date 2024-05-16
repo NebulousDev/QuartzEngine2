@@ -31,6 +31,9 @@ namespace Quartz
 		bool CreateFolder(const String& path, Folder*& pOutFolder, uSize priority) override;
 		bool DeleteFolder(Folder& Folder) override;
 
+		bool MapFile(File& file, uInt8*& pOutMapPtr, uInt64 reserveBytes, FileMapFlags mapFlags) override;
+		bool UnmapFile(File& file) override;
+
 		bool ReadFile(File& file, void* pOutData, uSize sizeBytes) override;
 		bool WriteFile(File& file, void* pInData, uSize sizeBytes) override;
 

@@ -5,8 +5,9 @@
 namespace Quartz
 {
 	File::File() : 
-		mPath(), mFlags(FileFlags(0)), mpNative(nullptr),
-		mSizeBytes(0), mOffsetBytes(0) {};
+		mPath(), mExtIdx(0), mNameIdx(0), mFlags(FileFlags(0)), 
+		mpNative(nullptr), mpMapData(nullptr), mpHandler(nullptr),
+		mSizeBytes(0), mOffsetBytes(0), mMapFlags(FileMapFlags(0)) {};
 
 	File::File(const String& path, Handler& handler, void* pHandle, 
 		FileFlags flags, uSize sizeBytes, uSize offsetBytes) :
@@ -102,6 +103,38 @@ namespace Quartz
 		}
 
 		return true;
+	}
+
+	bool File::Map(uInt8*& pOutMapPtr, uInt64 sizeBytes, FileMapFlags mapFlags)
+	{
+		// @TODO check perms
+		// @TODO check already mapped
+
+		if (!IsOpen())
+		{
+			LogError("Error memory mapping file [%s]. File is not open.", mPath.Str());
+			return false;
+		}
+
+		if (!mpHandler->MapFile(*this, pOutMapPtr, sizeBytes, mapFlags))
+		{
+			LogError("Error memory mapping file [%s]. mpHandler->MapFile() failed.", mPath.Str());
+			return false;
+		}
+
+		mpMapData = pOutMapPtr;
+		mFlags |= FILE_MAPPED;
+		mMapFlags = mapFlags;
+
+		return true;
+	}
+
+	void File::Unmap()
+	{
+		mpHandler->UnmapFile(*this);
+		mpMapData = nullptr;
+		mFlags &= ~FILE_MAPPED;
+		mMapFlags = 0;
 	}
 
 	bool operator==(const File& file0, const File& file1)

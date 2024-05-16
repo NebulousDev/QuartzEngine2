@@ -19,9 +19,10 @@ namespace Quartz
 
 	bool WinApiFilesystemHandler::OpenFile(File& file, FileOpenFlags openFlags, void*& pOutHandle, FileFlags& outFlags)
 	{
-		DWORD dwAccess = NULL;
-		DWORD dwCreation = OPEN_ALWAYS;
-		DWORD dwAttrribs = FILE_ATTRIBUTE_NORMAL;
+		DWORD dwAccess		= 0;
+		DWORD dwCreation	= OPEN_ALWAYS;
+		DWORD dwAttrribs	= FILE_ATTRIBUTE_NORMAL;
+		DWORD dwShareMode	= 0;
 
 		FileFlags fileFlags = FILE_VALID | FILE_OPEN;
 
@@ -64,6 +65,18 @@ namespace Quartz
 			fileFlags |= FILE_HIDDEN;
 		}
 
+		if (openFlags & FILE_OPEN_SHARE_READ)
+		{
+			dwShareMode |= FILE_SHARE_READ;
+			fileFlags |= FILE_SHARED;
+		}
+
+		if (openFlags & FILE_OPEN_SHARE_WRITE)
+		{
+			dwShareMode |= FILE_SHARE_WRITE;
+			fileFlags |= FILE_SHARED;
+		}
+
 		if (dwAttrribs != FILE_ATTRIBUTE_NORMAL)
 		{
 			// Ensure dwAttrribs does not contain FILE_ATTRIBUTE_NORMAL if not normal
@@ -71,8 +84,7 @@ namespace Quartz
 		}
 
 		HANDLE pFileHandle = ::CreateFile(file.GetPath().Str(),
-			dwAccess, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
-			dwCreation, dwAttrribs, NULL);
+			dwAccess, dwShareMode, NULL, dwCreation, dwAttrribs, NULL);
 
 		if (pFileHandle == INVALID_HANDLE_VALUE)
 		{
@@ -142,6 +154,74 @@ namespace Quartz
 	bool WinApiFilesystemHandler::DeleteFolder(Folder& folder)
 	{
 		return false;
+	}
+
+	// @TODO/NOTE: Will not work in 32-bit systems
+	bool WinApiFilesystemHandler::MapFile(File& file, uInt8*& pOutMapPtr, uInt64 reserveBytes, FileMapFlags mapFlags)
+	{
+		DWORD hiSize = reserveBytes >> 32;
+		DWORD loSize = reserveBytes & 0xFFFFFFFF;
+
+		DWORD dwPageAccess = 0;
+		DWORD dwMapAccess = 0;
+
+#define SYS_FILE_MAP_READ FILE_MAP_READ
+#define SYS_FILE_MAP_WRITE FILE_MAP_WRITE
+#undef FILE_MAP_READ
+#undef FILE_MAP_WRITE
+
+		if (mapFlags & FILE_MAP_READ)
+		{
+			dwMapAccess = SYS_FILE_MAP_READ;
+			dwPageAccess = PAGE_READONLY;
+		}
+		
+		if (mapFlags & FILE_MAP_WRITE)
+		{
+			// @NOTE: FILE_MAP_WRITE includes FILE_MAP_READ
+			dwMapAccess = SYS_FILE_MAP_WRITE;
+			dwPageAccess = PAGE_READWRITE;
+		}
+
+#define FILE_MAP_READ SYS_FILE_MAP_READ
+#define FILE_MAP_WRITE SYS_FILE_MAP_WRITE
+#undef SYS_FILE_MAP_READ
+#undef SYS_FILE_MAP_WRITE
+
+		HANDLE mapHandle = CreateFileMappingA((HANDLE)file.GetNativeHandle(), NULL, dwPageAccess, hiSize, loSize, NULL);
+
+		DWORD mapError = GetLastError();
+
+		if (mapError == ERROR_ALREADY_EXISTS)
+		{
+			// TODO
+		}
+
+		if (!mapHandle)
+		{
+			WinApiPrintError();
+			return false;
+		}
+
+		void* pMapPtr = MapViewOfFile(mapHandle, dwMapAccess, 0, 0, 0);
+
+		if (!pMapPtr)
+		{
+			WinApiPrintError();
+			CloseHandle(mapHandle);
+			return false;
+		}
+
+		pOutMapPtr = (uInt8*)pMapPtr;
+
+		CloseHandle(mapHandle);
+
+		return true;
+	}
+
+	bool WinApiFilesystemHandler::UnmapFile(File& file)
+	{
+		return true;
 	}
 
 	bool WinApiFilesystemHandler::ReadFile(File& file, void* pOutData, uSize sizeBytes)

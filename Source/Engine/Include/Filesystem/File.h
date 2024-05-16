@@ -4,6 +4,13 @@
 #include "FilesystemHandler.h"
 #include "Types/String.h"
 
+#ifdef FILE_MAP_READ
+#define SYS_FILE_MAP_READ FILE_MAP_READ
+#define SYS_FILE_MAP_WRITE FILE_MAP_WRITE
+#undef FILE_MAP_READ
+#undef FILE_MAP_WRITE
+#endif
+
 namespace Quartz
 {
 	enum FileFlagBits : uInt16
@@ -17,24 +24,35 @@ namespace Quartz
 		FILE_COMPRESSED	= 0x040,
 		FILE_HIDDEN		= 0x080,
 		FILE_TEMPORARY	= 0x100,
-		FILE_IS_FOLDER	= 0x200,
+		FILE_MAPPED		= 0x200,
+		FILE_SHARED		= 0x400
 	};
 
 	using FileFlags = uInt16;
 
-	enum FileOpenFlagBits : uInt32
+	enum FileOpenFlagBits : uInt16
 	{
-		FILE_OPEN_READ		= 0x01,
-		FILE_OPEN_WRITE		= 0x02,
-		FILE_OPEN_BINARY	= 0x04,
-		FILE_OPEN_CREATE	= 0x08,
-		FILE_OPEN_HIDDEN	= 0x10,
-		FILE_OPEN_TEMPORARY	= 0x20,
-		FILE_OPEN_CLEAR		= 0x40,
-		FILE_OPEN_APPEND	= 0x80
+		FILE_OPEN_READ			= 0x001,
+		FILE_OPEN_WRITE			= 0x002,
+		FILE_OPEN_BINARY		= 0x004,
+		FILE_OPEN_CREATE		= 0x008,
+		FILE_OPEN_HIDDEN		= 0x010,
+		FILE_OPEN_TEMPORARY		= 0x020,
+		FILE_OPEN_CLEAR			= 0x040,
+		FILE_OPEN_APPEND		= 0x080,
+		FILE_OPEN_SHARE_WRITE	= 0x100,
+		FILE_OPEN_SHARE_READ	= 0x200
 	};
 
-	using FileOpenFlags = uInt32;
+	using FileOpenFlags = uInt16;
+
+	enum FileMapFlagBits : uInt16
+	{
+		FILE_MAP_READ			= 0x1,
+		FILE_MAP_WRITE			= 0x2
+	};
+
+	using FileMapFlags = uInt16;
 
 	class QUARTZ_ENGINE_API File
 	{
@@ -45,15 +63,17 @@ namespace Quartz
 		using Handler = FilesystemHandler;
 
 	protected:
-		String		mPath;
-		uInt16		mNameIdx;
-		uInt16		mExtIdx;
-		FileFlags	mFlags;
-		uInt32		mSizeBytes;
-		uInt32		mOffsetBytes;
+		String			mPath;
+		uInt16			mNameIdx;
+		uInt16			mExtIdx;
+		FileFlags		mFlags;
+		FileMapFlags	mMapFlags;
+		uInt32			mSizeBytes;
+		uInt32			mOffsetBytes;
 
-		void*		mpNative;
-		Handler*	mpHandler;
+		void*			mpNative;
+		uInt8*			mpMapData;
+		Handler*		mpHandler;
 
 	public:
 		File();
@@ -65,6 +85,10 @@ namespace Quartz
 
 		bool Read(const uInt8* pOutData, uSize sizeBytes);
 		bool Write(const uInt8* pData, uSize sizeBytes);
+
+		bool Map(uInt8*& pOutMapPtr, uInt64 sizeBytes, 
+			FileMapFlags mapFlags = FILE_MAP_READ | FILE_MAP_WRITE);
+		void Unmap();
 
 		template<typename ValueType>
 		bool ReadValues(ValueType* pOutData, uSize count)
@@ -96,6 +120,16 @@ namespace Quartz
 		bool IsCompressed() const { return mFlags & FILE_COMPRESSED; }
 		bool IsHidden() const { return mFlags & FILE_HIDDEN; }
 		bool IsTemporary() const { return mFlags & FILE_TEMPORARY; }
+		bool IsMapped() const { return mFlags & FILE_MAPPED; }
 		void* GetNativeHandle() const { return mpNative; }
+		uInt8* GetMappedData() const { return mpMapData; }
+		FileMapFlags GetMapFlags() const { return mMapFlags; }
 	};
 }
+
+#ifdef FILE_MAP_READ
+#define FILE_MAP_READ SYS_FILE_MAP_READ
+#define FILE_MAP_WRITE SYS_FILE_MAP_WRITE
+#undef SYS_FILE_MAP_READ
+#undef SYS_FILE_MAP_WRITE
+#endif
