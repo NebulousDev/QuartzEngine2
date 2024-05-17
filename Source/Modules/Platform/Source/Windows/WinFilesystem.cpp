@@ -252,6 +252,40 @@ namespace Quartz
 		return true;
 	}
 
+	bool WinApiFilesystemHandler::SetFilePtr(File& file, int64 offset, FilePtrRelative relative, uInt64& outIntPtr)
+	{
+		LONG dwHiFilePointer = 0;
+		DWORD dwLoFilePointer = 0;
+
+		DWORD dwMoveMethod = FILE_BEGIN;
+
+		if (relative == FILE_PTR_CURRENT)
+		{
+			dwMoveMethod = FILE_CURRENT;
+		}
+		else if (relative == FILE_PTR_END)
+		{
+			dwMoveMethod = FILE_END;
+		}
+
+		dwLoFilePointer = SetFilePointer((HANDLE)file.GetNativeHandle(), offset, &dwHiFilePointer, dwMoveMethod);
+
+		if (dwLoFilePointer == INVALID_SET_FILE_POINTER)
+		{
+			WinApiPrintError();
+			return false;
+		}
+
+		outIntPtr = (dwHiFilePointer << 32 | dwLoFilePointer);
+
+		return true;
+	}
+
+	bool WinApiFilesystemHandler::GetFilePtr(const File& file, uInt64& outIntPtr)
+	{
+		return SetFilePtr(const_cast<File&>(file), 0, FILE_PTR_CURRENT, outIntPtr);
+	}
+
 	bool WinApiFilesystemHandler::PopulateChildren(Folder& folder, const Filesystem& filesystem,
 		Array<Folder*>& outFolders, Array<File*>& outFiles)
 	{

@@ -54,6 +54,13 @@ namespace Quartz
 
 	using FileMapFlags = uInt16;
 
+	enum FilePtrRelative
+	{
+		FILE_PTR_BEGIN,
+		FILE_PTR_CURRENT,
+		FILE_PTR_END
+	};
+
 	class QUARTZ_ENGINE_API File
 	{
 	public:
@@ -68,8 +75,8 @@ namespace Quartz
 		uInt16			mExtIdx;
 		FileFlags		mFlags;
 		FileMapFlags	mMapFlags;
-		uInt32			mSizeBytes;
-		uInt32			mOffsetBytes;
+		uInt64			mSizeBytes;
+		uInt64			mOffsetBytes;
 
 		void*			mpNative;
 		uInt8*			mpMapData;
@@ -83,12 +90,15 @@ namespace Quartz
 		bool Open(FileOpenFlags openFlags);
 		bool Close();
 
-		bool Read(const uInt8* pOutData, uSize sizeBytes);
+		bool Read(uInt8* pOutData, uSize sizeBytes);
 		bool Write(const uInt8* pData, uSize sizeBytes);
 
 		bool Map(uInt8*& pOutMapPtr, uInt64 sizeBytes, 
 			FileMapFlags mapFlags = FILE_MAP_READ | FILE_MAP_WRITE);
 		void Unmap();
+
+		bool SetFilePtr(int64 offset, FilePtrRelative relative);
+		uInt64 GetFilePtr() const;
 
 		template<typename ValueType>
 		bool ReadValues(ValueType* pOutData, uSize count)
@@ -97,9 +107,9 @@ namespace Quartz
 		}
 
 		template<typename ValueType>
-		bool WriteValues(ValueType* pData, uSize count)
+		bool WriteValues(const ValueType* pData, uSize count)
 		{
-			return Write(reinterpret_cast<uInt8*>(pData), count * sizeof(ValueType));
+			return Write(reinterpret_cast<const uInt8*>(pData), count * sizeof(ValueType));
 		}
 
 		friend QUARTZ_ENGINE_API bool operator==(const File& file0, const File& file1);

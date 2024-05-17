@@ -37,6 +37,9 @@ namespace Quartz
 		bool ReadFile(File& file, void* pOutData, uSize sizeBytes) override;
 		bool WriteFile(File& file, void* pInData, uSize sizeBytes) override;
 
+		bool SetFilePtr(File& file, int64 offset, FilePtrRelative relative, uInt64& outIntPtr) override;
+		bool GetFilePtr(const File& file, uInt64& outIntPtr) override;
+
 		bool PopulateChildren(Folder& folder, const Filesystem& filesystem,
 			Array<Folder*>& outFolders, Array<File*>& outFiles) override;
 

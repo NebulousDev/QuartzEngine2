@@ -14,6 +14,8 @@ namespace Quartz
 	using FileMapFlags = uInt16;
 	using FileFlags = uInt16;
 
+	enum FilePtrRelative;
+
 	class QUARTZ_ENGINE_API FilesystemHandler
 	{
 	public:
@@ -32,6 +34,9 @@ namespace Quartz
 
 		virtual bool ReadFile(File& file, void* pOutData, uSize sizeBytes) = 0;
 		virtual bool WriteFile(File& file, void* pInData, uSize sizeBytes) = 0;
+
+		virtual bool SetFilePtr(File& file, int64 offset, FilePtrRelative relative, uInt64& outIntPtr) = 0;
+		virtual bool GetFilePtr(const File& file, uInt64& outIntPtr) = 0;
 
 		virtual bool PopulateChildren(Folder& folder, const Filesystem& filesystem,
 			Array<Folder*>& outFolders, Array<File*>& outFiles) = 0;

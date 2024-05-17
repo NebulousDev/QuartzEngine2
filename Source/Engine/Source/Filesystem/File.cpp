@@ -71,7 +71,7 @@ namespace Quartz
 		return result;
 	}
 
-	bool File::Read(const uInt8* pOutData, uSize sizeBytes)
+	bool File::Read(uInt8* pOutData, uSize sizeBytes)
 	{
 		if (!IsOpen())
 		{
@@ -135,6 +135,35 @@ namespace Quartz
 		mpMapData = nullptr;
 		mFlags &= ~FILE_MAPPED;
 		mMapFlags = 0;
+	}
+
+	bool File::SetFilePtr(int64 offset, FilePtrRelative relative)
+	{
+		if (!IsOpen())
+		{
+			return false;
+		}
+
+		uInt64 newFilePtr = 0;
+
+		if (!mpHandler->SetFilePtr(*this, offset, relative, newFilePtr))
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	uInt64 File::GetFilePtr() const
+	{
+		uInt64 newFilePtr = 0;
+		if (!mpHandler->GetFilePtr(*this, newFilePtr))
+		{
+			// @TODO: Error?
+			return 0;
+		}
+
+		return newFilePtr;
 	}
 
 	bool operator==(const File& file0, const File& file1)
