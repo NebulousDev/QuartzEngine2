@@ -33,15 +33,19 @@ namespace Quartz
 		if (!pConfigAsset)
 		{
 			LogError("Error allocating config object! [pool size=%d/%d]", mConfigPool.Size(), mConfigPool.Capacity());
+			assetFile.Close();
 			return false;
 		}
 
 		if (!pConfigAsset->Read())
 		{
 			LogError("Error reading config file [%s].", assetFile.GetPath().Str());
+			assetFile.Close();
 			mConfigPool.Free(pConfigAsset);
 			return false;
 		}
+
+		assetFile.Close();
 
 		pOutAsset = pConfigAsset;
 

@@ -29,6 +29,9 @@
 #include "Utility/StringReader.h"
 
 #include "Resource/Loaders/ModelHandler.h"
+#include "Resource/Loaders/ImageHandler.h"
+#include "Resource/QMF/QMF.h"
+#include "Resource/QMF/QMFParser.h"
 
 namespace Quartz
 {
@@ -38,8 +41,8 @@ namespace Quartz
 
 		Window*			gpWindow;
 		Entity			gCamera;
-		Entity			gCube;
-		Entity			gCube2;
+		Entity			gEntity0;
+		Entity			gEntity1;
 		Physics			gPhysics;
 
 		bool QUARTZ_ENGINE_API ModuleQuery(bool isEditor, Quartz::ModuleQueryInfo& moduleQuery)
@@ -147,56 +150,49 @@ namespace Quartz
 
 		TransformComponent transformCube
 		(
-			{ 0.0f, 52.0f, 0.0f },
+			{ 0.0f, 10.0f, 0.0f },
 			Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
 			{ 1.0f, 1.0f, 1.0f }
 		);
 
 		TransformComponent transformCube2
 		(
-			{ 0.0f, 60.0f, 0.0f },
+			{ 0.0f, 15.0f, 0.0f },
 			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
 			{ 2.0f, 2.0f, 2.0f }
 		);
 
-		TransformComponent transformTri
-		(
-			{ -1.0f, -1.0f, -1.0f },
-			Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
-			{ 1.0f, 1.0f, 1.0f }
-		);
-
 		TransformComponent transformPlane
 		(
-			{ 0.0f, 50.0f, 0.0f },
+			{ 0.0f, 10.0f, 0.0f },
 			Quatf({ 0.0f, 0.0f, 0.0f }, 0.0f),
 			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneL
 		(
-			{ -10.0f, 50.0f, 0.0f },
+			{ -10.0f, 10.0f, 0.0f },
 			Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(90.0f)),
 			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneR
 		(
-			{ 10.0f, 50.0f, 0.0f },
+			{ 10.0f, 10.0f, 0.0f },
 			Quatf({ 0.0f, 0.0f, 1.0f }, ToRadians(-90.0f)),// * Quatf({ 0.0f, 1.0f, 0.0f }, ToRadians(180.0f)),
 			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneF
 		(
-			{ 0.0f, 50.0f, -10.0f },
+			{ 0.0f, 10.0f, -10.0f },
 			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(-90.0f)),// * Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(-90.0f)),
 			{ 20.0f, 1.0f, 20.0f }
 		);
 
 		TransformComponent transformPlaneB
 		(
-			{ 0.0f, 50.0f, 10.0f },
+			{ 0.0f, 10.0f, 10.0f },
 			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(90.0f)),// * Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(90.0f)),
 			{ 20.0f, 1.0f, 20.0f }
 		);
@@ -219,11 +215,6 @@ namespace Quartz
 			"Shaders/default3.frag"
 		};
 
-		//MeshComponent renderable1("simpleTri", triData);
-		//MeshComponent renderable2("simpleCube", cubeData);
-		//MeshComponent renderable3("simplePlane", planeData);
-		//MeshComponent renderable4("simplePlane2", planeData2);
-
 		RigidBody cubeRigidBody(0.1f, 0.6f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		RectCollider cubeCollider(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
 		//SphereCollider cubeCollider(0.5f, false);
@@ -240,6 +231,31 @@ namespace Quartz
 
 		void QUARTZ_ENGINE_API ModulePostInit()
 		{
+			ModelHandler* pModelHandler = new ModelHandler; // TODO
+			Engine::GetAssetManager().RegisterAssetHandler("obj", pModelHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("qmf", pModelHandler);
+
+			ImageHandler* pImageHandler = new ImageHandler;
+			Engine::GetAssetManager().RegisterAssetHandler("png", pImageHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("jpeg", pImageHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("bmp", pImageHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("gif", pImageHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("hdr", pImageHandler);
+
+			//File* pQMFFile = Engine::GetFilesystem().CreateFile("Assets/Models/sponza2.qmf");
+			//Model* pModel = Engine::GetAssetManager().GetOrLoadAsset<Model>("Assets/Models/sponza2.obj");
+			//
+			//QMFParser qmfWriter(*pQMFFile);
+			//
+			//qmfWriter.AddMesh(*pModel);
+			//qmfWriter.Write();
+
+			//PoolAllocator<Model> modelAllocs(200);
+			//PoolAllocator<ByteBuffer> bufferAllocs(200);
+			//QMFParser qmfReader(*pQMFFile, &modelAllocs, &bufferAllocs);
+			//
+			//qmfReader.Read();
+
 			RigidBodyComponent cubePhysics(cubeRigidBody, cubeCollider);
 			RigidBodyComponent cubePhysics2(cubeRigidBody2, cubeCollider2);
 			RigidBodyComponent planePhysics(planeRigidBody, planeCollider);
@@ -277,22 +293,16 @@ namespace Quartz
 
 			gPhysics.Initialize();
 
-			ModelHandler* pModelHandler = new ModelHandler; // TODO
-			Engine::GetAssetManager().RegisterAssetHandler("obj", pModelHandler);
+			Image* pImage = Engine::GetAssetManager().GetOrLoadAsset<Image>("Assets/Textures/default.png");
 
-			gCube = world.CreateEntity(transformCube, MeshComponent("Assets/Models/sponza.obj"), material1);
-			gCube2 = world.CreateEntity(transformCube2, MeshComponent("Assets/Models/dva.obj"), material1);// , cubePhysics2);
+			gEntity0 = world.CreateEntity(transformCube, MeshComponent("Assets/Models/testScene.qmf"), material1);
+			gEntity1 = world.CreateEntity(transformCube2, MeshComponent("Assets/Models/bunny.qmf"), material1, cubePhysics2);
 			Entity plane = world.CreateEntity(transformPlane, material1, planePhysics);
-			//Entity planeL = world.CreateEntity(transformPlaneL, renderable4, material1, planePhysics2);
-			//Entity planeR = world.CreateEntity(transformPlaneR, renderable4, material1, planePhysics2);
-			//Entity planeF = world.CreateEntity(transformPlaneF, renderable4, material1, planePhysics2);
-			//Entity planeB = world.CreateEntity(transformPlaneB, renderable4, material1, planePhysics2);
 
-			//Entity plane = world.CreateEntity(transformPlane, material1, planePhysics);
 			Entity planeL = world.CreateEntity(transformPlaneL, material1, planePhysics2);
 			Entity planeR = world.CreateEntity(transformPlaneR, material1, planePhysics2);
 			Entity planeF = world.CreateEntity(transformPlaneF, material1, planePhysics2);
-			Entity planeB = world.CreateEntity(transformPlaneB,  material1, planePhysics2);
+			Entity planeB = world.CreateEntity(transformPlaneB, material1, planePhysics2);
 
 			TerrainSettings terrainSettings;
 			terrainSettings.resolution		= 200;
@@ -304,7 +314,7 @@ namespace Quartz
 			Entity terrain = world.CreateEntity(TerrainComponent(terrainSettings));
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
-			TransformComponent cameraTransform({ 0.0f, 52.0f, 4.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
+			TransformComponent cameraTransform({ 0.0f, 12.0f, 4.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});
 			gCamera = world.CreateEntity(camera, cameraTransform, cameraPhysics);
 
 			uSize maxInFlightCount = 3;
@@ -464,17 +474,22 @@ namespace Quartz
 					(
 						cameraTransform.position + normal * 2.0f,
 						cameraTransform.rotation,
-						{ 2.0f, 1.0f, 1.0f }
+						{ 1.0f, 1.0f, 1.0f }
 					);
 
-					RigidBodyComponent physics(cubeRigidBody2, cubeCollider2);
-					physics.AddForce(normal * 100000.0f);
-					physics.AddTorque({ 0.0f, 0.0f, 0.0f });
+					RigidBody projectileBody(0.1f, 0.6f, 1.0f);
+					//RectCollider projectileCollider(Bounds3f{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} }, false);
+					SphereCollider projectileCollider(1.0f, false);
+					RigidBodyComponent projectilePhysics(projectileBody, projectileCollider);
 
-					if (Engine::GetWorld().EntityCount() < 256)
-					{
-						//Entity entity = Engine::GetWorld().CreateEntity(transform, renderable2, material1, physics);
-					}
+					projectilePhysics.AddForce(normal * 100000.0f);
+					projectilePhysics.AddTorque({ 0.0f, 1.0f, 0.0f });
+
+					Entity projectileEntity = Engine::GetWorld().CreateEntity(
+						transform, 
+						MeshComponent("Assets/Models/bunny.obj"), 
+						material1, 
+						projectilePhysics);
 
 				}
 			);

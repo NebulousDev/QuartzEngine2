@@ -157,18 +157,18 @@ namespace Quartz
 
 		outModel.data.elements =
 		{
-			{ VERTEX_ATTRIBUTE_POSITION, VERTEX_TYPE_FLOAT3 },
-			{ VERTEX_ATTRIBUTE_NORMAL, VERTEX_TYPE_FLOAT3 }
+			{ VERTEX_ATTRIBUTE_POSITION, VERTEX_FORMAT_FLOAT3 },
+			{ VERTEX_ATTRIBUTE_NORMAL, VERTEX_FORMAT_FLOAT3 }
 		};
 
 		if (objModel.indices.Size() <= INDEX_MAX_UINT16)
 		{
-			outModel.data.index.type = INDEX_TYPE_UINT16;
+			outModel.data.index.format = INDEX_FORMAT_UINT16;
 			is16Bit = true;
 		}
 		else
 		{
-			outModel.data.index.type = INDEX_TYPE_UINT32;
+			outModel.data.index.format = INDEX_FORMAT_UINT32;
 			is16Bit = false;
 		}
 

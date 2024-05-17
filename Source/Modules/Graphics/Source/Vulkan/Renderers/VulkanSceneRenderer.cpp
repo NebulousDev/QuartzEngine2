@@ -120,8 +120,8 @@ namespace Quartz
 			bool vertexDataFound;
 			bufferCache.FillRenderableVertexData(renderable, meshComponent.modelURIHash, pModel->data, vertexDataFound);
 
-			IndexType indexType = pModel->data.index.type;
-			renderable.vkIndexType = indexType == INDEX_TYPE_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+			IndexFormat indexType = pModel->data.index.format;
+			renderable.vkIndexType = indexType == INDEX_FORMAT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
 
 			VulkanRenderablePerModelUBO perModelUbo = {};
 			perModelUbo.model	= transformComponent.GetMatrix();

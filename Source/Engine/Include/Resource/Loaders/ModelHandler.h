@@ -13,6 +13,10 @@ namespace Quartz
 		PoolAllocator<ByteBuffer>	mBufferPool;
 		PoolAllocator<Model>		mModelPool;
 
+	private:
+		bool LoadQMFAsset(File& assetFile, Asset*& pOutAsset);
+		bool LoadOBJAsset(File& assetFile, Asset*& pOutAsset);
+
 	public:
 		ModelHandler();
 

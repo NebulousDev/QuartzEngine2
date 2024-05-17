@@ -26,7 +26,7 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Filesystem/Filesystem.cpp"
     "Source/Resource/Loaders/ConfigHandler.cpp"
     "Source/Resource/Loaders/ModelHandler.cpp"
-)
+    "Source/Resource/QMF/QMFParser.cpp")
 
 if(WIN32)
 
@@ -51,11 +51,12 @@ elseif(UNIX)
 
 endif()
 
-add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES} "Source/Resource/Loaders/ImageHandler.cpp")
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC 
 		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>"
+		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/stb>"
 		"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
     PRIVATE
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Source>"

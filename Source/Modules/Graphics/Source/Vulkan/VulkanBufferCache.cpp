@@ -494,7 +494,7 @@ namespace Quartz
 
 		renderable.meshLocation = meshBufferLocation;
 		renderable.indexStart	= meshBufferLocation.indexEntry.offset / sizeof(float); // @TODO?
-		renderable.indexCount	= meshBufferLocation.indexEntry.sizeBytes / vertexData.index.Size();
+		renderable.indexCount	= meshBufferLocation.indexEntry.sizeBytes / vertexData.index.FormatSize();
 	}
 
 	void VulkanBufferCache::FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes)
