@@ -11,7 +11,7 @@ namespace Quartz
 
 	File::File(const String& path, Handler& handler, void* pHandle, 
 		FileFlags flags, uSize sizeBytes, uSize offsetBytes) :
-		mPath(path), mpHandler(&handler), mpNative(pHandle), 
+		mPath(path), mpHandler(&handler), mpNative(pHandle), mpMapData(nullptr),
 		mFlags(flags), mSizeBytes(sizeBytes), mOffsetBytes(offsetBytes)
 	{
 		uSize extIdx = path.FindReverse(".");
