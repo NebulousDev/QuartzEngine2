@@ -60,7 +60,8 @@ namespace Quartz
 	bool Config::Read()
 	{
 		const uSize fileSizeBytes = mpSourceFile->GetSize();
-		const char* pFileData = new char[fileSizeBytes];
+		char* pFileData = new char[fileSizeBytes + 1];
+		pFileData[fileSizeBytes] = '\0';
 		
 		if (!mpSourceFile->Read((uInt8*)pFileData, fileSizeBytes))
 		{
