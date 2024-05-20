@@ -12,6 +12,11 @@ namespace Quartz
 	{
 		StringReader parser(data);
 
+		// @NOTE: if objects rehashes, the loader breaks
+		Map<String, ObjObject> objects(1024);
+
+		ObjObject* pObjObject = &objects.Put("_obj_model_", ObjObject());
+
 		while (!parser.IsEnd())
 		{
 			parser.SkipWhitespace();
@@ -32,9 +37,31 @@ namespace Quartz
 			}
 
 			// Object
-			else if (token == "o")
+			else if (token == "usemtl")
 			{
-				parser.ReadLine();
+				parser.SkipWhitespace();
+				
+				Substring objectName = parser.ReadLine();
+				objectName = objectName.TrimWhitespaceReverse();
+
+				if (objectName.Length() > 0)
+				{
+					String objectNameStr(objectName);
+
+					auto& objectIt = objects.Find(objectNameStr);
+					if (objectIt != objects.End())
+					{
+						pObjObject = &objectIt->value;
+					}
+					else
+					{
+						ObjObject newObject;
+						newObject.material = objectNameStr;
+
+						pObjObject = &objects.Put(objectNameStr, newObject);
+					}
+				}
+
 				continue;
 			}
 
@@ -89,7 +116,7 @@ namespace Quartz
 				OBJIndex index{};
 				uInt32 indexCount = 0;
 
-				Array<OBJIndex>& indices = outObjModel.indices;
+				Array<OBJIndex>& indices = pObjObject->indices;
 
 				while (!faceLine.IsEnd())
 				{
@@ -143,73 +170,113 @@ namespace Quartz
 			}
 		}
 
+		for (auto& objectPair : objects)
+		{
+			const uInt32 indexCount = objectPair.value.indices.Size();
+
+			if (indexCount > 0)
+			{
+				outObjModel.objects.PushBack(objectPair.value);
+				outObjModel.maxIndex += indexCount;
+			}
+		}
+
 		return true;
 	}
 
 	inline bool ConvertOBJToModel(const ObjModel& objModel, Model& outModel)
 	{
-		VertexData& vertexData	= outModel.data;
+		VertexData& vertexData	= outModel.vertexData;
 		ByteBuffer& vertices	= *vertexData.pVertexBuffer;
 		ByteBuffer& indices		= *vertexData.pIndexBuffer;
 
-		Map<OBJIndex, uInt32>	indexMap;
-		bool					is16Bit;
-
-		outModel.data.elements =
-		{
-			{ VERTEX_ATTRIBUTE_POSITION, VERTEX_FORMAT_FLOAT3 },
-			{ VERTEX_ATTRIBUTE_NORMAL, VERTEX_FORMAT_FLOAT3 }
-		};
-
-		if (objModel.indices.Size() <= INDEX_MAX_UINT16)
-		{
-			outModel.data.index.format = INDEX_FORMAT_UINT16;
-			is16Bit = true;
-		}
-		else
-		{
-			outModel.data.index.format = INDEX_FORMAT_UINT32;
-			is16Bit = false;
-		}
+		uInt64 vertexBufferOffset	= 0;
+		uInt64 indexBufferOffset	= 0;
 
 		uInt32 idx = 0;
-		for (const OBJIndex& index : objModel.indices)
+
+		for (const ObjObject& object : objModel.objects)
 		{
-			auto& idxIt = indexMap.Find(index);
-			if (idxIt != indexMap.End())
+			Mesh mesh;
+
+			Map<OBJIndex, uInt32>	indexMap;
+			bool					is16Bit;
+
+			mesh.name			= object.material;
+			mesh.materialPath	= "/Materials/Path";
+			mesh.lod			= 0;
+
+			mesh.elements =
 			{
-				if (is16Bit)
-				{
-					indices.Write<uInt16>((uInt16)idxIt->value);
-				}
-				else
-				{
-					indices.Write<uInt32>((uInt32)idxIt->value);
-				}
+				{ VERTEX_ATTRIBUTE_POSITION, VERTEX_FORMAT_FLOAT3 },
+				{ VERTEX_ATTRIBUTE_NORMAL, VERTEX_FORMAT_FLOAT3 }
+			};
+
+			if (objModel.maxIndex <= INDEX_MAX_UINT16)
+			{
+				mesh.indexElement.format = INDEX_FORMAT_UINT16;
+				is16Bit = true;
 			}
 			else
 			{
-				vertices.Write(objModel.positions[index.posIdx].x);
-				vertices.Write(objModel.positions[index.posIdx].y);
-				vertices.Write(objModel.positions[index.posIdx].z);
+				mesh.indexElement.format = INDEX_FORMAT_UINT32;
+				is16Bit = false;
+			}
 
-				vertices.Write(objModel.normals[index.normIdx].x);
-				vertices.Write(objModel.normals[index.normIdx].y);
-				vertices.Write(objModel.normals[index.normIdx].z);
-
-				if (is16Bit)
+			for (const OBJIndex& index : object.indices)
+			{
+				auto& idxIt = indexMap.Find(index);
+				if (idxIt != indexMap.End())
 				{
-					indices.Write<uInt16>((uInt16)idx);
+					if (is16Bit)
+					{
+						indices.Write<uInt16>((uInt16)idxIt->value);
+					}
+					else
+					{
+						indices.Write<uInt32>((uInt32)idxIt->value);
+					}
 				}
 				else
 				{
-					indices.Write<uInt32>((uInt32)idx);
+					vertices.Write(objModel.positions[index.posIdx].x);
+					vertices.Write(objModel.positions[index.posIdx].y);
+					vertices.Write(objModel.positions[index.posIdx].z);
+
+					vertices.Write(objModel.normals[index.normIdx].x);
+					vertices.Write(objModel.normals[index.normIdx].y);
+					vertices.Write(objModel.normals[index.normIdx].z);
+
+					if (is16Bit)
+					{
+						indices.Write<uInt16>((uInt16)idx);
+					}
+					else
+					{
+						indices.Write<uInt32>((uInt32)idx);
+					}
+
+					indexMap.Put(index, idx);
+
+					idx++;
 				}
-
-				indexMap.Put(index, idx);
-
-				idx++;
 			}
+
+			mesh.verticesStartBytes	= vertexBufferOffset;
+			mesh.verticesSizeBytes	= vertices.Size() - vertexBufferOffset;
+			mesh.indicesStartBytes	= indexBufferOffset;
+			mesh.indicesSizeBytes	= indices.Size() - indexBufferOffset;
+
+			if (is16Bit && indices.Size() % 4 != 0)
+			{
+				// Write a trailing zero for alignment with 32 bit indices
+				indices.Write<uInt16>((uInt16)0);
+			}
+
+			outModel.meshes.PushBack(mesh);
+
+			vertexBufferOffset += mesh.verticesSizeBytes;
+			indexBufferOffset += mesh.indicesSizeBytes;
 		}
 
 		return true;

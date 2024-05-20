@@ -43,11 +43,18 @@ namespace Quartz
 		return static_cast<uSize>(hash);
 	}
 
+	struct ObjObject
+	{
+		String			material;
+		Array<OBJIndex>	indices;
+	};
+
 	struct ObjModel : public Asset
 	{
-		Array<Vec3f>	positions;
-		Array<Vec3f>	normals;
-		Array<Vec2f>	texCoords;
-		Array<OBJIndex>	indices;
+		Array<Vec3f>		positions;
+		Array<Vec3f>		normals;
+		Array<Vec2f>		texCoords;
+		Array<ObjObject>	objects;
+		uInt32				maxIndex;
 	};
 }

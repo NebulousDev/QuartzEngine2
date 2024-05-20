@@ -219,7 +219,7 @@ namespace Quartz
 			writeDescriptorSets[bufferCount + i].pImageInfo			= &imageInfos[i];
 		}
 
-		PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR2 = 
+		static PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR2 = 
 			(PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(pPipeline->pDevice->vkDevice, "vkCmdPushDescriptorSetKHR");
 
 		vkCmdPushDescriptorSetKHR2(mpCommandBuffer->vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 

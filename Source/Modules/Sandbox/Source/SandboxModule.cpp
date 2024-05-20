@@ -33,6 +33,9 @@
 #include "Resource/QMF/QMF.h"
 #include "Resource/QMF/QMFParser.h"
 
+#include "Runtime/Timer.h"
+#include "Utility/RefCounter.h"
+
 namespace Quartz
 {
 	extern "C"
@@ -234,6 +237,7 @@ namespace Quartz
 			ModelHandler* pModelHandler = new ModelHandler; // TODO
 			Engine::GetAssetManager().RegisterAssetHandler("obj", pModelHandler);
 			Engine::GetAssetManager().RegisterAssetHandler("qmf", pModelHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("qmod", pModelHandler);
 
 			ImageHandler* pImageHandler = new ImageHandler;
 			Engine::GetAssetManager().RegisterAssetHandler("png", pImageHandler);
@@ -242,19 +246,21 @@ namespace Quartz
 			Engine::GetAssetManager().RegisterAssetHandler("gif", pImageHandler);
 			Engine::GetAssetManager().RegisterAssetHandler("hdr", pImageHandler);
 
-			//File* pQMFFile = Engine::GetFilesystem().CreateFile("Assets/Models/sponza2.qmf");
-			//Model* pModel = Engine::GetAssetManager().GetOrLoadAsset<Model>("Assets/Models/sponza2.obj");
+			//File* pQMFFile = Engine::GetFilesystem().CreateFile("Assets/Models/dva.qmod");
+			//Model* pModel = Engine::GetAssetManager().GetOrLoadAsset<Model>("Assets/Models/dva.obj");
 			//
 			//QMFParser qmfWriter(*pQMFFile);
 			//
-			//qmfWriter.AddMesh(*pModel);
+			//qmfWriter.SetModel(*pModel);
 			//qmfWriter.Write();
-
+			//
 			//PoolAllocator<Model> modelAllocs(200);
 			//PoolAllocator<ByteBuffer> bufferAllocs(200);
 			//QMFParser qmfReader(*pQMFFile, &modelAllocs, &bufferAllocs);
 			//
 			//qmfReader.Read();
+			//
+			//Model* pModelRead = qmfReader.GetModel();
 
 			RigidBodyComponent cubePhysics(cubeRigidBody, cubeCollider);
 			RigidBodyComponent cubePhysics2(cubeRigidBody2, cubeCollider2);
@@ -295,8 +301,10 @@ namespace Quartz
 
 			Image* pImage = Engine::GetAssetManager().GetOrLoadAsset<Image>("Assets/Textures/default.png");
 
-			gEntity0 = world.CreateEntity(transformCube, MeshComponent("Assets/Models/testScene.qmf"), material1);
-			gEntity1 = world.CreateEntity(transformCube2, MeshComponent("Assets/Models/bunny.qmf"), material1, cubePhysics2);
+			//transformCube.scale /= 100.0f;
+
+			gEntity0 = world.CreateEntity(transformCube, MeshComponent("Assets/Models/dva.qmod"), material1);
+			//gEntity1 = world.CreateEntity(transformCube2, MeshComponent("Assets/Models/cube.qmf"), material1, cubePhysics2);
 			Entity plane = world.CreateEntity(transformPlane, material1, planePhysics);
 
 			Entity planeL = world.CreateEntity(transformPlaneL, material1, planePhysics2);

@@ -13,10 +13,11 @@ namespace Quartz
 	private:
 		Map<String, AssetHandler*>	mHandlers;
 		Map<String, Asset*>			mAssets;
+		AssetID						mNextAssetID; // @TODO: find a better system
 
 	public:
 		AssetManager() :
-			mHandlers(128), mAssets(8196) {}
+			mHandlers(128), mAssets(8196), mNextAssetID(1) {}
 
 		template<typename AssetHandlerType>
 		bool RegisterAssetHandler(const String& ext, AssetHandlerType* pAssetHandler)
@@ -55,6 +56,10 @@ namespace Quartz
 				// Error message in LoadAsset()
 				return nullptr;
 			}
+
+			// @TODO: find a better system
+			pAsset->mAssetId = mNextAssetID;
+			mNextAssetID++;
 
 			mAssets.Put(assetFile.GetPath(), pAsset);
 

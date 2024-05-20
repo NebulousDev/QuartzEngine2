@@ -29,7 +29,7 @@ namespace Quartz
 
 		/// TEMP
 
-		pOutAsset = static_cast<Asset*>(qmfParser.GetModels()[0]);
+		pOutAsset = static_cast<Asset*>(qmfParser.GetModel());
 
 		/// TEMP
 
@@ -59,7 +59,7 @@ namespace Quartz
 
 		ObjModel* pObjModel = new ObjModel();
 
-		String objStr(assetFile.GetSize() + 1);
+		String objStr(assetFile.GetSize());
 		if (!assetFile.Read((uInt8*)objStr.Data(), assetFile.GetSize()))
 		{
 			LogError("Error reading obj file [%s].", assetFile.GetPath().Str());
@@ -77,21 +77,31 @@ namespace Quartz
 			return false;
 		}
 
-		// TODO: using Indices could be too large
-		ByteBuffer* pVertexBuffer	= mBufferPool.Allocate(pObjModel->indices.Size() * sizeof(float) * 6); 
-		ByteBuffer* pIndexBuffer	= mBufferPool.Allocate(pObjModel->indices.Size() * sizeof(uInt32));
+		uInt64 indexBufferCount = 0;
+
+		for (const ObjObject& object : pObjModel->objects)
+		{
+			indexBufferCount += object.indices.Size();
+		}
+
+		// TODO: using indices could be too large
+		const uInt64 vertexBufferSizeBytes = indexBufferCount * sizeof(float) * 6;
+		const uInt64 indexBufferSizeBytes = indexBufferCount * sizeof(uInt32);
+
+		ByteBuffer* pVertexBuffer	= mBufferPool.Allocate(vertexBufferSizeBytes);
+		ByteBuffer* pIndexBuffer	= mBufferPool.Allocate(indexBufferSizeBytes);
 
 		if (!pVertexBuffer || !pIndexBuffer)
 		{
-			LogError("Error. Failed to allocate buffer space [%d MiB] for obj file [%s].", 
-				(pObjModel->positions.Size() + pObjModel->indices.Size()) / 1024, assetFile.GetPath().Str());
+			//LogError("Error. Failed to allocate buffer space [%d MiB] for obj file [%s].", 
+			//	(vertexBufferSizeBytes + indexBufferSizeBytes) / 1024, assetFile.GetPath().Str());
 			delete pObjModel;
 			return false;
 		}
 
 		Model* pModel = mModelPool.Allocate(&assetFile);
-		pModel->data.pVertexBuffer = pVertexBuffer;
-		pModel->data.pIndexBuffer = pIndexBuffer;
+		pModel->vertexData.pVertexBuffer	= pVertexBuffer;
+		pModel->vertexData.pIndexBuffer		= pIndexBuffer;
 
 		if (!ConvertOBJToModel(*pObjModel, *pModel))
 		{
@@ -117,7 +127,7 @@ namespace Quartz
 		{
 			return LoadOBJAsset(assetFile, pOutAsset);
 		}
-		else if (modelExt == "qmf"_STR)
+		else if (modelExt == "qmf"_STR || modelExt == "qmod"_STR)
 		{
 			return LoadQMFAsset(assetFile, pOutAsset);
 		}
@@ -129,8 +139,8 @@ namespace Quartz
 	{
 		Model* pModel = static_cast<Model*>(pInAsset);
 
-		mBufferPool.Free(pModel->data.pVertexBuffer);
-		mBufferPool.Free(pModel->data.pIndexBuffer);
+		mBufferPool.Free(pModel->vertexData.pVertexBuffer);
+		mBufferPool.Free(pModel->vertexData.pIndexBuffer);
 		mModelPool.Free(pModel);
 
 		return true;

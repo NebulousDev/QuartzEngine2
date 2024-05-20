@@ -85,12 +85,12 @@ namespace Quartz
 
 	struct QMFStringTable							// 256 bits
 	{
-		char				magic[8] = "QMFSTRS";	// 64 bits
 		uInt32				stringCount;			// 32 bits
 		QMFStringEncoding	encoding;				// 16 bits
 		uInt16				_reserved0;				// 16 bits
 		uInt64				strsOffset;				// 64 bits
 		uInt64				strsSizeBytes;			// 64 bits
+		uInt64				nextExtOffset;			// 64 bits
 	};
 
 	struct QMFShader								// 384 bits
@@ -107,9 +107,8 @@ namespace Quartz
 		uInt64			codeSizeBytes;				// 64 bits
 	};
 
-	struct QMFShaderTable							// 320 bits
+	struct QMFShaderTable							// 256 bits
 	{
-		char			magic[8] = "QMFSDRS";		// 64 bits
 		uInt32			shaderCount;				// 32 bits
 		uInt32			_reserved0;					// 32 bits
 		uInt64			shadersOffset;				// 64 bits
@@ -126,47 +125,39 @@ namespace Quartz
 
 	struct QMFMesh									// 448 bits
 	{
-		QMFStringID		meshNameID;					// 32 bits
-		QMFIndexFormat	indexFormat;				// 8 bits
+		QMFStringID		nameID;						// 32 bitss
+		QMFStringID		materialPathID;				// 32 bits
+		uInt16			lodIdx;						// 16 bits
 		uInt8			_reserved0;					// 8 bits
-		uInt32			_reserved1;					// 16 bits
+		QMFIndexFormat	indexFormat;				// 8 bits
 		uInt16			elementCount;				// 16 bits
-		uInt16			elementOffset;				// 16 bits
-		uInt32			_reserved2;					// 32 bits
+		uInt16			_reserved1;					// 16 bits
+		uInt64			elementOffset;				// 64 bits
 		uInt64			verticesOffset;				// 64 bits
 		uInt64			verticesSizeBytes;			// 64 bits
 		uInt64			indicesOffset;				// 64 bits
 		uInt64			indicesSizeBytes;			// 64 bits
-		uInt64			nextExtOffset;				// 64 bits
 	};
 
-	struct QMFMeshTable								// 320 bits
+	struct QMFMeshTable								// 384 bits
 	{
-		char	magic[8] = "QMFMSHS";				// 64 bits
 		uInt32	meshCount;							// 32 bits
 		uInt16	_reserved0;							// 32 bits
 		uInt64	meshesOffset;						// 64 bits
 		uInt64	meshesSizeBytes;					// 64 bits
+		uInt64	vertexBufferSizeBytes;				// 64 bits
+		uInt64	indexBufferSizeBytes;				// 64 bits
 		uInt64	nextExtOffset;						// 64 bits
 	};
 
-	struct QMFLayout								// 64 bits
-	{
-		uInt16 shaderCount;							// 16 bits
-		uInt16 materialCount;						// 16 bits
-		uInt16 meshCount;							// 16 bits
-		uInt16 _reserved0;							// 16 bits
-	};
-
-	struct QMF
+	struct QMF										// -- bits
 	{
 		char			magic[8] = "QMF";			// 32 bits
-		uInt16			version;					// 16 bits
-		uInt16			_reserved0;					// 16 bits
-		uInt32			_reserved1;					// 32 bits
-		QMFLayout		layout;						// 64 bits
+		uInt16			versionMajor;				// 16 bits
+		uInt16			versionMinor;				// 16 bits
+		uInt64			_reserved0;					// 64 bits
 		QMFStringTable	stringTable;				// 256 bits
-		QMFMeshTable	meshTable;					// 320 bits
+		QMFMeshTable	meshTable;					// 384 bits
 		uInt64			nextExtOffset;				// 64 bits
 	};
 

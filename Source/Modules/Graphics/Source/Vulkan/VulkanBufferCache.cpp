@@ -113,7 +113,8 @@ namespace Quartz
 		}
 	}
 
-	void VulkanBufferCache::Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, const VulkanRenderSettings& settings)
+	void VulkanBufferCache::Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, 
+		const VulkanRenderSettings& settings)
 	{
 		mSettings			= settings;
 		mpResourceManager	= pResourceManager;
@@ -122,15 +123,19 @@ namespace Quartz
 		InitializeDefaultBuffers();
 	}
 
-	void CopyMeshData(const VertexData& vertexData, void* pOutVertexData, void* pOutIndexData)
+	void CopyMeshData(const VertexData& vertexData, void* pOutVertexData, void* pOutIndexData, 
+		uInt32 vertexPadBytes, uInt32 indexPadBytes)
 	{
-		const uSize vertexSizeBytes	= vertexData.pVertexBuffer->Size();
-		const uSize indexSizeBytes	= vertexData.pIndexBuffer->Size();
+		const uSize verticesSizeBytes	= vertexData.pVertexBuffer->Size();
+		const uSize indicesSizeBytes	= vertexData.pIndexBuffer->Size();
 		const void* pVertexData		= vertexData.pVertexBuffer->Data();
 		const void* pIndexData		= vertexData.pIndexBuffer->Data();
 
-		memcpy_s(pOutVertexData, vertexSizeBytes, pVertexData, vertexSizeBytes);
-		memcpy_s(pOutIndexData, indexSizeBytes, pIndexData, indexSizeBytes);
+		memcpy_s(pOutVertexData, verticesSizeBytes, pVertexData, verticesSizeBytes);
+		memcpy_s(pOutIndexData, indicesSizeBytes, pIndexData, indicesSizeBytes);
+
+		memset((uInt8*)pOutVertexData + verticesSizeBytes, 0, vertexPadBytes);
+		memset((uInt8*)pOutIndexData + indicesSizeBytes, 0, indexPadBytes);
 	}
 
 	void CopyPerModelData(void* pPerModelData, void* pOutPerModelBuffer, uSize sizeBytes)
@@ -138,22 +143,32 @@ namespace Quartz
 		memcpy_s(pOutPerModelBuffer, sizeBytes, pPerModelData, sizeBytes);
 	}
 
-	MeshBufferLocation VulkanBufferCache::GetOrAllocateMeshBuffers(uInt64 meshHash, const VertexData& vertexData, bool& outFound)
+	bool VulkanBufferCache::GetOrAllocateMeshBuffers(const Model& model, 
+		MeshBufferLocation& outBufferLocation, 
+		uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound)
 	{
-		auto& it = mMeshBufferLookup.Find(meshHash);
+		auto& it = mMeshBufferLookup.Find(model.GetAssetID());
 
 		if (it != mMeshBufferLookup.End())
 		{
 			outFound = true;
-			return it->value;
+			outBufferLocation = it->value;
+			return true;
 		}
 
 		MeshBufferLocation		bufferLocation = {};
 		VulkanMultiBufferEntry	vertexEntry;
 		VulkanMultiBufferEntry	indexEntry;
 
-		const uSize vertexSizeBytes = vertexData.pVertexBuffer->Size();
-		const uSize indexSizeBytes = vertexData.pIndexBuffer->Size();
+		// @TODO: check sizes
+		uSize verticesSizeBytes		= model.vertexData.pVertexBuffer->Size();
+		uSize indicesSizeBytes		= model.vertexData.pIndexBuffer->Size();
+
+		uInt32 vertexAlignmentDiff	= verticesSizeBytes % vertexAlignBytes;
+		uInt32 indexAlignmentDiff	= indicesSizeBytes % indexAlignBytes;
+
+		verticesSizeBytes += vertexAlignmentDiff;
+		indicesSizeBytes	+= indexAlignmentDiff;
 
 		if (!mSettings.useUniqueMeshBuffers)
 		{
@@ -164,8 +179,8 @@ namespace Quartz
 			VulkanMultiBuffer* pVertexBuffer = &mVertexBuffers[vertexIndex];
 			VulkanMultiBuffer* pIndexBuffer = &mIndexBuffers[indexIndex];
 
-			pVertexBuffer->Allocate<uInt8>(vertexSizeBytes, vertexEntry, nullptr);
-			pIndexBuffer->Allocate<uInt8>(indexSizeBytes, indexEntry, nullptr);
+			pVertexBuffer->Allocate<uInt8>(verticesSizeBytes, vertexEntry, nullptr);
+			pIndexBuffer->Allocate<uInt8>(indicesSizeBytes, indexEntry, nullptr);
 			
 			bufferLocation.vertexEntry		= vertexEntry;
 			bufferLocation.indexEntry		= indexEntry;
@@ -189,7 +204,7 @@ namespace Quartz
 			}
 
 			VulkanBufferInfo vertexBufferInfo = {};
-			vertexBufferInfo.sizeBytes			= vertexSizeBytes;
+			vertexBufferInfo.sizeBytes			= verticesSizeBytes;
 			vertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | usageFlags;
 			vertexBufferInfo.vkMemoryProperties = memoryFlags;
 
@@ -197,7 +212,7 @@ namespace Quartz
 				&mVertexBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, vertexBufferInfo)));
 
 			VulkanBufferInfo indexBufferInfo = {};
-			indexBufferInfo.sizeBytes			= indexSizeBytes;
+			indexBufferInfo.sizeBytes			= indicesSizeBytes;
 			indexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | usageFlags;
 			indexBufferInfo.vkMemoryProperties	= memoryFlags;
 
@@ -206,8 +221,8 @@ namespace Quartz
 
 			if (mSettings.useMeshStaging)
 			{
-				pVertexBuffer->Allocate<uInt8>(vertexSizeBytes, vertexEntry, nullptr);
-				pIndexBuffer->Allocate<uInt8>(indexSizeBytes, indexEntry, nullptr);
+				pVertexBuffer->Allocate<uInt8>(verticesSizeBytes, vertexEntry, nullptr);
+				pIndexBuffer->Allocate<uInt8>(indicesSizeBytes, indexEntry, nullptr);
 			}
 			else
 			{
@@ -217,10 +232,10 @@ namespace Quartz
 				pVertexBuffer->Map();
 				pIndexBuffer->Map();
 
-				pVertexBuffer->Allocate<uInt8>(vertexSizeBytes, vertexEntry, &pVertexData);
-				pIndexBuffer->Allocate<uInt8>(indexSizeBytes, indexEntry, &pIndexData);
+				pVertexBuffer->Allocate<uInt8>(verticesSizeBytes, vertexEntry, &pVertexData);
+				pIndexBuffer->Allocate<uInt8>(indicesSizeBytes, indexEntry, &pIndexData);
 
-				CopyMeshData(vertexData, pVertexData, pIndexData);
+				CopyMeshData(model.vertexData, pVertexData, pIndexData, vertexAlignmentDiff, indexAlignmentDiff);
 			}
 
 			bufferLocation.vertexEntry		= vertexEntry;
@@ -229,29 +244,39 @@ namespace Quartz
 			bufferLocation.pIndexBuffer		= pIndexBuffer;
 		}
 
-		mMeshBufferLookup.Put(meshHash, bufferLocation);
+		mMeshBufferLookup.Put(model.GetAssetID(), bufferLocation);
 
 		outFound = false;
+		outBufferLocation = bufferLocation;
 
-		return bufferLocation;
+		return true;
 	}
 
-	MeshBufferLocation VulkanBufferCache::GetOrAllocateMeshStagingBuffers(uInt64 meshHash, const VertexData& vertexData, bool& outFound)
+	bool VulkanBufferCache::GetOrAllocateMeshStagingBuffers(const Model& model, 
+		MeshBufferLocation& outStagingBufferLocation, 
+		uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound)
 	{
-		auto& it = mMeshStagingBufferLookup.Find(meshHash);
+		auto& it = mMeshStagingBufferLookup.Find(model.GetAssetID());
 
 		if (it != mMeshStagingBufferLookup.End())
 		{
 			outFound = true;
-			return it->value;
+			outStagingBufferLocation = it->value;
+			return true;
 		}
 
 		MeshBufferLocation		bufferLocation = {};
 		VulkanMultiBufferEntry	vertexStagingEntry;
 		VulkanMultiBufferEntry	indexStagingEntry;
 
-		const uSize vertexSizeBytes = vertexData.pVertexBuffer->Size();
-		const uSize indexSizeBytes = vertexData.pIndexBuffer->Size();
+		uSize verticesSizeBytes		= model.vertexData.pVertexBuffer->Size();
+		uSize indicesSizeBytes		= model.vertexData.pIndexBuffer->Size();
+
+		uInt32 vertexAlignmentDiff	= verticesSizeBytes % vertexAlignBytes;
+		uInt32 indexAlignmentDiff	= indicesSizeBytes % indexAlignBytes;
+
+		verticesSizeBytes += vertexAlignmentDiff;
+		indicesSizeBytes	+= indexAlignmentDiff;
 
 		uInt8* pVertexStagingData;
 		uInt8* pIndexStagingData;
@@ -268,10 +293,10 @@ namespace Quartz
 			pVertexStagingBuffer->Map();
 			pIndexStagingBuffer->Map();
 
-			pVertexStagingBuffer->Allocate<uInt8>(vertexSizeBytes, vertexStagingEntry, &pVertexStagingData);
-			pIndexStagingBuffer->Allocate<uInt8>(indexSizeBytes, indexStagingEntry, &pIndexStagingData);
+			pVertexStagingBuffer->Allocate<uInt8>(verticesSizeBytes, vertexStagingEntry, &pVertexStagingData);
+			pIndexStagingBuffer->Allocate<uInt8>(indicesSizeBytes, indexStagingEntry, &pIndexStagingData);
 
-			CopyMeshData(vertexData, pVertexStagingData, pIndexStagingData);
+			CopyMeshData(model.vertexData, pVertexStagingData, pIndexStagingData, vertexAlignmentDiff, indexAlignmentDiff);
 
 			bufferLocation.vertexEntry		= vertexStagingEntry;
 			bufferLocation.indexEntry		= indexStagingEntry;
@@ -281,7 +306,7 @@ namespace Quartz
 		else
 		{
 			VulkanBufferInfo stagingVertexBufferInfo = {};
-			stagingVertexBufferInfo.sizeBytes			= vertexSizeBytes;
+			stagingVertexBufferInfo.sizeBytes			= verticesSizeBytes;
 			stagingVertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			stagingVertexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -289,7 +314,7 @@ namespace Quartz
 				&mVertexStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingVertexBufferInfo)));
 
 			VulkanBufferInfo stagingIndexBufferInfo = {};
-			stagingIndexBufferInfo.sizeBytes			= indexSizeBytes;
+			stagingIndexBufferInfo.sizeBytes			= indicesSizeBytes;
 			stagingIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			stagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -299,10 +324,10 @@ namespace Quartz
 			pVertexStagingBuffer->Map();
 			pIndexStagingBuffer->Map();
 
-			pVertexStagingBuffer->Allocate<uInt8>(vertexSizeBytes, vertexStagingEntry, &pVertexStagingData);
-			pIndexStagingBuffer->Allocate<uInt8>(indexSizeBytes, indexStagingEntry, &pIndexStagingData);
+			pVertexStagingBuffer->Allocate<uInt8>(verticesSizeBytes, vertexStagingEntry, &pVertexStagingData);
+			pIndexStagingBuffer->Allocate<uInt8>(indicesSizeBytes, indexStagingEntry, &pIndexStagingData);
 
-			CopyMeshData(vertexData, pVertexStagingData, pIndexStagingData);
+			CopyMeshData(model.vertexData, pVertexStagingData, pIndexStagingData, vertexAlignmentDiff, indexAlignmentDiff);
 
 			bufferLocation.vertexEntry		= vertexStagingEntry;
 			bufferLocation.indexEntry		= indexStagingEntry;
@@ -310,11 +335,12 @@ namespace Quartz
 			bufferLocation.pIndexBuffer		= pIndexStagingBuffer;
 		}
 
-		mMeshStagingBufferLookup.Put(meshHash, bufferLocation);
+		mMeshStagingBufferLookup.Put(model.GetAssetID(), bufferLocation);
 
 		outFound = false;
+		outStagingBufferLocation = bufferLocation;
 
-		return bufferLocation;
+		return true;
 	}
 
 	PerModelBufferLocation VulkanBufferCache::AllocatePerModelBuffer(void* pPerModelData, uSize perModelSizeBytes)
@@ -460,17 +486,38 @@ namespace Quartz
 		}
 	}
 
-	void VulkanBufferCache::FillRenderableVertexData(VulkanRenderable& renderable, uInt64 meshHash, const VertexData& vertexData, bool& outFound)
+	bool VulkanBufferCache::GetOrAllocateBuffers(const Model& model,
+		MeshBufferLocation& outbufferLocation, MeshBufferLocation& outStagingbufferLocation,
+		uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound)
 	{
 		bool meshBufferFound;
-
-		MeshBufferLocation meshBufferLocation = GetOrAllocateMeshBuffers(meshHash, vertexData, meshBufferFound);
+		MeshBufferLocation meshBufferLocation;
+		if (!GetOrAllocateMeshBuffers(model, meshBufferLocation, 
+			vertexAlignBytes, indexAlignBytes, meshBufferFound))
+		{
+			outFound = false;
+			return false;
+		}
+		else
+		{
+			outFound = true;
+			outbufferLocation = meshBufferLocation;
+		}
 
 		if (mSettings.useMeshStaging)
 		{
 			bool meshStagingBufferFound;
-
-			MeshBufferLocation meshStagingBufferLocation = GetOrAllocateMeshStagingBuffers(meshHash, vertexData, meshStagingBufferFound);
+			MeshBufferLocation meshStagingBufferLocation;
+			if (!GetOrAllocateMeshStagingBuffers(model, meshStagingBufferLocation, 
+				vertexAlignBytes, indexAlignBytes, meshStagingBufferFound))
+			{
+				outFound = false;
+				return false;
+			}
+			else
+			{
+				outStagingbufferLocation = meshStagingBufferLocation;
+			}
 
 			if (!meshBufferFound)
 			{
@@ -492,12 +539,10 @@ namespace Quartz
 			}
 		}
 
-		renderable.meshLocation = meshBufferLocation;
-		renderable.indexStart	= meshBufferLocation.indexEntry.offset / sizeof(float); // @TODO?
-		renderable.indexCount	= meshBufferLocation.indexEntry.sizeBytes / vertexData.index.FormatSize();
+		return true;
 	}
 
-	void VulkanBufferCache::FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes)
+	bool VulkanBufferCache::FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes)
 	{
 		PerModelBufferLocation perModelBufferLocation = AllocatePerModelBuffer(pPerModelData, perModelSizeBytes);
 
@@ -517,6 +562,8 @@ namespace Quartz
 		}
 
 		renderable.perModelLocation = perModelBufferLocation;
+
+		return true;
 	}
 
 	void VulkanBufferCache::RecordTransfers(VulkanCommandRecorder& recorder)

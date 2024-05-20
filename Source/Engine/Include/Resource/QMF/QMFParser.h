@@ -15,7 +15,7 @@ namespace Quartz
 	private:
 		File&						mFile;
 		QMF							mHeader;
-		Array<Model*>				mModels;
+		Model*						mpModel;
 		Array<String>				mStrings;
 		PoolAllocator<Model>*		mpModelAllocator;
 		PoolAllocator<ByteBuffer>*	mpBufferAllocator;
@@ -26,7 +26,7 @@ namespace Quartz
 		bool		BeginWriting();
 		bool		EndWriting();
 		bool		WriteStrings();
-		bool		WriteMesh(const Model& model);
+		bool		WriteMesh(const Mesh& mesh, const VertexData& vertexData);
 
 		bool		BeginReading();
 		bool		EndReading();
@@ -38,12 +38,12 @@ namespace Quartz
 			PoolAllocator<Model>* pModelAllocator = nullptr,
 			PoolAllocator<ByteBuffer>* pBufferAllocator = nullptr);
 
-		void AddMesh(const Model& model);
+		void SetModel(const Model& model);
 
 		bool Read();
 		bool Write();
 
-		const Array<Model*>& GetModels() const { return mModels; }
+		Model* GetModel() const { return mpModel; }
 		const Array<String>& GetStrings() const { return mStrings; }
 	};
 }

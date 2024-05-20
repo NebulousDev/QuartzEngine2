@@ -70,19 +70,21 @@ namespace Quartz
 		Array<VulkanMultiBuffer>	mPerModelBuffers;
 		Array<VulkanMultiBuffer>	mPerModelStagingBuffers;
 
-		Map<uInt64, MeshBufferLocation>	mMeshBufferLookup;
-		Map<uInt64, MeshBufferLocation>	mMeshStagingBufferLookup;
-		Array<VulkanRenderable>			mRenderables;
-		Array<VulkanRenderable>			mRenderablesSorted;
-		Array<TransferCommand>			mReadyTransfers;
+		Map<AssetID, MeshBufferLocation>	mMeshBufferLookup;
+		Map<AssetID, MeshBufferLocation>	mMeshStagingBufferLookup;
+		Array<VulkanRenderable>				mRenderables;
+		Array<VulkanRenderable>				mRenderablesSorted;
+		Array<TransferCommand>				mReadyTransfers;
 
 		VulkanRenderSettings		mSettings;
 
 	private:
 		void					InitializeDefaultBuffers();
 
-		MeshBufferLocation		GetOrAllocateMeshBuffers(uInt64 meshHash, const VertexData& vertexData, bool& outFound);
-		MeshBufferLocation		GetOrAllocateMeshStagingBuffers(uInt64 meshHash, const VertexData& vertexData, bool& outFound);
+		bool					GetOrAllocateMeshBuffers(const Model& model, MeshBufferLocation& outBufferLocation, 
+									uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound);
+		bool					GetOrAllocateMeshStagingBuffers(const Model& model, MeshBufferLocation& outStagingBufferLocation, 
+									uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound);
 		PerModelBufferLocation	AllocatePerModelBuffer(void* pPerModelData, uSize perModelSizeBytes);
 		PerModelBufferLocation	AllocatePerModelStagingBuffer(void* pPerModelData, uSize perModelSizeBytes);
 
@@ -91,8 +93,9 @@ namespace Quartz
 
 		void					ResetPerModelBuffers();
 
-		void					FillRenderableVertexData(VulkanRenderable& renderable, uInt64 meshHash, const VertexData& vertexData, bool& outFound);
-		void					FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes);
+		bool					GetOrAllocateBuffers(const Model& model, MeshBufferLocation& outbufferLocation,
+									MeshBufferLocation& outStagingbufferLocation, uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound);
+		bool					FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes);
 
 		void					RecordTransfers(VulkanCommandRecorder& recorder);
 	};

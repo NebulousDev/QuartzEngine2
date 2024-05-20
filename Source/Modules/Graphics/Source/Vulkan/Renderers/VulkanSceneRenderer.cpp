@@ -100,8 +100,6 @@ namespace Quartz
 			MeshComponent& meshComponent			= world.Get<MeshComponent>(entity);
 			TransformComponent& transformComponent	= world.Get<TransformComponent>(entity);
 
-			VulkanRenderable renderable = {};
-
 			Model* pModel = meshComponent.pCachedModel;
 
 			if (!pModel)
@@ -118,45 +116,62 @@ namespace Quartz
 			}
 
 			bool vertexDataFound;
-			bufferCache.FillRenderableVertexData(renderable, meshComponent.modelURIHash, pModel->data, vertexDataFound);
+			MeshBufferLocation bufferLocation;
+			MeshBufferLocation stagingBufferLocation;
+			bufferCache.GetOrAllocateBuffers(*pModel, bufferLocation, stagingBufferLocation, 1, 4, vertexDataFound);
+			// @TODO: error check ^
 
-			IndexFormat indexType = pModel->data.index.format;
-			renderable.vkIndexType = indexType == INDEX_FORMAT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-
-			VulkanRenderablePerModelUBO perModelUbo = {};
-			perModelUbo.model	= transformComponent.GetMatrix();
-			perModelUbo.view	= cameraTransform.GetViewMatrix();
-			perModelUbo.proj	= camera.GetProjectionMatrix();
-
-			bufferCache.FillRenderablePerModelData(renderable, 0, &perModelUbo, sizeof(VulkanRenderablePerModelUBO));
-
-			if (world.HasComponent<MaterialComponent>(entity))
+			for (const Mesh& mesh : pModel->meshes)
 			{
-				MaterialComponent& materialComponent = world.Get<MaterialComponent>(entity);
+				VulkanRenderable renderable = {};
 
-				VulkanShader* pVertexShader		= shaderCache.FindOrCreateShader(materialComponent.vertexURI, VK_SHADER_STAGE_VERTEX_BIT);
-				VulkanShader* pFragmentShader	= shaderCache.FindOrCreateShader(materialComponent.fragmentURI, VK_SHADER_STAGE_FRAGMENT_BIT);
+				const IndexElement indexElement	= mesh.indexElement;
+				const IndexFormat indexType		= indexElement.format;
+				const uInt32 indexBufferStart	= bufferLocation.indexEntry.offset;
+				const uInt32 indexSize			= indexElement.FormatSize();
 
-				Array<VulkanAttachment, 2> attachments =
+				renderable.vkIndexType = indexType == INDEX_FORMAT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+
+				renderable.meshLocation = bufferLocation;
+				renderable.indexStart	= (indexBufferStart + mesh.indicesStartBytes) / indexSize;
+				renderable.indexCount	= mesh.indicesSizeBytes / indexSize; 
+
+				VulkanRenderablePerModelUBO perModelUbo = {};
+				perModelUbo.model	= transformComponent.GetMatrix();
+				perModelUbo.view	= cameraTransform.GetViewMatrix();
+				perModelUbo.proj	= camera.GetProjectionMatrix();
+
+				// @TODO: This can probably be optimized by moving out of the mesh and into the model
+				bufferCache.FillRenderablePerModelData(renderable, 0, &perModelUbo, sizeof(VulkanRenderablePerModelUBO));
+
+				if (world.HasComponent<MaterialComponent>(entity))
 				{
-					{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
-					{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
-				};
+					MaterialComponent& materialComponent = world.Get<MaterialComponent>(entity);
 
-				VulkanGraphicsPipelineInfo pipelineInfo = pipelineCache.MakeGraphicsPipelineInfo(
-					{ pVertexShader, pFragmentShader }, attachments);
+					VulkanShader* pVertexShader		= shaderCache.FindOrCreateShader(materialComponent.vertexURI, VK_SHADER_STAGE_VERTEX_BIT);
+					VulkanShader* pFragmentShader	= shaderCache.FindOrCreateShader(materialComponent.fragmentURI, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-				pipelineInfo.vkFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-				pipelineInfo.vkCullMode = VK_CULL_MODE_NONE;
+					Array<VulkanAttachment, 2> attachments =
+					{
+						{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
+						{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
+					};
 
-				renderable.pPipeline = pipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
+					VulkanGraphicsPipelineInfo pipelineInfo = pipelineCache.MakeGraphicsPipelineInfo(
+						{ pVertexShader, pFragmentShader }, attachments);
+
+					pipelineInfo.vkFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+					pipelineInfo.vkCullMode = VK_CULL_MODE_NONE;
+
+					renderable.pPipeline = pipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
+				}
+				else
+				{
+					renderable.pPipeline = mpDefaultPipeline;
+				}
+
+				mRenderables.PushBack(renderable);
 			}
-			else
-			{
-				renderable.pPipeline = mpDefaultPipeline;
-			}
-
-			mRenderables.PushBack(renderable);
 		}
 	}
 
@@ -191,7 +206,7 @@ namespace Quartz
 			
 			recorder.BindUniforms(renderable.pPipeline, 0, pBufferBinds, 1, nullptr, 0);
 
-			recorder.DrawIndexed(1, renderable.indexCount, 0, 0);
+			recorder.DrawIndexed(1, renderable.indexCount, renderable.indexStart, 0);
 		}
 	}
 }

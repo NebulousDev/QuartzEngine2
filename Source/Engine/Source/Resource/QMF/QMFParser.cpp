@@ -6,26 +6,28 @@ namespace Quartz
 {
 	QMF QMFParser::WriteBlankQMFHeader()
 	{
-		QMFLayout layout;
-		layout.materialCount		= 0;
-		layout.shaderCount			= 0;
-		layout.meshCount			= 0;
 
 		QMFStringTable stringTable;
 		stringTable.encoding		= QMF_STRING_UTF8;
+		stringTable._reserved0		= 0;
 		stringTable.stringCount		= 0;
 		stringTable.strsOffset		= 0;
 		stringTable.strsSizeBytes	= 0;
+		stringTable.nextExtOffset	= 0;
 
 		QMFMeshTable meshTable;
-		meshTable.meshCount			= 0;
-		meshTable.meshesOffset		= 0;
-		meshTable.meshesSizeBytes	= 0;
-		meshTable.nextExtOffset		= 0;
+		meshTable.meshCount				= 0;
+		meshTable._reserved0			= 0;
+		meshTable.meshesOffset			= 0;
+		meshTable.meshesSizeBytes		= 0;
+		meshTable.vertexBufferSizeBytes	= 0;
+		meshTable.indexBufferSizeBytes	= 0;
+		meshTable.nextExtOffset			= 0;
 
 		QMF qmf;
-		qmf.version					= 0x01;
-		qmf.layout					= layout;
+		qmf.versionMajor			= 1;
+		qmf.versionMinor			= 2;
+		qmf._reserved0				= 0;
 		qmf.stringTable				= stringTable;
 		qmf.meshTable				= meshTable;
 		qmf.nextExtOffset			= 0;
@@ -48,7 +50,7 @@ namespace Quartz
 			LogWarning("QMF File [%s] is already open.", mFile.GetPath().Str());
 			mFile.SetFilePtr(0, FILE_PTR_BEGIN);
 		}
-		else if (!mFile.Open(FILE_OPEN_WRITE | FILE_OPEN_BINARY | FILE_OPEN_CLEAR))
+		else if (!mFile.Open(FILE_OPEN_WRITE | FILE_OPEN_BINARY | FILE_OPEN_CLEAR | FILE_OPEN_SHARE_READ))
 		{
 			LogError("QMF File [%s] failed to open.", mFile.GetPath().Str());
 			return false;
@@ -98,9 +100,8 @@ namespace Quartz
 		return true;
 	}
 
-	bool QMFParser::WriteMesh(const Model& model)
+	bool QMFParser::WriteMesh(const Mesh& mesh, const VertexData& vertexData)
 	{
-		const VertexData& vertexData = model.data;
 		QMFMeshTable& meshTable = mHeader.meshTable;
 
 		uInt64 fileOffset = mFile.GetFilePtr();
@@ -110,24 +111,30 @@ namespace Quartz
 			meshTable.meshesOffset = fileOffset;
 		}
 
-		QMFMesh mesh;
-		mesh.meshNameID			= RegisterString("TEMP_MODEL_STR");
-		mesh.indexFormat		= (QMFIndexFormat)vertexData.index.FormatID();
-		mesh.elementCount		= vertexData.elements.Size();
-		mesh.elementOffset		= fileOffset + sizeof(QMFMesh);
-		mesh.verticesOffset		= mesh.elementOffset + mesh.elementCount * sizeof(QMFMeshElement);
-		mesh.verticesSizeBytes	= vertexData.pVertexBuffer->Size();
-		mesh.indicesOffset		= mesh.verticesOffset + mesh.verticesSizeBytes;
-		mesh.indicesSizeBytes	= vertexData.pIndexBuffer->Size();
+		meshTable.vertexBufferSizeBytes += mesh.verticesSizeBytes;
+		meshTable.indexBufferSizeBytes	+= mesh.indicesSizeBytes;
 
-		if (!mFile.WriteValues<QMFMesh>(&mesh, 1))
+		QMFMesh qmfMesh;
+		qmfMesh.nameID				= RegisterString(mesh.name);
+		qmfMesh.materialPathID		= RegisterString(mesh.materialPath);
+		qmfMesh.lodIdx				= mesh.lod;
+		qmfMesh._reserved0			= 0;
+		qmfMesh.indexFormat			= (QMFIndexFormat)mesh.indexElement.FormatID();
+		qmfMesh.elementCount		= mesh.elements.Size();
+		qmfMesh.elementOffset		= fileOffset + sizeof(QMFMesh);
+		qmfMesh.verticesOffset		= qmfMesh.elementOffset + qmfMesh.elementCount * sizeof(QMFMeshElement);
+		qmfMesh.verticesSizeBytes	= mesh.verticesSizeBytes;
+		qmfMesh.indicesOffset		= qmfMesh.verticesOffset + qmfMesh.verticesSizeBytes;
+		qmfMesh.indicesSizeBytes	= mesh.indicesSizeBytes;
+
+		if (!mFile.WriteValues<QMFMesh>(&qmfMesh, 1))
 		{
 			return false;
 		}
 
 		meshTable.meshesSizeBytes += sizeof(QMFMesh);
 
-		for (const VertexElement& vertElement : vertexData.elements)
+		for (const VertexElement& vertElement : mesh.elements)
 		{
 			QMFMeshElement meshElement;
 			meshElement.attribute	= (QMFVertexAttribute)vertElement.attribute;
@@ -141,17 +148,17 @@ namespace Quartz
 			meshTable.meshesSizeBytes += sizeof(QMFMeshElement);
 		}
 
-		if (!mFile.Write(vertexData.pVertexBuffer->Data(), mesh.verticesSizeBytes))
+		if (!mFile.Write(vertexData.pVertexBuffer->Data() + mesh.verticesStartBytes, mesh.verticesSizeBytes))
 		{
 			return false;
 		}
 
-		if (!mFile.Write(vertexData.pIndexBuffer->Data(), mesh.indicesSizeBytes))
+		if (!mFile.Write(vertexData.pIndexBuffer->Data() + mesh.indicesStartBytes, mesh.indicesSizeBytes))
 		{
 			return false;
 		}
 
-		meshTable.meshesSizeBytes += mesh.verticesSizeBytes + mesh.indicesSizeBytes;
+		meshTable.meshesSizeBytes += qmfMesh.verticesSizeBytes + qmfMesh.indicesSizeBytes;
 		meshTable.meshCount++;
 
 		return true;
@@ -164,7 +171,7 @@ namespace Quartz
 			LogWarning("QMF File [%s] is already open.", mFile.GetPath().Str());
 			mFile.SetFilePtr(0, FILE_PTR_BEGIN);
 		}
-		else if (!mFile.Open(FILE_OPEN_READ | FILE_OPEN_BINARY))
+		else if (!mFile.Open(FILE_OPEN_READ | FILE_OPEN_BINARY | FILE_OPEN_SHARE_READ))
 		{
 			LogError("Error reading QMF File [%s]. Failed to open.", mFile.GetPath().Str());
 			return false;
@@ -224,26 +231,80 @@ namespace Quartz
 
 		mFile.SetFilePtr(mHeader.meshTable.meshesOffset, FILE_PTR_BEGIN);
 
+		Model* pModel = mpModelAllocator->Allocate(&mFile);
+		
+		if (!pModel)
+		{
+			// @TODO: error
+			return false;
+		}
+
+		VertexData& vertexData = pModel->vertexData;
+
+		pModel->meshes.Resize(mHeader.meshTable.meshCount);
+
+		const uInt64 vertexBufferSizeBytes	= mHeader.meshTable.vertexBufferSizeBytes;
+		const uInt64 indexBufferSizeBytes	= mHeader.meshTable.indexBufferSizeBytes;
+
+		vertexData.pVertexBuffer = mpBufferAllocator->Allocate(vertexBufferSizeBytes);
+		vertexData.pVertexBuffer->Allocate(vertexBufferSizeBytes);
+
+		vertexData.pIndexBuffer = mpBufferAllocator->Allocate(indexBufferSizeBytes);
+		vertexData.pIndexBuffer->Allocate(indexBufferSizeBytes);
+
+		uInt64 vertexBufferOffset	= 0;
+		uInt64 indexBufferOffset	= 0;
+
 		for (uSize i = 0; i < mHeader.meshTable.meshCount; i++)
 		{
-			Model* pModel = mpModelAllocator->Allocate(&mFile);
-			VertexData& vertexData = pModel->data;
+			Mesh& mesh = pModel->meshes[i];
+			QMFMesh qmfMesh;
 
-			QMFMesh mesh;
-
-			if (!mFile.ReadValues<QMFMesh>(&mesh, 1))
+			if (!mFile.ReadValues<QMFMesh>(&qmfMesh, 1))
 			{
+				mpBufferAllocator->Free(vertexData.pVertexBuffer);
+				mpBufferAllocator->Free(vertexData.pIndexBuffer);
 				mpModelAllocator->Free(pModel);
 				return false;
 			}
 
-			mFile.SetFilePtr(mesh.elementOffset, FILE_PTR_BEGIN);
+			if (qmfMesh.nameID < mStrings.Size())
+			{
+				mesh.name = mStrings[qmfMesh.nameID];
+			}
+			else
+			{
+				mpBufferAllocator->Free(vertexData.pVertexBuffer);
+				mpBufferAllocator->Free(vertexData.pIndexBuffer);
+				mpModelAllocator->Free(pModel);
+				return false;
+			}
 
-			Array<QMFMeshElement, 8> meshElements(mesh.elementCount);
+			if (qmfMesh.materialPathID < mStrings.Size())
+			{
+				mesh.materialPath = mStrings[qmfMesh.materialPathID];
+			}
+			else
+			{
+				mpBufferAllocator->Free(vertexData.pVertexBuffer);
+				mpBufferAllocator->Free(vertexData.pIndexBuffer);
+				mpModelAllocator->Free(pModel);
+				return false;
+			}
+
+			mesh.lod				= qmfMesh.lodIdx;
+			mesh.verticesStartBytes	= vertexBufferOffset;
+			mesh.verticesSizeBytes	= qmfMesh.verticesSizeBytes;
+			mesh.indicesStartBytes	= indexBufferOffset;
+			mesh.indicesSizeBytes	= qmfMesh.indicesSizeBytes;
+
+			mFile.SetFilePtr(qmfMesh.elementOffset, FILE_PTR_BEGIN);
+
+			Array<QMFMeshElement, 8> meshElements(qmfMesh.elementCount);
 
 			// @TODO: check mesh.elementCount < 8
 
-			if (!mFile.ReadValues<QMFMeshElement>(meshElements.Data(), mesh.elementCount))
+			if (!mFile.ReadValues<QMFMeshElement>(meshElements.Data(), qmfMesh.elementCount))
 			{
 				mpModelAllocator->Free(pModel);
 				return false;
@@ -282,31 +343,22 @@ namespace Quartz
 				vertexElement.attribute = attribute;
 				vertexElement.format	= format;
 
-				vertexData.elements.PushBack(vertexElement);
+				mesh.elements.PushBack(vertexElement);
 			}
 
-			vertexData.index.format = INDEX_FORMAT_INVALID;
-
-			switch (mesh.indexFormat)
+			mesh.indexElement.format = INDEX_FORMAT_INVALID;
+		
+			switch (qmfMesh.indexFormat)
 			{
-				case QMF_INDEX_FORMAT_UINT8:	vertexData.index.format = INDEX_FORMAT_UINT8;	break;
-				case QMF_INDEX_FORMAT_UINT16:	vertexData.index.format = INDEX_FORMAT_UINT16;	break;
-				case QMF_INDEX_FORMAT_UINT32:	vertexData.index.format = INDEX_FORMAT_UINT32;	break;
+				case QMF_INDEX_FORMAT_UINT8:	mesh.indexElement.format = INDEX_FORMAT_UINT8;	break;
+				case QMF_INDEX_FORMAT_UINT16:	mesh.indexElement.format = INDEX_FORMAT_UINT16;	break;
+				case QMF_INDEX_FORMAT_UINT32:	mesh.indexElement.format = INDEX_FORMAT_UINT32;	break;
 				default: break;
 			}
 
-			const uInt64 verticesSizeBytes	= mesh.verticesSizeBytes;
-			const uInt64 indicesSizeBytes	= mesh.indicesSizeBytes;
+			mFile.SetFilePtr(qmfMesh.verticesOffset, FILE_PTR_BEGIN);
 
-			vertexData.pVertexBuffer = mpBufferAllocator->Allocate(verticesSizeBytes);
-			vertexData.pIndexBuffer = mpBufferAllocator->Allocate(indicesSizeBytes);
-
-			vertexData.pVertexBuffer->Allocate(verticesSizeBytes);
-			vertexData.pIndexBuffer->Allocate(indicesSizeBytes);
-
-			mFile.SetFilePtr(mesh.verticesOffset, FILE_PTR_BEGIN);
-
-			if (!mFile.Read(vertexData.pVertexBuffer->Data(), verticesSizeBytes))
+			if (!mFile.Read(vertexData.pVertexBuffer->Data() + vertexBufferOffset, qmfMesh.verticesSizeBytes))
 			{
 				mpBufferAllocator->Free(vertexData.pVertexBuffer);
 				mpBufferAllocator->Free(vertexData.pIndexBuffer);
@@ -314,9 +366,9 @@ namespace Quartz
 				return false;
 			}
 
-			mFile.SetFilePtr(mesh.indicesOffset, FILE_PTR_BEGIN);
+			mFile.SetFilePtr(qmfMesh.indicesOffset, FILE_PTR_BEGIN);
 
-			if (!mFile.Read(vertexData.pIndexBuffer->Data(), indicesSizeBytes))
+			if (!mFile.Read(vertexData.pIndexBuffer->Data() + indexBufferOffset, qmfMesh.indicesSizeBytes))
 			{
 				mpBufferAllocator->Free(vertexData.pVertexBuffer);
 				mpBufferAllocator->Free(vertexData.pIndexBuffer);
@@ -324,8 +376,11 @@ namespace Quartz
 				return false;
 			}
 
-			mModels.PushBack(pModel);
+			vertexBufferOffset += qmfMesh.verticesSizeBytes;
+			indexBufferOffset += qmfMesh.indicesSizeBytes;
 		}
+
+		mpModel = pModel;
 
 		return true;
 	}
@@ -345,9 +400,9 @@ namespace Quartz
 		mpModelAllocator(pModelAllocator),
 		mpBufferAllocator(pBufferAllocator) { }
 
-	void QMFParser::AddMesh(const Model& model)
+	void QMFParser::SetModel(const Model& model)
 	{
-		mModels.PushBack(const_cast<Model*>(&model));
+		mpModel = const_cast<Model*>(&model);
 	}
 
 	bool QMFParser::Read()
@@ -387,9 +442,9 @@ namespace Quartz
 			return false;
 		}
 
-		for (const Model* pModel : mModels)
+		for (const Mesh& mesh : mpModel->meshes)
 		{
-			if (!WriteMesh(*pModel))
+			if (!WriteMesh(mesh, mpModel->vertexData))
 			{
 				mFile.Close();
 				return false;
