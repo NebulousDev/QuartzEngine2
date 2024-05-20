@@ -3,7 +3,7 @@
 #include "Log.h"
 
 #include "ObjHelper.h"
-#include "Resource/QMF/QMFParser.h"
+#include "Resource/Binary/QModelParser.h"
 
 namespace Quartz
 {
@@ -11,25 +11,25 @@ namespace Quartz
 		mBufferPool(2048),
 		mModelPool(1024) { }
 
-	bool ModelHandler::LoadQMFAsset(File& assetFile, Asset*& pOutAsset)
+	bool ModelHandler::LoadQModelAsset(File& assetFile, Asset*& pOutAsset)
 	{
 		if (!assetFile.IsValid())
 		{
-			LogError("Error loading qmf file [%s]. Invalid file.", assetFile.GetPath().Str());
+			LogError("Error loading QModel file [%s]. Invalid file.", assetFile.GetPath().Str());
 			return false;
 		}
 
-		QMFParser qmfParser(assetFile, &mModelPool, &mBufferPool);
+		QModelParser qModelParser(assetFile, &mModelPool, &mBufferPool);
 
-		if (!qmfParser.Read())
+		if (!qModelParser.Read())
 		{
-			LogError("Error loading obj file [%s]. qmfParser->Read() failed.", assetFile.GetPath().Str());
+			LogError("Error loading obj file [%s]. qModelParser->Read() failed.", assetFile.GetPath().Str());
 			return false;
 		}
 
 		/// TEMP
 
-		pOutAsset = static_cast<Asset*>(qmfParser.GetModel());
+		pOutAsset = static_cast<Asset*>(qModelParser.GetModel());
 
 		/// TEMP
 
@@ -127,9 +127,9 @@ namespace Quartz
 		{
 			return LoadOBJAsset(assetFile, pOutAsset);
 		}
-		else if (modelExt == "qmf"_STR || modelExt == "qmod"_STR)
+		else if (modelExt == "qmodel"_STR)
 		{
-			return LoadQMFAsset(assetFile, pOutAsset);
+			return LoadQModelAsset(assetFile, pOutAsset);
 		}
 
 		return false;

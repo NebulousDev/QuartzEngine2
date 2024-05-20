@@ -25,13 +25,13 @@
 
 #include "Input/Input.h"
 #include "Filesystem/File.h"
+#include "Filesystem/Folder.h"
 #include "Memory/Allocator.h"
 #include "Utility/StringReader.h"
 
 #include "Resource/Loaders/ModelHandler.h"
 #include "Resource/Loaders/ImageHandler.h"
-#include "Resource/QMF/QMF.h"
-#include "Resource/QMF/QMFParser.h"
+#include "Resource/Binary/QModelParser.h"
 
 #include "Runtime/Timer.h"
 #include "Utility/RefCounter.h"
@@ -232,12 +232,20 @@ namespace Quartz
 		RigidBody cameraRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		SphereCollider cameraCollider(0.5f, true);
 
+		void QuickConvertToQMF(const String& objFilePath, const String& qmfFilePath)
+		{
+			File* pQMFFile = Engine::GetFilesystem().CreateFile(qmfFilePath);
+			Model* pModel = Engine::GetAssetManager().GetOrLoadAsset<Model>(objFilePath);
+			QModelParser qmfWriter(*pQMFFile);
+			qmfWriter.SetModel(*pModel);
+			qmfWriter.Write();
+		}
+
 		void QUARTZ_ENGINE_API ModulePostInit()
 		{
 			ModelHandler* pModelHandler = new ModelHandler; // TODO
 			Engine::GetAssetManager().RegisterAssetHandler("obj", pModelHandler);
-			Engine::GetAssetManager().RegisterAssetHandler("qmf", pModelHandler);
-			Engine::GetAssetManager().RegisterAssetHandler("qmod", pModelHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("qmodel", pModelHandler);
 
 			ImageHandler* pImageHandler = new ImageHandler;
 			Engine::GetAssetManager().RegisterAssetHandler("png", pImageHandler);
@@ -249,18 +257,35 @@ namespace Quartz
 			//File* pQMFFile = Engine::GetFilesystem().CreateFile("Assets/Models/dva.qmod");
 			//Model* pModel = Engine::GetAssetManager().GetOrLoadAsset<Model>("Assets/Models/dva.obj");
 			//
-			//QMFParser qmfWriter(*pQMFFile);
+			//QModelParser qmfWriter(*pQMFFile);
 			//
 			//qmfWriter.SetModel(*pModel);
 			//qmfWriter.Write();
 			//
 			//PoolAllocator<Model> modelAllocs(200);
 			//PoolAllocator<ByteBuffer> bufferAllocs(200);
-			//QMFParser qmfReader(*pQMFFile, &modelAllocs, &bufferAllocs);
+			//QModelParser qmfReader(*pQMFFile, &modelAllocs, &bufferAllocs);
 			//
 			//qmfReader.Read();
 			//
 			//Model* pModelRead = qmfReader.GetModel();
+
+			//Folder* pFolder = Engine::GetFilesystem().GetFolder("Assets/Models");
+			//
+			//for (File* pFile : pFolder->GetFiles())
+			//{
+			//	if (pFile->GetExtention() == "obj"_STR)
+			//	{
+			//		String objPath = pFile->GetPath().Substring(2);
+			//		String qModPath = String(pFolder->GetPath().Substring(2)) + "/" +
+			//			pFile->GetName().Substring(0, pFile->GetName().Find(".obj")) + ".qmod";
+			//		QuickConvertToQMF(objPath, qModPath);
+			//	}
+			//}
+
+			//QuickConvertToQMF("Assets/Models/sibenik.obj", "Assets/Models/sibenik.qmod");
+			//QuickConvertToQMF("Assets/Models/sponza.obj", "Assets/Models/sponza.qmod");
+			//QuickConvertToQMF("Assets/Models/testScene.obj", "Assets/Models/testScene.qmod");
 
 			RigidBodyComponent cubePhysics(cubeRigidBody, cubeCollider);
 			RigidBodyComponent cubePhysics2(cubeRigidBody2, cubeCollider2);
@@ -301,10 +326,11 @@ namespace Quartz
 
 			Image* pImage = Engine::GetAssetManager().GetOrLoadAsset<Image>("Assets/Textures/default.png");
 
-			//transformCube.scale /= 100.0f;
+			//transformCube2.scale /= 100.0f;
 
-			gEntity0 = world.CreateEntity(transformCube, MeshComponent("Assets/Models/dva.qmod"), material1);
-			//gEntity1 = world.CreateEntity(transformCube2, MeshComponent("Assets/Models/cube.qmf"), material1, cubePhysics2);
+			gEntity0 = world.CreateEntity(transformCube, MeshComponent("Assets/Models/bunny.qmodel"), material1);
+			//gEntity1 = world.CreateEntity(transformCube, MeshComponent("Assets/Models/cube.qmodel"), material1, cubePhysics2);
+			Entity gEntity2 = world.CreateEntity(transformCube2, MeshComponent("Assets/Models/sibenik.qmodel"), material1);
 			Entity plane = world.CreateEntity(transformPlane, material1, planePhysics);
 
 			Entity planeL = world.CreateEntity(transformPlaneL, material1, planePhysics2);

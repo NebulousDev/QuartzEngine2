@@ -26,7 +26,7 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Filesystem/Filesystem.cpp"
     "Source/Resource/Loaders/ConfigHandler.cpp"
     "Source/Resource/Loaders/ModelHandler.cpp"
-    "Source/Resource/QMF/QMFParser.cpp")
+    "Source/Resource/Binary/QModelParser.cpp")
 
 if(WIN32)
 

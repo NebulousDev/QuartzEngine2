@@ -14,7 +14,7 @@ namespace Quartz
 		PoolAllocator<Model>		mModelPool;
 
 	private:
-		bool LoadQMFAsset(File& assetFile, Asset*& pOutAsset);
+		bool LoadQModelAsset(File& assetFile, Asset*& pOutAsset);
 		bool LoadOBJAsset(File& assetFile, Asset*& pOutAsset);
 
 	public:

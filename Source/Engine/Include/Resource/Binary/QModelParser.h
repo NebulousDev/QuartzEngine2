@@ -1,6 +1,6 @@
 #pragma once
 
-#include "QMF.h"
+#include "QModel.h"
 #include "EngineAPI.h"
 #include "Types/Array.h"
 #include "Memory/Allocator.h"
@@ -10,19 +10,19 @@
 
 namespace Quartz
 {
-	class QUARTZ_ENGINE_API QMFParser
+	class QUARTZ_ENGINE_API QModelParser
 	{
 	private:
 		File&						mFile;
-		QMF							mHeader;
+		QModel						mHeader;
 		Model*						mpModel;
 		Array<String>				mStrings;
 		PoolAllocator<Model>*		mpModelAllocator;
 		PoolAllocator<ByteBuffer>*	mpBufferAllocator;
 
 	private:
-		QMF			WriteBlankQMFHeader();
-		QMFStringID RegisterString(const String& string);
+		QModel		WriteBlankQModelHeader();
+		QStringID	RegisterString(const String& string);
 		bool		BeginWriting();
 		bool		EndWriting();
 		bool		WriteStrings();
@@ -34,7 +34,7 @@ namespace Quartz
 		bool		ReadMeshes();
 
 	public:
-		QMFParser(File& qmfFile,
+		QModelParser(File& qModelFile,
 			PoolAllocator<Model>* pModelAllocator = nullptr,
 			PoolAllocator<ByteBuffer>* pBufferAllocator = nullptr);
 
