@@ -127,13 +127,12 @@ namespace Quartz
 
 				const IndexElement indexElement	= mesh.indexElement;
 				const IndexFormat indexType		= indexElement.format;
-				const uInt32 indexBufferStart	= bufferLocation.indexEntry.offset;
 				const uInt32 indexSize			= indexElement.FormatSize();
 
 				renderable.vkIndexType = indexType == INDEX_FORMAT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
 
 				renderable.meshLocation = bufferLocation;
-				renderable.indexStart	= (indexBufferStart + mesh.indicesStartBytes) / indexSize;
+				renderable.indexStart	= mesh.indicesStartBytes / indexSize;
 				renderable.indexCount	= mesh.indicesSizeBytes / indexSize; 
 
 				VulkanRenderablePerModelUBO perModelUbo = {};
