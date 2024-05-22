@@ -27,7 +27,7 @@ namespace Quartz
 				continue;
 			}
 
-			Substring token = parser.ReadTo(" ");
+			Substring token = parser.ReadThrough(" ");
 
 			// Comment
 			if (token == "#")

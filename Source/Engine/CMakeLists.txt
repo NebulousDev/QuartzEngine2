@@ -26,7 +26,9 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Filesystem/Filesystem.cpp"
     "Source/Resource/Loaders/ConfigHandler.cpp"
     "Source/Resource/Loaders/ModelHandler.cpp"
-    "Source/Resource/Binary/QModelParser.cpp")
+    "Source/Resource/Loaders/ImageHandler.cpp"
+    "Source/Resource/Binary/QModelParser.cpp"
+    "Source/Resource/Binary/QShaderParser.cpp")
 
 if(WIN32)
 
@@ -51,7 +53,7 @@ elseif(UNIX)
 
 endif()
 
-add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES} "Source/Resource/Loaders/ImageHandler.cpp")
+add_executable(${PROJECT_NAME} ${QUARTZENGINE_SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC 

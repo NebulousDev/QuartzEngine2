@@ -94,7 +94,7 @@ namespace Quartz
 
 	struct VertexData
 	{
-		ByteBuffer*				pVertexBuffer;
-		ByteBuffer*				pIndexBuffer;
+		ByteBuffer*	pVertexBuffer;
+		ByteBuffer*	pIndexBuffer;
 	};
 }

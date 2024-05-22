@@ -47,8 +47,8 @@ namespace Quartz
 		const Substring GetName() const { return mPath.Substring(mNameIdx); }
 		const String& GetPath() const { return mPath; }
 		FolderFlags GetFlags() const { return mFlags; }
-		const Array<Folder*>& GetChildFolders() const { return mFolders; }
-		const Array<File*>& GetChildFiles() const { return mFiles; }
+		const Array<Folder*>& GetFolders() const { return mFolders; }
+		const Array<File*>& GetFiles() const { return mFiles; }
 		bool IsValid() const { return mFlags & FOLDER_VALID; }
 		bool IsVirtual() const { return mFlags & FOLDER_VIRTUAL; }
 		void* GetNativeHandle() const { return mpNative; }

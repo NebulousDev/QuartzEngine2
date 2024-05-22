@@ -60,6 +60,20 @@ namespace Quartz
 		return true;
 	}
 
+	bool QModelParser::EndWriting()
+	{
+		mFile.SetFilePtr(0, FILE_PTR_BEGIN);
+
+		if (!mFile.WriteValues<QModel>(&mHeader, 1))
+		{
+			return false;
+		}
+
+		mFile.Close();
+
+		return true;
+	}
+
 	bool QModelParser::WriteStrings()
 	{
 		mHeader.stringTable.strsOffset = mFile.GetFilePtr();
@@ -85,20 +99,6 @@ namespace Quartz
 		return true;
 	}
 
-	bool QModelParser::EndWriting()
-	{
-		mFile.SetFilePtr(0, FILE_PTR_BEGIN);
-
-		if (!mFile.WriteValues<QModel>(&mHeader, 1))
-		{
-			return false;
-		}
-
-		mFile.Close();
-
-		return true;
-	}
-
 	bool QModelParser::WriteMesh(const Mesh& mesh, const VertexData& vertexData)
 	{
 		QModelMeshTable& meshTable = mHeader.meshTable;
@@ -119,12 +119,12 @@ namespace Quartz
 		qModelMesh.lodIdx				= mesh.lod;
 		qModelMesh._reserved0			= 0;
 		qModelMesh.indexFormat			= (QModelIndexFormat)mesh.indexElement.FormatID();
-		qModelMesh.elementCount		= mesh.elements.Size();
+		qModelMesh.elementCount			= mesh.elements.Size();
 		qModelMesh.elementOffset		= fileOffset + sizeof(QModelMesh);
 		qModelMesh.verticesOffset		= qModelMesh.elementOffset + qModelMesh.elementCount * sizeof(QModelMeshElement);
 		qModelMesh.verticesSizeBytes	= mesh.verticesSizeBytes;
 		qModelMesh.indicesOffset		= qModelMesh.verticesOffset + qModelMesh.verticesSizeBytes;
-		qModelMesh.indicesSizeBytes	= mesh.indicesSizeBytes;
+		qModelMesh.indicesSizeBytes		= mesh.indicesSizeBytes;
 
 		if (!mFile.WriteValues<QModelMesh>(&qModelMesh, 1))
 		{
