@@ -1,8 +1,6 @@
-#include "Vulkan/SPIRV/Spirv.h"
+#include "Resource/SPIRV/Spirv.h"
 
 #include <spirv-headers/spirv.h>
-
-#include "Types/Array.h"
 
 #include <cstdio>
 
@@ -10,7 +8,7 @@ namespace Quartz
 {
 	// Loosly based off spirv parsing by Arseny Kapoulkine shown here:
 	// https://www.youtube.com/watch?v=3Py4GlWAicY
-	bool SpirvParseReflection(SpirvReflection* pReflection, const Array<uInt8>& spirvCode)
+	bool SpirvParseReflection(SpirvReflection* pReflection, const ByteBuffer& spirvCode)
 	{
 		const uInt32* pCode = reinterpret_cast<const uInt32*>(spirvCode.Data());
 		const uInt32 codeSizeInts = spirvCode.Size() / 4;

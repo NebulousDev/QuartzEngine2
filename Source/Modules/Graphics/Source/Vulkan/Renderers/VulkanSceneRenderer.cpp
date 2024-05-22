@@ -16,8 +16,8 @@ namespace Quartz
 		VulkanResourceManager*	pResources	= graphics.pResourceManager;
 		VulkanDevice*			pDevice		= graphics.pPrimaryDevice;
 
-		VulkanShader* pVertexShader = shaderCache.FindOrCreateShader("Shaders/default.vert", VK_SHADER_STAGE_VERTEX_BIT);
-		VulkanShader* pFragmentShader = shaderCache.FindOrCreateShader("Shaders/default.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
+		VulkanShader* pVertexShader = shaderCache.FindOrCreateShader("Shaders/default.qsvert");
+		VulkanShader* pFragmentShader = shaderCache.FindOrCreateShader("Shaders/default.qsfrag");
 
 		Array<VulkanAttachment, 2> attachments =
 		{
@@ -147,8 +147,8 @@ namespace Quartz
 				{
 					MaterialComponent& materialComponent = world.Get<MaterialComponent>(entity);
 
-					VulkanShader* pVertexShader		= shaderCache.FindOrCreateShader(materialComponent.vertexURI, VK_SHADER_STAGE_VERTEX_BIT);
-					VulkanShader* pFragmentShader	= shaderCache.FindOrCreateShader(materialComponent.fragmentURI, VK_SHADER_STAGE_FRAGMENT_BIT);
+					VulkanShader* pVertexShader		= shaderCache.FindOrCreateShader(materialComponent.vertexURI);
+					VulkanShader* pFragmentShader	= shaderCache.FindOrCreateShader(materialComponent.fragmentURI);
 
 					Array<VulkanAttachment, 2> attachments =
 					{

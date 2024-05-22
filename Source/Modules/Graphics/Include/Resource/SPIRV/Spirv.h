@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <spirv-headers/spirv.h>
 
-#include "Types/Array.h"
+#include "Types/Special/ByteBuffer.h"
 #include "Types/String.h"
 
 namespace Quartz
@@ -206,7 +206,7 @@ namespace Quartz
 		uInt32		size;
 	};
 
-	bool SpirvParseReflection(SpirvReflection* pReflection, const Array<uInt8>& spirvCode);
+	bool SpirvParseReflection(SpirvReflection* pReflection, const  ByteBuffer& spirvCode);
 
 	void SpirvExtractUniforms(Array<SpirvUniform>& uniforms, SpirvReflection& reflection);
 

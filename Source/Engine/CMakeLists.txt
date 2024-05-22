@@ -27,6 +27,7 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Resource/Loaders/ConfigHandler.cpp"
     "Source/Resource/Loaders/ModelHandler.cpp"
     "Source/Resource/Loaders/ImageHandler.cpp"
+    "Source/Resource/Loaders/ShaderHandler.cpp"
     "Source/Resource/Binary/QModelParser.cpp"
     "Source/Resource/Binary/QShaderParser.cpp")
 

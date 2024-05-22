@@ -6,7 +6,7 @@ include(GNUInstallDirs)
 
 add_compile_definitions(QUARTZ_GRAPHICS_EXPORT)
 
-file(GLOB imgui_sources 
+file(GLOB third_party_sources
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_glfw.cpp"
@@ -14,7 +14,7 @@ file(GLOB imgui_sources
 )
 
 add_library(${PROJECT_NAME} SHARED
-	${imgui_sources}
+	${third_party_sources}
 	"Source/GraphicsModule.cpp"
 	"Source/Vulkan/VulkanBufferCache.cpp"
     "Source/Vulkan/VulkanGraphics.cpp"
@@ -22,7 +22,7 @@ add_library(${PROJECT_NAME} SHARED
     "Source/Vulkan/VulkanRenderer.cpp"
 	"Source/Vulkan/VulkanSwapchianTimer.cpp"
 	"Source/Vulkan/VulkanResourceManager.cpp"
-	"Source/Vulkan/SPIRV/SPIRV.cpp"
+	"Source/Resource/SPIRV/SPIRV.cpp"
 	"Source/Vulkan/VulkanBufferWriter.cpp"
 	"Source/Vulkan/VulkanCommandRecorder.cpp"
 	"Source/Component/TransformComponent.cpp"
@@ -32,12 +32,11 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Vulkan/VulkanPipelineCache.cpp"
 	"Source/Vulkan/VulkanShaderCache.cpp"
 	"Source/Component/CameraComponent.cpp"
-	
 	"Source/Vulkan/Renderers/VulkanTerrainRenderer.cpp"
 	"Source/Vulkan/Renderers/VulkanSkyRenderer.cpp"
 	"Source/Vulkan/Renderers/VulkanSceneRenderer.cpp"
 	"Source/Vulkan/Renderers/VulkanImGuiRenderer.cpp"
- )
+	"Source/Resource/Loaders/NativeShaderHandler.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

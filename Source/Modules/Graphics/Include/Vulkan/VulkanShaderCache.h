@@ -17,6 +17,6 @@ namespace Quartz
 		VulkanShaderCache();
 		VulkanShaderCache(VulkanDevice* pDevice, VulkanResourceManager* pResources);
 
-		VulkanShader* FindOrCreateShader(const String& filepath, VkShaderStageFlagBits vkShaderStage);
+		VulkanShader* FindOrCreateShader(const String& filepath);
 	};
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../SPIRV/Spirv.h"
+#include "Resource/SPIRV/Spirv.h"
 
 namespace Quartz
 {

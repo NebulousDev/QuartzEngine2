@@ -333,7 +333,7 @@ namespace Quartz
 	{
 		uSize accumulatedOffset = 0;
 
-		for (uSize i = 0; i < inOutParams.Size() - 1; i++)
+		for (sSize i = 0; i < ((sSize)inOutParams.Size() - 1); i++)
 		{
 			ShaderParam& param = inOutParams[i];
 			ShaderParam& nextParam = inOutParams[i + 1];

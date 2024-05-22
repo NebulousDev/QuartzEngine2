@@ -17,7 +17,7 @@
 #include "Component/MeshComponent.h"
 #include "Component/MaterialComponent.h"
 #include "Component/CameraComponent.h"
-#include "Component/TerrainComponent.h"
+//#include "Component/TerrainComponent.h"
 
 #include "Physics.h"
 
@@ -31,7 +31,10 @@
 
 #include "Resource/Loaders/ModelHandler.h"
 #include "Resource/Loaders/ImageHandler.h"
+#include "Resource/Loaders/NativeShaderHandler.h"
+#include "Resource/Loaders/ShaderHandler.h"
 #include "Resource/Binary/QModelParser.h"
+#include "Resource/Binary/QShaderParser.h"
 
 #include "Runtime/Timer.h"
 #include "Utility/RefCounter.h"
@@ -202,20 +205,20 @@ namespace Quartz
 
 		MaterialComponent material1
 		{
-			"Shaders/default.vert",
-			"Shaders/default.frag"
+			"Shaders/default.qsvert",
+			"Shaders/default.qsfrag"
 		};
 
 		MaterialComponent material2
 		{
-			"Shaders/default2.vert",
-			"Shaders/default2.frag"
+			"Shaders/default2.qsvert",
+			"Shaders/default2.qsfrag"
 		};
 
 		MaterialComponent material3
 		{
-			"Shaders/default3.vert",
-			"Shaders/default3.frag"
+			"Shaders/default3.qsvert",
+			"Shaders/default3.qsfrag"
 		};
 
 		RigidBody cubeRigidBody(0.1f, 0.6f, 1.0f, { 0.0f, 0.0f, 0.0f });
@@ -232,13 +235,22 @@ namespace Quartz
 		RigidBody cameraRigidBody(0.0f, 1.0f, 1.0f, { 0.0f, 0.0f, 0.0f });
 		SphereCollider cameraCollider(0.5f, true);
 
-		void QuickConvertToQMF(const String& objFilePath, const String& qmfFilePath)
+		void QuickConvertToQModel(const String& objFilePath, const String& qModelFilePath)
 		{
-			File* pQMFFile = Engine::GetFilesystem().CreateFile(qmfFilePath);
+			File* pQMFFile = Engine::GetFilesystem().CreateFile(qModelFilePath);
 			Model* pModel = Engine::GetAssetManager().GetOrLoadAsset<Model>(objFilePath);
 			QModelParser qmfWriter(*pQMFFile);
 			qmfWriter.SetModel(*pModel);
 			qmfWriter.Write();
+		}
+
+		void QuckConvertToQShader(const String& glslFilePath, const String& qShaderFilePath)
+		{
+			File* pShaderFile = Engine::GetFilesystem().CreateFile(qShaderFilePath);
+			Shader* pShader = Engine::GetAssetManager().GetOrLoadAsset<Shader>(glslFilePath);
+			QShaderParser qShaderWriter(*pShaderFile);
+			qShaderWriter.SetShader(*pShader);
+			qShaderWriter.Write();
 		}
 
 		void QUARTZ_ENGINE_API ModulePostInit()
@@ -254,6 +266,45 @@ namespace Quartz
 			Engine::GetAssetManager().RegisterAssetHandler("gif", pImageHandler);
 			Engine::GetAssetManager().RegisterAssetHandler("hdr", pImageHandler);
 
+			NativeShaderHandler* pNativeShaderHandler = new NativeShaderHandler;
+			Engine::GetAssetManager().RegisterAssetHandler("vert", pNativeShaderHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("frag", pNativeShaderHandler);
+
+			ShaderHandler* pShaderHandler = new ShaderHandler;
+			Engine::GetAssetManager().RegisterAssetHandler("qsvert", pShaderHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("qsfrag", pShaderHandler);
+
+			//QuckConvertToQShader("Shaders/default.frag", "Shaders/default.qsfrag");
+			//QuckConvertToQShader("Shaders/default.vert", "Shaders/default.qsvert");
+			//QuckConvertToQShader("Shaders/default2.frag", "Shaders/default2.qsfrag");
+			//QuckConvertToQShader("Shaders/default2.vert", "Shaders/default2.qsvert");
+			//QuckConvertToQShader("Shaders/default3.frag", "Shaders/default3.qsfrag");
+			//QuckConvertToQShader("Shaders/default3.vert", "Shaders/default3.qsvert");
+			//QuckConvertToQShader("Shaders/fullscreen.vert", "Shaders/fullscreen.qsvert");
+			//QuckConvertToQShader("Shaders/skyScatterLUT.frag", "Shaders/skyScatterLUT.qsfrag");
+			//QuckConvertToQShader("Shaders/skyTransmittanceLUT.frag", "Shaders/skyTransmittanceLUT.qsfrag");
+			//QuckConvertToQShader("Shaders/skyViewLUT.frag", "Shaders/skyViewLUT.qsfrag");
+			//QuckConvertToQShader("Shaders/sky.frag", "Shaders/sky.qsfrag");
+			//QuckConvertToQShader("Shaders/terrain.vert", "Shaders/terrain.qsvert");
+			//QuckConvertToQShader("Shaders/terrain.frag", "Shaders/terrain.qsfrag");
+
+
+			//Shader* pqShader = Engine::GetAssetManager().GetOrLoadAsset<Shader>("Shaders/skyScatterLUT.qsfrag");
+
+			//File* pShaderFile = Engine::GetFilesystem().CreateFile("Shaders/skyScatterLUT.qsfrag");
+			//Shader* pShader = Engine::GetAssetManager().GetOrLoadAsset<Shader>("Shaders/skyScatterLUT.frag");
+
+			//QShaderParser qShaderWriter(*pShaderFile);
+			//qShaderWriter.SetShader(*pShader);
+			//qShaderWriter.Write();
+
+			//PoolAllocator<Shader> shaderAllocs(200);
+			//PoolAllocator<ByteBuffer> bufferAllocs(200);
+			//QShaderParser qShaderReader(*pShaderFile, &shaderAllocs, &bufferAllocs);
+			//qShaderReader.Read();
+			//Shader* pReadShader = qShaderReader.GetShader();
+
+			int i = 0;
 			//File* pQMFFile = Engine::GetFilesystem().CreateFile("Assets/Models/dva.qmod");
 			//Model* pModel = Engine::GetAssetManager().GetOrLoadAsset<Model>("Assets/Models/dva.obj");
 			//
@@ -324,7 +375,7 @@ namespace Quartz
 
 			gPhysics.Initialize();
 
-			Image* pImage = Engine::GetAssetManager().GetOrLoadAsset<Image>("Assets/Textures/default.png");
+			//Image* pImage = Engine::GetAssetManager().GetOrLoadAsset<Image>("Assets/Textures/default.png");
 
 			//transformCube2.scale /= 100.0f;
 
@@ -338,14 +389,14 @@ namespace Quartz
 			Entity planeF = world.CreateEntity(transformPlaneF, material1, planePhysics2);
 			Entity planeB = world.CreateEntity(transformPlaneB, material1, planePhysics2);
 
-			TerrainSettings terrainSettings;
-			terrainSettings.resolution		= 200;
-			terrainSettings.seed			= 1234;
-			terrainSettings.scale			= 550.0f;
-			terrainSettings.lacunarity		= 1.5f;
-			terrainSettings.octaveWeights	= { 1.0f, 0.3f, 0.15f, 0.10f, 0.10f, 0.05f };
-
-			Entity terrain = world.CreateEntity(TerrainComponent(terrainSettings));
+			//TerrainSettings terrainSettings;
+			//terrainSettings.resolution		= 200;
+			//terrainSettings.seed			= 1234;
+			//terrainSettings.scale			= 550.0f;
+			//terrainSettings.lacunarity		= 1.5f;
+			//terrainSettings.octaveWeights	= { 1.0f, 0.3f, 0.15f, 0.10f, 0.10f, 0.05f };
+			//
+			//Entity terrain = world.CreateEntity(TerrainComponent(terrainSettings));
 
 			CameraComponent camera(windowInfo.width, windowInfo.height, 70.0f, 0.001f, 1000.f);
 			TransformComponent cameraTransform({ 0.0f, 12.0f, 4.0f }, { { 0.0f, 1.0f, 0.0f }, ToRadians(0.0f)}, {1.0f, 1.0f, 1.0f});

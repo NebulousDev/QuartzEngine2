@@ -429,6 +429,11 @@ namespace Quartz
 
 	bool QShaderParser::Write()
 	{
+		if (!mpShader)
+		{
+			return false;
+		}
+
 		if (!BeginWriting())
 		{
 			mFile.Close();

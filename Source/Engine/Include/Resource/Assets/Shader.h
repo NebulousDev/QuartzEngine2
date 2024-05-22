@@ -115,5 +115,7 @@ namespace Quartz
 
 		Shader() = default;
 		Shader(File* pSourceFile) : Asset(pSourceFile) {};
+
+		inline String GetAssetTypeName() const override { return "Shader"; }
 	};
 }

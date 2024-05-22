@@ -531,8 +531,8 @@ namespace Quartz
 
 		/* Create Pipelines */
 
-		VulkanShader* pTerrainVertexShader = shaderCache.FindOrCreateShader("Shaders/terrain.vert", VK_SHADER_STAGE_VERTEX_BIT);
-		VulkanShader* pTerrainFragmentShader = shaderCache.FindOrCreateShader("Shaders/terrain.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
+		VulkanShader* pTerrainVertexShader = shaderCache.FindOrCreateShader("Shaders/terrain.qsvert");
+		VulkanShader* pTerrainFragmentShader = shaderCache.FindOrCreateShader("Shaders/terrain.qsfrag");
 
 		Array<VulkanAttachment, 2> attachments =
 		{

@@ -246,11 +246,11 @@ namespace Quartz
 
 		/* Create Shaders */
 
-		VulkanShader* pFullscreenVertexShader				= shaderCache.FindOrCreateShader("Shaders/fullscreen.vert", VK_SHADER_STAGE_VERTEX_BIT);
-		VulkanShader* pSkyTransmittanceLUTFragmentShader	= shaderCache.FindOrCreateShader("Shaders/skyTransmittanceLUT.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
-		VulkanShader* pSkyScatterLUTFragmentShader			= shaderCache.FindOrCreateShader("Shaders/skyScatterLUT.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
-		VulkanShader* pSkyViewLUTFragmentShader				= shaderCache.FindOrCreateShader("Shaders/skyViewLUT.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
-		VulkanShader* pSkyRenderFragmentShader				= shaderCache.FindOrCreateShader("Shaders/sky.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
+		VulkanShader* pFullscreenVertexShader				= shaderCache.FindOrCreateShader("Shaders/fullscreen.qsvert");
+		VulkanShader* pSkyTransmittanceLUTFragmentShader	= shaderCache.FindOrCreateShader("Shaders/skyTransmittanceLUT.qsfrag");
+		VulkanShader* pSkyScatterLUTFragmentShader			= shaderCache.FindOrCreateShader("Shaders/skyScatterLUT.qsfrag");
+		VulkanShader* pSkyViewLUTFragmentShader				= shaderCache.FindOrCreateShader("Shaders/skyViewLUT.qsfrag");
+		VulkanShader* pSkyRenderFragmentShader				= shaderCache.FindOrCreateShader("Shaders/sky.qsfrag");
 
 		/* Create Shader Pipelines */
 

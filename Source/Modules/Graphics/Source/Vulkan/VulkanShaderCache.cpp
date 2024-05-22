@@ -1,7 +1,8 @@
 #include "Vulkan/VulkanShaderCache.h"
 
 #include "Log.h"
-#include "shaderc/shaderc.hpp"
+#include "Engine.h"
+#include "Resource/Assets/Shader.h"
 #include <iostream>
 #include <fstream>
 
@@ -19,81 +20,7 @@ namespace Quartz
 		// Nothing
 	}
 
-	// @TODO: Temp location, should be moved to Engine Module
-	bool ReadFile(const String& filepath, Array<char>& outData)
-	{
-		std::ifstream file(filepath.Str());
-
-		if (!file.is_open())
-		{
-			LogError("ReadFile failed: Cannot open file '%s'", filepath.Str());
-			return false;
-		}
-
-		file.seekg(0, file.end);
-		uSize fileSize = file.tellg();
-		outData.Resize(fileSize + 1);
-
-		file.seekg(0, file.beg);
-		file.read(outData.Data(), fileSize);
-		outData[fileSize] = 0;
-
-		file.close();
-
-		return true;
-	}
-
-	bool CompileShader(const String& filepath, const char* source, Array<uInt8>& outSpirv, shaderc_shader_kind kind)
-	{
-		shaderc::Compiler compiler;
-		shaderc::CompileOptions options;
-
-		LogInfo("Compiling Shader '%s'...", filepath.Str());
-
-		options.SetOptimizationLevel(shaderc_optimization_level_performance);
-		//options.SetOptimizationLevel(shaderc_optimization_level_zero);
-		options.SetGenerateDebugInfo();
-
-		shaderc::SpvCompilationResult module =
-			compiler.CompileGlslToSpv(source, kind, "shaderc-shader", options);
-
-		if (module.GetCompilationStatus() != shaderc_compilation_status_success)
-		{
-			LogError("Failed compiling shader '%s':\n%s", filepath.Str(), module.GetErrorMessage().c_str());
-			return false;
-		}
-
-		std::vector<uInt32> binary = { module.cbegin(), module.cend() };
-		outSpirv.Resize(binary.size() * sizeof(unsigned int));
-		memcpy_s(outSpirv.Data(), outSpirv.Size(), binary.data(), binary.size() * sizeof(unsigned int));
-
-		return true;
-	}
-
-	shaderc_shader_kind GetShadercShaderKind(VkShaderStageFlagBits vkShaderStage)
-	{
-		switch (vkShaderStage)
-		{
-			case VK_SHADER_STAGE_VERTEX_BIT:					return shaderc_vertex_shader;
-			case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:		return shaderc_tess_control_shader;
-			case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:	return shaderc_tess_evaluation_shader;
-			case VK_SHADER_STAGE_GEOMETRY_BIT:					return shaderc_geometry_shader;
-			case VK_SHADER_STAGE_FRAGMENT_BIT:					return shaderc_fragment_shader;
-			case VK_SHADER_STAGE_COMPUTE_BIT:					return shaderc_compute_shader;
-			case VK_SHADER_STAGE_RAYGEN_BIT_KHR:				return shaderc_raygen_shader;
-			case VK_SHADER_STAGE_ANY_HIT_BIT_KHR:				return shaderc_anyhit_shader;
-			case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:			return shaderc_closesthit_shader;
-			case VK_SHADER_STAGE_MISS_BIT_KHR:					return shaderc_miss_shader;
-			case VK_SHADER_STAGE_INTERSECTION_BIT_KHR:			return shaderc_intersection_shader;
-			case VK_SHADER_STAGE_CALLABLE_BIT_KHR:				return shaderc_callable_shader;
-			case VK_SHADER_STAGE_TASK_BIT_EXT:					return shaderc_task_shader;
-			case VK_SHADER_STAGE_MESH_BIT_EXT:					return shaderc_mesh_shader;
-		}
-
-		return shaderc_glsl_infer_from_source;
-	}
-
-	VulkanShader* VulkanShaderCache::FindOrCreateShader(const String& filepath, VkShaderStageFlagBits vkShaderStage)
+	VulkanShader* VulkanShaderCache::FindOrCreateShader(const String& filepath)
 	{
 		auto& it = mShaderMap.Find(filepath);
 
@@ -102,25 +29,32 @@ namespace Quartz
 			return it->value;
 		}
 
-		Array<char> shaderData;
+		Shader* pShader = Engine::GetAssetManager().GetOrLoadAsset<Shader>(filepath);
 
-		if (!ReadFile(filepath, shaderData))
+		if (!pShader)
 		{
-			LogError("FindOrCreateShader failed: Could not read file '%s'", filepath.Str());
 			return nullptr;
 		}
 
-		Array<uInt8> spirvData;
-		if (!CompileShader(filepath, (const char*)shaderData.Data(), spirvData, GetShadercShaderKind(vkShaderStage)))
+		ShaderCode* pSpirvCode = nullptr;
+
+		for (ShaderCode& code : pShader->shaderCodes)
 		{
-			LogError("FindOrCreateShader failed: Shader compilation failed for '%s'", filepath.Str());
+			if (code.lang == SHADER_LANG_GLSL_SPIRV)
+			{
+				pSpirvCode = &code;
+			}
+		}
+
+		if (!pSpirvCode)
+		{
 			return nullptr;
 		}
 
-		VulkanShader* pShader = mpResourceManager->CreateShader(mpDevice, filepath, spirvData);
+		VulkanShader* pVulkanShader = mpResourceManager->CreateShader(mpDevice, filepath, *pSpirvCode->pSourceBuffer);
 
-		mShaderMap.Put(filepath, pShader);
+		mShaderMap.Put(filepath, pVulkanShader);
 
-		return pShader;
+		return pVulkanShader;
 	}
 }

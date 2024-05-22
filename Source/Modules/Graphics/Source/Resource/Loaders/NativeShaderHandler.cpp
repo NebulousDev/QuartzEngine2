@@ -2,6 +2,7 @@
 
 #include "GLSLHelper.h"
 #include "Memory/Memory.h"
+#include "Resource/SPIRV/Spirv.h"
 
 namespace Quartz
 {
@@ -50,10 +51,27 @@ namespace Quartz
 
 		MemCopy(code.pSourceBuffer->Data(), spirvData.Data(), spirvData.Size());
 
-		code.entry = "main";
+		SpirvReflection reflection;
+
+		if (SpirvParseReflection(&reflection, *code.pSourceBuffer))
+		{
+			code.entry = reflection.entryName;
+		}
+		else
+		{
+			LogWarning("Failed to parse SPIR-V reflection data. EntryName defaulting to \"main\"");
+			code.entry = "main";
+		}
+
 		code.lang = SHADER_LANG_GLSL_SPIRV;
 
-		Shader* pShader = mShaderPool.Allocate();
+		Shader* pShader = mShaderPool.Allocate(&assetFile);
+
+		if (!pShader)
+		{
+			return false;
+		}
+
 		pShader->name	= assetFile.GetPath();
 		pShader->params = params;
 		pShader->stage	= stageGuess;
@@ -71,71 +89,71 @@ namespace Quartz
 	}
 
 	NativeShaderHandler::NativeShaderHandler() :
-		mBufferPool(2048),
-		mShaderPool(1024) { }
+		mBufferPool(2048 * sizeof(ByteBuffer)),
+		mShaderPool(1024 * sizeof(Shader)) { }
 
 	bool NativeShaderHandler::LoadAsset(File& assetFile, Asset*& pOutAsset)
 	{
-		String modelExt = assetFile.GetExtention();
+		String fileExt = assetFile.GetExtention();
 
-		if (modelExt == "vert"_STR)
+		if (fileExt == "vert"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_VERTEX);
 		}
-		else if (modelExt == "tesc"_STR)
+		else if (fileExt == "tesc"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_TESSELLATION_CONTROL);
 		}
-		else if (modelExt == "tese"_STR)
+		else if (fileExt == "tese"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_TESSELLATION_EVALUATION);
 		}
-		else if (modelExt == "geom"_STR)
+		else if (fileExt == "geom"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_GEOMETRY);
 		}
-		else if (modelExt == "frag"_STR)
+		else if (fileExt == "frag"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_FRAGMENT);
 		}
-		else if (modelExt == "comp"_STR)
+		else if (fileExt == "comp"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_COMPUTE);
 		}
-		else if (modelExt == "task"_STR)
+		else if (fileExt == "task"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_TASK);
 		}
-		else if (modelExt == "mesh"_STR)
+		else if (fileExt == "mesh"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_MESH);
 		}
-		else if (modelExt == "rgen"_STR)
+		else if (fileExt == "rgen"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_RAY_GENERATION);
 		}
-		else if (modelExt == "intr"_STR)
+		else if (fileExt == "intr"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_INTERSECTION);
 		}
-		else if (modelExt == "anyh"_STR)
+		else if (fileExt == "anyh"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_ANY_HIT);
 		}
-		else if (modelExt == "close"_STR)
+		else if (fileExt == "close"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_CLOSEST_HIT);
 		}
-		else if (modelExt == "miss"_STR)
+		else if (fileExt == "miss"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_MISS);
 		}
-		else if (modelExt == "call"_STR)
+		else if (fileExt == "call"_STR)
 		{
 			return LoadGLSLShaderAsset(assetFile, pOutAsset, SHADER_STAGE_CALLABLE);
 		}
 
-		else if (modelExt == "hlsl"_STR)
+		else if (fileExt == "hlsl"_STR)
 		{
 			return LoadHLSLShaderAsset(assetFile, pOutAsset);
 		}
@@ -145,6 +163,15 @@ namespace Quartz
 
 	bool NativeShaderHandler::UnloadAsset(Asset* pInAsset)
 	{
-		return false;
+		Shader* pShader = static_cast<Shader*>(pInAsset);
+
+		for (ShaderCode& code : pShader->shaderCodes)
+		{
+			mBufferPool.Free(code.pSourceBuffer);
+		}
+
+		mShaderPool.Free(pShader);
+
+		return true;
 	}
 }
