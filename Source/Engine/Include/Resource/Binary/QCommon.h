@@ -13,6 +13,8 @@ namespace Quartz
 
 	using QStringID = uInt32;
 
+#pragma pack(push,1)
+
 	struct QStringTable							// 256 bits
 	{
 		uInt32			stringCount;			// 32 bits
@@ -22,4 +24,7 @@ namespace Quartz
 		uInt64			strsSizeBytes;			// 64 bits
 		uInt64			nextExtOffset;			// 64 bits
 	};
+
+#pragma pack(pop)
+
 }

@@ -494,13 +494,13 @@ namespace Quartz
 				if (valueObject.type == SPIRV_TYPE_SAMPLED_IMAGE)
 				{
 					SpirvUniform uniform;
-					uniform.name = object.name;
-					uniform.set = object.decoration.set;
-					uniform.binding = object.decoration.binding;
-					uniform.sizeBytes = SpirvObjectSize(valueObject, reflection);
-					uniform.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-					uniform.shaderStage = reflection.shaderStage;
-					uniform.isBlock = false;
+					uniform.name			= object.name;
+					uniform.set				= object.decoration.set;
+					uniform.binding			= object.decoration.binding;
+					uniform.sizeBytes		= SpirvObjectSize(valueObject, reflection);
+					uniform.descriptorType	= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					uniform.shaderStage		= reflection.shaderStage;
+					uniform.isBlock			= false;
 
 					uniforms.PushBack(uniform);
 				}
