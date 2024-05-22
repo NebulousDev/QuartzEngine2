@@ -5,6 +5,7 @@
 #include "Engine.h"
 #include "Log.h"
 #include "Types/Map.h"
+#include "Runtime/Timer.h"
 
 namespace Quartz
 {
@@ -29,6 +30,9 @@ namespace Quartz
 		template<typename AssetType>
 		AssetType* GetOrLoadAsset(File& assetFile)
 		{
+			Timer loadTimer;
+			loadTimer.Start();
+
 			auto& assetIt = mAssets.Find(assetFile.GetPath());
 			if (assetIt != mAssets.End())
 			{
@@ -62,6 +66,11 @@ namespace Quartz
 			mNextAssetID++;
 
 			mAssets.Put(assetFile.GetPath(), pAsset);
+
+			double loadTime = loadTimer.Mark() / 1000000.0;
+
+			LogInfo("[Asset Manager] Loaded %s \"%s\" in %.3lf ms.",
+				pAsset->GetAssetTypeName().Str(), assetFile.GetPath().Str(), loadTime);
 
 			return static_cast<AssetType*>(pAsset);
 		}

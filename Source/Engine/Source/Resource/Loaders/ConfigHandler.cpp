@@ -5,7 +5,7 @@
 namespace Quartz
 {
 	ConfigHandler::ConfigHandler() :
-		mConfigPool(128) { } 
+		mConfigPool(128 * sizeof(Config)) { }
 
 	bool ConfigHandler::LoadAsset(File& assetFile, Asset*& pOutAsset)
 	{

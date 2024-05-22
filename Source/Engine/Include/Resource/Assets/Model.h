@@ -26,5 +26,7 @@ namespace Quartz
 
 		inline Model() = default;
 		inline Model(File* pSourceFile) : Asset(pSourceFile) {};
+
+		inline String GetAssetTypeName() const override { return "Model"; }
 	}; 
 }

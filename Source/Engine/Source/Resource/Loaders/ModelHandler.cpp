@@ -8,8 +8,8 @@
 namespace Quartz
 {
 	ModelHandler::ModelHandler() :
-		mBufferPool(2048),
-		mModelPool(1024) { }
+		mBufferPool(2048 * sizeof(ByteBuffer)),
+		mModelPool(1024 * sizeof(Model)) { }
 
 	bool ModelHandler::LoadQModelAsset(File& assetFile, Asset*& pOutAsset)
 	{
@@ -23,15 +23,11 @@ namespace Quartz
 
 		if (!qModelParser.Read())
 		{
-			LogError("Error loading obj file [%s]. qModelParser->Read() failed.", assetFile.GetPath().Str());
+			LogError("Error loading QModel file [%s]. qModelParser->Read() failed.", assetFile.GetPath().Str());
 			return false;
 		}
 
-		/// TEMP
-
 		pOutAsset = static_cast<Asset*>(qModelParser.GetModel());
-
-		/// TEMP
 
 		return true;
 	}
@@ -121,15 +117,20 @@ namespace Quartz
 
 	bool ModelHandler::LoadAsset(File& assetFile, Asset*& pOutAsset)
 	{
-		String modelExt = assetFile.GetExtention();
+		String fileExt = assetFile.GetExtention();
 
-		if (modelExt == "obj"_STR)
+		if (fileExt == "obj"_WRAP)
 		{
 			return LoadOBJAsset(assetFile, pOutAsset);
 		}
-		else if (modelExt == "qmodel"_STR)
+		else if (fileExt == "qmodel"_WRAP)
 		{
 			return LoadQModelAsset(assetFile, pOutAsset);
+		}
+		else
+		{
+			LogError("Failed to load model file [%s]: unknown extension '%s'.", assetFile.GetPath().Str(), fileExt.Str());
+			return false;
 		}
 
 		return false;

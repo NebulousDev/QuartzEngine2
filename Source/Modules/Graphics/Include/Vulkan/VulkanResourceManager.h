@@ -2,6 +2,7 @@
 
 #include "../GfxAPI.h"
 #include "Types/Array.h"
+#include "Types/Special/ByteBuffer.h"
 
 #include "Primatives/VulkanSurface.h"
 #include "Primatives/VulkanSwapchain.h"
@@ -62,7 +63,7 @@ namespace Quartz
 		VulkanSwapchain*			CreateSwapchain(VulkanDevice* pDevice, const VulkanSurface& surface, uInt32 bufferCount);
 		VulkanImage*				CreateImage(VulkanDevice* pDevice, const VulkanImageInfo& info);
 		VulkanImageView*			CreateImageView(VulkanDevice* pDevice, const VulkanImageViewInfo& info);
-		VulkanShader*				CreateShader(VulkanDevice* pDevice, const String& name, const Array<uInt8>& binary);
+		VulkanShader*				CreateShader(VulkanDevice* pDevice, const String& name, const ByteBuffer& binary);
 		VulkanRenderpass*			CreateRenderpass(VulkanDevice* pDevice, const VulkanRenderpassInfo& info);
 		VulkanGraphicsPipeline*		CreateGraphicsPipeline(VulkanDevice* pDevice, const VulkanGraphicsPipelineInfo& info, uInt32 subpass);
 		VulkanBuffer*				CreateBuffer(VulkanDevice* pDevice, const VulkanBufferInfo& info);

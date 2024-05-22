@@ -31,5 +31,7 @@ namespace Quartz
 		{
 			return (uSize)((format & 0xFFFF0000) >> 16);
 		}
+
+		inline String GetAssetTypeName() const override { return "Image"; }
 	};
 }

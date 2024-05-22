@@ -26,5 +26,7 @@ namespace Quartz
 		inline bool			IsLoaded() const { return mLoaded; }
 		inline Substring	GetName() const { return mpSourceFile->GetName(); }
 		inline String		GetPath() const { return mpSourceFile->GetPath(); }
+
+		virtual String		GetAssetTypeName() const = 0;
 	};
 }

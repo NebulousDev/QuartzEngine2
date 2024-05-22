@@ -13,8 +13,8 @@
 namespace Quartz
 {
 	ImageHandler::ImageHandler() :
-		mBufferPool(2048),
-		mImagePool(1024)
+		mBufferPool(2048 * sizeof(ByteBuffer)),
+		mImagePool(1024 * sizeof(Image))
 	{
 		stbi_set_flip_vertically_on_load(true);
 	}

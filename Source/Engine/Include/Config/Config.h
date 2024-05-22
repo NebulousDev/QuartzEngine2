@@ -34,5 +34,7 @@ namespace Quartz
 
 		void SetConfigFile(File* pConfigFile);
 		void PrintConfigs();
+
+		inline String GetAssetTypeName() const override { return "Config"; }
 	};
 }

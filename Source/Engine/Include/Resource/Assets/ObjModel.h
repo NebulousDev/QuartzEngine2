@@ -49,7 +49,7 @@ namespace Quartz
 		Array<OBJIndex>	indices;
 	};
 
-	struct ObjModel : public Asset
+	struct ObjModel
 	{
 		Array<Vec3f>		positions;
 		Array<Vec3f>		normals;

@@ -435,6 +435,11 @@ namespace Quartz
 
 	bool QModelParser::Write()
 	{
+		if (!mpModel)
+		{
+			return false;
+		}
+
 		if (!BeginWriting())
 		{
 			mFile.Close();

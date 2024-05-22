@@ -9,6 +9,14 @@
 
 #include <vulkan/vulkan.h>
 
+#define DEBUG_TRACE_LOG_VULKAN_RESOURCE_CREATION 0
+
+#if DEBUG_TRACE_LOG_VULKAN_RESOURCE_CREATION 
+#define LogTraceVkRSM LogTrace
+#else
+#define LogTraceVkRSM(x)
+#endif
+
 namespace Quartz
 {
 	VulkanSurface* VulkanResourceManager::Register(const VulkanSurface& surface)
@@ -142,7 +150,7 @@ namespace Quartz
 
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkPhysicalDevice, vkSurface, &surfaceCapibilites);
 
-		LogTrace("Created VulkanSurface [ID=%06.6d].", mSurfaces.Size() + 1);
+		LogTraceVkRSM("Created VulkanSurface [ID=%06.6d].", mSurfaces.Size() + 1);
 
 		VulkanSurface vulkanSurface		= {};
 		vulkanSurface.vkSurface			= vkSurface;
@@ -279,7 +287,7 @@ namespace Quartz
 			return nullptr;
 		}
 
-		LogTrace("Created VulkanImage [ID=%06.6d].", mImages.Size() + 1);
+		LogTraceVkRSM("Created VulkanImage [ID=%06.6d].", mImages.Size() + 1);
 
 		VulkanImage vulkanImage		= {};
 		vulkanImage.pDevice			= pDevice;
@@ -347,7 +355,7 @@ namespace Quartz
 			return nullptr;
 		}
 
-		LogTrace("Created VulkanImageView [ID=%06.6d].", mImageViews.Size() + 1);
+		LogTraceVkRSM("Created VulkanImageView [ID=%06.6d].", mImageViews.Size() + 1);
 
 		VulkanImageView vulkanImageView		= {};
 		vulkanImageView.pDevice				= pDevice;
@@ -538,7 +546,7 @@ namespace Quartz
 			imageViews[i]	= pImageView;
 		}
 
-		LogTrace("Created VulkanSwapchain [ID=%06.6d].", mSwapchains.Size() + 1);
+		LogTraceVkRSM("Created VulkanSwapchain [ID=%06.6d].", mSwapchains.Size() + 1);
 
 		VulkanSwapchain vulkanSwapchain = {};
 		vulkanSwapchain.vkSwapchain					= vkSwapchain;
@@ -553,7 +561,7 @@ namespace Quartz
 		return Register(vulkanSwapchain);
 	}
 
-	VulkanShader* VulkanResourceManager::CreateShader(VulkanDevice* pDevice, const String& name, const Array<uInt8>& binary)
+	VulkanShader* VulkanResourceManager::CreateShader(VulkanDevice* pDevice, const String& name, const ByteBuffer& binary)
 	{
 		VkShaderModule			vkShader;
 		SpirvReflection			reflection;
@@ -578,105 +586,105 @@ namespace Quartz
 			vkDestroyShaderModule(pDevice->vkDevice, vkShader, VK_NULL_HANDLE);
 			return nullptr;
 		}
-
+		
 		SpirvExtractUniforms(uniforms, reflection);
 		SpirvExtractAttributes(attributes, reflection);
-
+		
 		switch (reflection.executionModel)
 		{
 			case SpvExecutionModelVertex:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_VERTEX_BIT;
-
+		
 				break;
 			}
 			case SpvExecutionModelTessellationControl:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-
+		
 				break;
 			}
 			case SpvExecutionModelTessellationEvaluation:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-
+		
 				break;
 			}
 			case SpvExecutionModelGeometry:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_GEOMETRY_BIT;
-
+		
 				break;
 			}
 			case SpvExecutionModelFragment:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_FRAGMENT_BIT;
-
+		
 				break;
 			}
 			case SpvExecutionModelGLCompute:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_COMPUTE_BIT;
-
+		
 				break;
 			}
 			case SpvExecutionModelKernel:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_COMPUTE_BIT; // Correct?
-
+		
 				break;
 			}
 			case SpvExecutionModelTaskNV:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_TASK_BIT_NV;
-
+		
 				break;
 			}
 			case SpvExecutionModelMeshNV:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_MESH_BIT_NV;
-
+		
 				break;
 			}
 			case SpvExecutionModelRayGenerationKHR:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-
+		
 				break;
 			}
 			case SpvExecutionModelIntersectionKHR:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
-
+		
 				break;
 			}
 			case SpvExecutionModelAnyHitKHR:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
-
+		
 				break;
 			}
 			case SpvExecutionModelClosestHitKHR:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-
+		
 				break;
 			}
 			case SpvExecutionModelMissKHR:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_MISS_BIT_KHR;
-
+		
 				break;
 			}
 			case SpvExecutionModelCallableKHR:
 			{
 				vkStageFlags	= VK_SHADER_STAGE_CALLABLE_BIT_KHR;
-
+		
 				break;
 			}
 		}
 
-		LogTrace("Created VulkanShader [ID=%06.6d].", mShaders.Size() + 1);
+		LogTraceVkRSM("Created VulkanShader [ID=%06.6d].", mShaders.Size() + 1);
 
 		VulkanShader vulkanShader = {};
 		vulkanShader.name		= name;
@@ -869,7 +877,7 @@ namespace Quartz
 			return nullptr;
 		}
 
-		LogTrace("Created VulkanRenderpass [ID=%06.6d].", mRenderpasss.Size() + 1);
+		LogTraceVkRSM("Created VulkanRenderpass [ID=%06.6d].", mRenderpasss.Size() + 1);
 
 		VulkanRenderpass vulkanRenderpass = {};
 		vulkanRenderpass.vkRenderpass	= vkRenderPass;
@@ -990,7 +998,7 @@ namespace Quartz
 				descriptorSetLayout.setBindings.PushBack(vulkanBinding);
 			}
 
-			LogTrace("Created VulkanDescriptorSetLayout [ID=%06.6d].", mDescriptorSetLayouts.Size() + 1);
+			LogTraceVkRSM("Created VulkanDescriptorSetLayout [ID=%06.6d].", mDescriptorSetLayouts.Size() + 1);
 
 			VulkanDescriptorSetLayout* pSetLayout = Register(descriptorSetLayout);
 			descriptorSetLayouts.PushBack(pSetLayout);
@@ -1215,7 +1223,7 @@ namespace Quartz
 			return nullptr;
 		}
 
-		LogTrace("Created VulkanGraphicsPipeline [ID=%06.6d].", mGraphicsPipelines.Size() + 1);
+		LogTraceVkRSM("Created VulkanGraphicsPipeline [ID=%06.6d].", mGraphicsPipelines.Size() + 1);
 
 		VulkanGraphicsPipeline vulkanGraphicsPipeline = {};
 		vulkanGraphicsPipeline.pDevice				= pDevice;
@@ -1279,7 +1287,7 @@ namespace Quartz
 			return nullptr;
 		}
 
-		LogTrace("Created VulkanBuffer [ID=%06.6d, Size=%d bytes].", mBuffers.Size() + 1, info.sizeBytes);
+		LogTraceVkRSM("Created VulkanBuffer [ID=%06.6d, Size=%d bytes].", mBuffers.Size() + 1, info.sizeBytes);
 
 		VulkanBuffer vulkanBuffer = {};
 		vulkanBuffer.vkBuffer			= vkBuffer;
@@ -1307,7 +1315,7 @@ namespace Quartz
 			return nullptr;
 		}
 
-		LogTrace("Created VulkanCommandPool [ID=%06.6d].", mCommandPools.Size() + 1);
+		LogTraceVkRSM("Created VulkanCommandPool [ID=%06.6d].", mCommandPools.Size() + 1);
 
 		VulkanCommandPool vulkanCommandPool = {};
 		vulkanCommandPool.vkCommandPool				= vkCommandPool;
@@ -1342,7 +1350,7 @@ namespace Quartz
 			vulkanCommandBuffer.pDevice = pCommandPool->pDevice;
 			vulkanCommandBuffer.pCommandPool = pCommandPool;
 
-			LogTrace("Created VulkanCommandBuffer [ID=%06.6d].", mCommandBuffers.Size() + 1);
+			LogTraceVkRSM("Created VulkanCommandBuffer [ID=%06.6d].", mCommandBuffers.Size() + 1);
 
 			ppOutCommandBuffers[i] = Register(vulkanCommandBuffer);
 		}
@@ -1386,7 +1394,7 @@ namespace Quartz
 		vulkanFramebuffer.height = info.height;
 		vulkanFramebuffer.layers = info.layers;
 
-		LogTrace("Created VulkanFramebuffer [ID=%06.6d].", mFramebuffers.Size() + 1);
+		LogTraceVkRSM("Created VulkanFramebuffer [ID=%06.6d].", mFramebuffers.Size() + 1);
 
 		return Register(vulkanFramebuffer);
 	}
@@ -1409,7 +1417,7 @@ namespace Quartz
 			return nullptr;
 		}
 
-		LogTrace("Created VulkanDescriptorPool [ID=%06.6d].", mDescriptorPools.Size() + 1);
+		LogTraceVkRSM("Created VulkanDescriptorPool [ID=%06.6d].", mDescriptorPools.Size() + 1);
 
 		VulkanDescriptorPool descriptorPool = {};
 		descriptorPool.vkDescriptorPool = vkDescriptorPool;
@@ -1447,7 +1455,7 @@ namespace Quartz
 
 		for (uSize i = 0; i < info.setLayouts.Size(); i++)
 		{
-			LogTrace("Created VulkanDescriptorSet [ID=%06.6d].", mDescriptorSets.Size() + 1);
+			LogTraceVkRSM("Created VulkanDescriptorSet [ID=%06.6d].", mDescriptorSets.Size() + 1);
 
 			VulkanDescriptorSet descriptorSet = {};
 			descriptorSet.pDescriptorPool	= info.pDescriptorPool;
@@ -1490,7 +1498,7 @@ namespace Quartz
 			return nullptr;
 		}
 
-		LogTrace("Created VulkanDescriptorSetLayout [ID=%06.6d].", mDescriptorSetLayouts.Size() + 1);
+		LogTraceVkRSM("Created VulkanDescriptorSetLayout [ID=%06.6d].", mDescriptorSetLayouts.Size() + 1);
 
 		VulkanDescriptorSetLayout descriptorSetLayout = {};
 		descriptorSetLayout.vkDescriptorSetLayout	= vkDescriptorSetLayout;
@@ -1514,11 +1522,11 @@ namespace Quartz
 			// @TODO: properly remove, requires better storage
 			//mBuffers.Remove(pBuffer);
 
-			LogTrace("Destroyed VulkanBuffer [ID=%06.6d].", index);
+			LogTraceVkRSM("Destroyed VulkanBuffer [ID=%06.6d].", index);
 		}
 		else
 		{
-			LogTrace("Failed to destroy VulkanBuffer [ID=???]: Buffer not found.");
+			LogTraceVkRSM("Failed to destroy VulkanBuffer [ID=???]: Buffer not found.");
 		}
 	}
 
@@ -1535,11 +1543,11 @@ namespace Quartz
 			// @TODO: properly remove, requires better storage
 			//mImages.Remove(index);
 
-			LogTrace("Destroyed VulkanImage [ID=%06.6d].", index);
+			LogTraceVkRSM("Destroyed VulkanImage [ID=%06.6d].", index);
 		}
 		else
 		{
-			LogTrace("Failed to destroy VulkanImage [ID=???]: Image not found.");
+			LogTraceVkRSM("Failed to destroy VulkanImage [ID=???]: Image not found.");
 		}
 	}
 
@@ -1556,11 +1564,11 @@ namespace Quartz
 			// @TODO: properly remove, requires better storage
 			//mImageViews.Remove(index);
 
-			LogTrace("Destroyed VulkanImageView [ID=%06.6d].", index);
+			LogTraceVkRSM("Destroyed VulkanImageView [ID=%06.6d].", index);
 		}
 		else
 		{
-			LogTrace("Failed to destroy VulkanImageView [ID=???]: ImageView not found.");
+			LogTraceVkRSM("Failed to destroy VulkanImageView [ID=???]: ImageView not found.");
 		}
 	}
 }
