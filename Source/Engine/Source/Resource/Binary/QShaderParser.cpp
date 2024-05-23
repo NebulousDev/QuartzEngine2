@@ -92,7 +92,7 @@ namespace Quartz
 
 		for (const String& string : mStrings)
 		{
-			uInt16 strLength = string.Length() + 1;
+			uInt16 strLength = string.Length();
 
 			if (!mFile.WriteValues<uInt16>(&strLength, 1))
 			{
@@ -105,7 +105,7 @@ namespace Quartz
 			}
 
 			mHeader.stringTable.stringCount++;
-			mHeader.stringTable.strsSizeBytes += 2 + strLength;
+			mHeader.stringTable.strsSizeBytes += 2 + strLength + 1;
 		}
 
 		return true;
@@ -256,7 +256,7 @@ namespace Quartz
 
 			String string(strLength);
 
-			if (!mFile.Read((uInt8*)string.Data(), strLength))
+			if (!mFile.Read((uInt8*)string.Data(), strLength + 1))
 			{
 				return false;
 			}

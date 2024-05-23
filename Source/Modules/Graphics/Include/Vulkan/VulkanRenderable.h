@@ -14,18 +14,19 @@ namespace Quartz
 		VulkanMultiBuffer*		pIndexBuffer;
 	};
 
-	struct PerModelBufferLocation
+	struct UniformBufferLocation
 	{
-		VulkanMultiBufferEntry	perModelEntry;
-		VulkanMultiBuffer*		pPerModelBuffer;
+		VulkanMultiBufferEntry	entry;
+		VulkanMultiBuffer*		pBuffer;
 	};
 
 	struct VulkanRenderable
 	{
-		MeshBufferLocation		meshLocation;
-		PerModelBufferLocation	perModelLocation;
+		MeshBufferLocation		meshBuffer;
+		UniformBufferLocation	transformBuffer;
+		UniformBufferLocation	materialBuffer;
 		VulkanGraphicsPipeline* pPipeline;
-		float					distance;
+		float					distFromCamera;
 		uInt32					indexStart;
 		uInt32					indexCount;
 		VkIndexType				vkIndexType;

@@ -13,29 +13,27 @@ namespace Quartz
 #define MATERIAL_SAMPLER_SIZE			4
 #define MATERIAL_TEXTURE_SAMPLER_SIZE	4
 
-	enum MaterialParam : uInt32
+	enum MaterialValueType : uInt32
 	{
-		MATERIAL_PARAM_INVALID			= 0,
-		MATERIAL_PARAM_FLOAT			= (1 << 16) | MATERIAL_FLOAT_SIZE * 1,
-		MATERIAL_PARAM_FLOAT2			= (2 << 16) | MATERIAL_FLOAT_SIZE * 2,
-		MATERIAL_PARAM_FLOAT3			= (3 << 16) | MATERIAL_FLOAT_SIZE * 3,
-		MATERIAL_PARAM_FLOAT4			= (4 << 16) | MATERIAL_FLOAT_SIZE * 4,
-		MATERIAL_PARAM_INT				= (5 << 16) | MATERIAL_INT_SIZE * 1,
-		MATERIAL_PARAM_INT2				= (6 << 16) | MATERIAL_INT_SIZE * 2,
-		MATERIAL_PARAM_INT3				= (7 << 16) | MATERIAL_INT_SIZE * 3,
-		MATERIAL_PARAM_INT4				= (8 << 16) | MATERIAL_INT_SIZE * 4,
-		MATERIAL_PARAM_UINT				= (9 << 16) | MATERIAL_UINT_SIZE * 1,
-		MATERIAL_PARAM_UINT2			= (10 << 16) | MATERIAL_UINT_SIZE * 2,
-		MATERIAL_PARAM_UINT3			= (11 << 16) | MATERIAL_UINT_SIZE * 3,
-		MATERIAL_PARAM_UINT4			= (12 << 16) | MATERIAL_UINT_SIZE * 4,
-		MATERIAL_PARAM_TEXTURE			= (13 << 16) | MATERIAL_TEXTURE_SIZE,
-		MATERIAL_PARAM_SAMPLER			= (14 << 16) | MATERIAL_SAMPLER_SIZE,
-		MATERIAL_PARAM_TEXTURE_SAMPLER	= (15 << 16) | MATERIAL_TEXTURE_SAMPLER_SIZE
+		MATERIAL_VALUE_INVALID			= 0,
+		MATERIAL_VALUE_FLOAT			= (1 << 16) | MATERIAL_FLOAT_SIZE * 1,
+		MATERIAL_VALUE_VEC2				= (2 << 16) | MATERIAL_FLOAT_SIZE * 2,
+		MATERIAL_VALUE_VEC3				= (3 << 16) | MATERIAL_FLOAT_SIZE * 3,
+		MATERIAL_VALUE_VEC4				= (4 << 16) | MATERIAL_FLOAT_SIZE * 4,
+		MATERIAL_VALUE_INT				= (5 << 16) | MATERIAL_INT_SIZE * 1,
+		MATERIAL_VALUE_IVEC2			= (6 << 16) | MATERIAL_INT_SIZE * 2,
+		MATERIAL_VALUE_IVEC3			= (7 << 16) | MATERIAL_INT_SIZE * 3,
+		MATERIAL_VALUE_IVEC4			= (8 << 16) | MATERIAL_INT_SIZE * 4,
+		MATERIAL_VALUE_UINT				= (9 << 16) | MATERIAL_UINT_SIZE * 1,
+		MATERIAL_VALUE_UVEC2			= (10 << 16) | MATERIAL_UINT_SIZE * 2,
+		MATERIAL_VALUE_UVEC3			= (11 << 16) | MATERIAL_UINT_SIZE * 3,
+		MATERIAL_VALUE_UVEC4			= (12 << 16) | MATERIAL_UINT_SIZE * 4,
+		MATERIAL_VALUE_TEXTURE			= (13 << 16) | MATERIAL_TEXTURE_SIZE,
 	};
 
 	struct MaterialValue
 	{
-		MaterialParam parameter;
+		MaterialValueType type;
 
 		union
 		{
@@ -51,20 +49,42 @@ namespace Quartz
 			Vec2u32 vec2uVal;
 			Vec3u32 vec3uVal;
 			Vec4u32 vec4uVal;
+			String	stringVal;
 		};
 
 		inline MaterialValue() : vec4fVal() {};
-	};
+		inline MaterialValue(const MaterialValue& value) : 
+			type(value.type), vec4uVal(value.vec4uVal) {}
 
-	struct MaterialShader
-	{
-		String						name;
-		Array<String, 8>			shaders;
+		inline MaterialValue& operator=(const MaterialValue& value)
+		{
+			type = value.type;
+			vec4uVal = value.vec4uVal;
+			return *this;
+		}
+
+		inline friend bool operator==(const MaterialValue& val0, const MaterialValue& val1)
+		{
+			return val0.type == val1.type;
+		}
+
+		inline ~MaterialValue()
+		{
+			if (type == MATERIAL_VALUE_TEXTURE)
+			{
+				stringVal.~StringBase();
+			}
+		}
 	};
 
 	struct Material : public Asset
 	{
-		MaterialShader				shader;
-		Map<String, MaterialValue>	params;
+		Array<String, 8>			shaderPaths;
+		Map<String, MaterialValue>	shaderValues;
+
+		inline Material() = default;
+		inline Material(File* pSourceFile) : Asset(pSourceFile) {};
+
+		inline String GetAssetTypeName() const override { return "Material"; }
 	};
 }

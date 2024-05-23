@@ -165,7 +165,7 @@ namespace Quartz
 
 			while (!bracketOpenReader.IsEmpty())
 			{
-				bracketOpenReader.ReadTo("{");
+				bracketOpenReader.ReadTo("{"_WRAP);
 
 				if (!bracketOpenReader.IsEmpty())
 				{
@@ -177,7 +177,7 @@ namespace Quartz
 
 			while (!bracketCloseReader.IsEmpty())
 			{
-				bracketCloseReader.ReadTo("}");
+				bracketCloseReader.ReadTo("}"_WRAP);
 
 				if (!bracketCloseReader.IsEmpty())
 				{
@@ -188,16 +188,16 @@ namespace Quartz
 
 			// Look for names:
 
-			const uSize simicolonIdx = line.Find(";");
+			const uSize simicolonIdx = line.Find(";"_WRAP);
 			uSize nameStartIdx = 0;
 
 			if (simicolonIdx != line.Length())
 			{
 				Substring nameStr = line.Substring(0, simicolonIdx);
 
-				const uSize nameStartSpaceIdx	= line.FindReverse(" ");
-				const uSize nameStartBracketIdx = line.FindReverse("}");
-				const uSize nameStartTabIdx		= line.FindReverse("\t");
+				const uSize nameStartSpaceIdx	= line.FindReverse(" "_WRAP);
+				const uSize nameStartBracketIdx = line.FindReverse("}"_WRAP);
+				const uSize nameStartTabIdx		= line.FindReverse("\t"_WRAP);
 
 				nameStartIdx = nameStartSpaceIdx > nameStartBracketIdx ? nameStartSpaceIdx : nameStartBracketIdx;
 				nameStartIdx = nameStartIdx > nameStartTabIdx ? nameStartIdx : nameStartTabIdx;
@@ -205,6 +205,11 @@ namespace Quartz
 				if (nameStartIdx != 0)
 				{
 					nameStr = nameStr.Substring(nameStartIdx + 1);
+				}
+
+				if (nameStr.StartsWith("}"_WRAP))
+				{
+					nameStr = nameStr.Substring(1).TrimWhitespace();
 				}
 
 				if (scopeCount == 0 && isBlock)
@@ -230,8 +235,8 @@ namespace Quartz
 					sSize arrayCount = 0;
 
 					// @NOTE: assumes brackets are on the same line, fails otherwise
-					const uSize arrayCountOpenIdx = nameStr.FindReverse("[");
-					const uSize arrayCountCloseIdx = nameStr.FindReverse("]");
+					const uSize arrayCountOpenIdx = nameStr.FindReverse("["_WRAP);
+					const uSize arrayCountCloseIdx = nameStr.FindReverse("]"_WRAP);
 
 					if (arrayCountOpenIdx != arrayCountCloseIdx)
 					{
@@ -252,8 +257,8 @@ namespace Quartz
 					
 					Substring typeStr = line.Substring(0, nameStartIdx).TrimWhitespaceReverse();
 
-					const uSize typeStartSpaceIdx	= typeStr.FindReverse(" ");
-					const uSize typeStartTabIdx		= typeStr.FindReverse("\t");
+					const uSize typeStartSpaceIdx	= typeStr.FindReverse(" "_WRAP);
+					const uSize typeStartTabIdx		= typeStr.FindReverse("\t"_WRAP);
 					const uSize typeStartIdx		= typeStartSpaceIdx > typeStartTabIdx ? typeStartSpaceIdx : typeStartTabIdx;
 
 					typeStr = typeStr.Substring(typeStartIdx).TrimWhitespace();
@@ -400,7 +405,7 @@ namespace Quartz
 
 				structMap.Put(structTypeName, structParams);
 			}
-			else if (line.StartsWith("layout"))
+			else if (line.StartsWith("layout"_WRAP))
 			{
 				const Substring layoutStr = line.Substring(6);
 
@@ -415,10 +420,10 @@ namespace Quartz
 				int64 set		= -1;
 				int64 binding	= -1;
 
-				LineReadLayoutValue(layoutStr, "set", set);
-				LineReadLayoutValue(layoutStr, "binding", binding);
+				LineReadLayoutValue(layoutStr, "set"_WRAP, set);
+				LineReadLayoutValue(layoutStr, "binding"_WRAP, binding);
 
-				if (line.Find("std140") == line.Length())
+				if (line.Find("std140"_WRAP) == line.Length())
 				{
 					LogWarning("GLSL uniform block does not contain 'std140' layout qualifier. Uniform offsets may not be correct!");
 				}

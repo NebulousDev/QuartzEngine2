@@ -52,6 +52,7 @@ namespace Quartz
 		}
 
 		VulkanShader* pVulkanShader = mpResourceManager->CreateShader(mpDevice, filepath, *pSpirvCode->pSourceBuffer);
+		pVulkanShader->pShaderAsset = pShader; // @TODO: Find a better method
 
 		mShaderMap.Put(filepath, pVulkanShader);
 

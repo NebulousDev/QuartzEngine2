@@ -546,10 +546,10 @@ namespace Quartz
 		}
 
 		// Sort attribs by location
-		for (uSize i = 0; i < attributes.Size() - 1; i++)
+		for (sSize i = 0; i < (sSize)attributes.Size() - 1; i++)
 		{
 			uSize minIdx = i;
-			for (uSize j = i + 1; j < attributes.Size(); j++)
+			for (sSize j = i + 1; j < (sSize)attributes.Size(); j++)
 			{
 				if (attributes[j].location < attributes[minIdx].location)
 				{

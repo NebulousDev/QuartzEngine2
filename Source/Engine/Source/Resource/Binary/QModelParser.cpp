@@ -115,7 +115,7 @@ namespace Quartz
 
 		QModelMesh qModelMesh;
 		qModelMesh.nameID				= RegisterString(mesh.name);
-		qModelMesh.materialPathID		= RegisterString(mesh.materialPath);
+		qModelMesh.materialIdx			= 0; //RegisterString(mesh.materialPath);
 		qModelMesh.lodIdx				= mesh.lod;
 		qModelMesh._reserved0			= 0;
 		qModelMesh.indexFormat			= (QModelIndexFormat)mesh.indexElement.FormatID();
@@ -279,17 +279,17 @@ namespace Quartz
 				return false;
 			}
 
-			if (qModelMesh.materialPathID < mStrings.Size())
-			{
-				mesh.materialPath = mStrings[qModelMesh.materialPathID];
-			}
-			else
-			{
-				mpBufferAllocator->Free(vertexData.pVertexBuffer);
-				mpBufferAllocator->Free(vertexData.pIndexBuffer);
-				mpModelAllocator->Free(pModel);
-				return false;
-			}
+			//if (qModelMesh.materialPathID < mStrings.Size())
+			//{
+			//	mesh.materialPath = mStrings[qModelMesh.materialPathID];
+			//}
+			//else
+			//{
+			//	mpBufferAllocator->Free(vertexData.pVertexBuffer);
+			//	mpBufferAllocator->Free(vertexData.pIndexBuffer);
+			//	mpModelAllocator->Free(pModel);
+			//	return false;
+			//}
 
 			mesh.lod				= qModelMesh.lodIdx;
 			mesh.verticesStartBytes	= vertexBufferOffset;

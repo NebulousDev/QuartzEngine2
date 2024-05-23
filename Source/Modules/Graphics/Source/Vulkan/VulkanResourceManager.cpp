@@ -14,7 +14,7 @@
 #if DEBUG_TRACE_LOG_VULKAN_RESOURCE_CREATION 
 #define LogTraceVkRSM LogTrace
 #else
-#define LogTraceVkRSM(x)
+#define LogTraceVkRSM(...)
 #endif
 
 namespace Quartz
@@ -893,11 +893,12 @@ namespace Quartz
 	{
 		VkPipeline vkPipeline = VK_NULL_HANDLE;
 
-		Array<VkPipelineShaderStageCreateInfo>				shaderStageInfos;
-		Array<Map<String, VkDescriptorSetLayoutBinding>>	descriptorSetBindings(16); // @Todo: querry max supported sets
-		Array<uInt32>										descriptorSetSizes(16);
-		Array<VulkanDescriptorSetLayout*>					descriptorSetLayouts;
-		Array<VkDescriptorSetLayout>						vkDescriptorSetLayouts;
+		Array<VkPipelineShaderStageCreateInfo>					shaderStageInfos;
+		Array<Map<String, VkDescriptorSetLayoutBinding>, 16>	descriptorSetBindings(16); // @Todo: querry max supported sets
+		Array<uInt32, 16>										descriptorSetSizes(16, 0);
+		Array<VulkanDescriptorSetLayout*>						descriptorSetLayouts;
+		Array<VkDescriptorSetLayout>							vkDescriptorSetLayouts;
+		Array<Array<uInt32, 16>, 16>							setBindingSizes(16, Array<uInt32, 16>(16, 0));
 		
 		uSize maxSetIndex = 0;
 
@@ -938,6 +939,7 @@ namespace Quartz
 					// @TODO: check set bounds < 16
 					descriptorSetBindings[uniform.set].Put(uniform.name, vkBinding);
 					descriptorSetSizes[uniform.set] += uniform.sizeBytes;
+					setBindingSizes[uniform.set][uniform.binding] += uniform.sizeBytes;
 				}
 
 				if (uniform.set > maxSetIndex)
@@ -993,7 +995,7 @@ namespace Quartz
 			{
 				VulkanDesctiptorSetLayoutBinding vulkanBinding = {};
 				vulkanBinding.vkBinding = binding.value;
-				vulkanBinding.sizeBytes = 0; // @TODO: Fix zero bytes
+				vulkanBinding.sizeBytes = setBindingSizes[setIndex][binding.value.binding]; // @TODO: improve
 
 				descriptorSetLayout.setBindings.PushBack(vulkanBinding);
 			}

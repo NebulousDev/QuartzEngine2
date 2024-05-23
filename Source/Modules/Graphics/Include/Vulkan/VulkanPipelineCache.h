@@ -20,11 +20,11 @@ namespace Quartz
 		VulkanPipelineCache(VulkanDevice* pDevice, VulkanResourceManager* pResources);
 
 		VulkanGraphicsPipelineInfo MakeGraphicsPipelineInfo(
-			const Array<VulkanShader*>& shaders,
+			const Array<VulkanShader*, 8>& shaders,
 			const Array<VulkanAttachment>& attachments);
 
 		VulkanGraphicsPipelineInfo MakeGraphicsPipelineInfo(
-			const Array<VulkanShader*>& shaders,
+			const Array<VulkanShader*, 8>& shaders,
 			const Array<VulkanAttachment>& attachments,
 			const Array<VkVertexInputAttributeDescription>& vertexAttributes,
 			const Array<VkVertexInputBindingDescription>& vertexBindings);

@@ -203,7 +203,7 @@ namespace Quartz
 			bool					is16Bit;
 
 			mesh.name			= object.material;
-			mesh.materialPath	= "/Materials/Path";
+			mesh.materialIdx	= 0; //"/Materials/Path";
 			mesh.lod			= 0;
 
 			mesh.elements =

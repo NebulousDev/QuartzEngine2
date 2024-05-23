@@ -10,7 +10,7 @@ namespace Quartz
 	{
 		String					name;
 		uInt32					lod;
-		String					materialPath;
+		uInt32					materialIdx;
 		Array<VertexElement, 8>	elements;
 		IndexElement			indexElement;
 		uInt64					verticesStartBytes;

@@ -54,11 +54,14 @@ namespace Quartz
 			mPerInstanceBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perInstanceBufferInfo)));
 
 			VulkanBufferInfo perModelBufferInfo = {};
-			perModelBufferInfo.sizeBytes			= mSettings.perModelBufferSizeMb * (1024 * 1024);
+			perModelBufferInfo.sizeBytes			= mSettings.uniformBufferSizeMb * (1024 * 1024);
 			perModelBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 			perModelBufferInfo.vkMemoryProperties	= memoryFlags;
 
-			mPerModelBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perModelBufferInfo)));
+			for (uSize i = 0; i < mSettings.maxUniformSets; i++)
+			{
+				mUniformBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perModelBufferInfo)));
+			}
 		}
 
 		if (!mSettings.useUniqueMeshStagingBuffers)
@@ -102,13 +105,15 @@ namespace Quartz
 			if (mSettings.useUniformStaging && !mSettings.usePerModelPushConstants)
 			{
 				VulkanBufferInfo stagingPerModelBufferInfo = {};
-				stagingPerModelBufferInfo.sizeBytes				= mSettings.perModelBufferSizeMb * (1024 * 1024);
+				stagingPerModelBufferInfo.sizeBytes				= mSettings.uniformBufferSizeMb * (1024 * 1024);
 				stagingPerModelBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingPerModelBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-				mPerModelStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingPerModelBufferInfo)));
-
-				mPerModelStagingBuffers[0].Map();
+				for (uSize i = 0; i < mSettings.maxUniformSets; i++)
+				{
+					mUniformStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingPerModelBufferInfo)));
+					mUniformStagingBuffers[i].Map();
+				}
 			}
 		}
 	}
@@ -138,9 +143,9 @@ namespace Quartz
 		memset((uInt8*)pOutIndexData + indicesSizeBytes, 0, indexPadBytes);
 	}
 
-	void CopyPerModelData(void* pPerModelData, void* pOutPerModelBuffer, uSize sizeBytes)
+	void CopyPerModelData(void* pUniformData, void* pOutPerModelBuffer, uSize sizeBytes)
 	{
-		memcpy_s(pOutPerModelBuffer, sizeBytes, pPerModelData, sizeBytes);
+		memcpy_s(pOutPerModelBuffer, sizeBytes, pUniformData, sizeBytes);
 	}
 
 	bool VulkanBufferCache::GetOrAllocateMeshBuffers(const Model& model, 
@@ -343,27 +348,26 @@ namespace Quartz
 		return true;
 	}
 
-	PerModelBufferLocation VulkanBufferCache::AllocatePerModelBuffer(void* pPerModelData, uSize perModelSizeBytes)
+	bool VulkanBufferCache::AllocateUniformBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, uSize uniformSizeBytes)
 	{
 		VkBufferUsageFlags		usageFlags = 0;
 		VkMemoryPropertyFlags	memoryFlags = 0;
 
-		PerModelBufferLocation	bufferLocation = {};
-		VulkanMultiBufferEntry	perModelEntry;
+		UniformBufferLocation	bufferLocation = {};
+		VulkanMultiBufferEntry	entry;
 
-		VulkanMultiBuffer*		pPerModelBuffer;
+		VulkanMultiBuffer*		pBuffer;
 
 		if (!mSettings.useUniqueMeshStagingBuffers)
 		{
-			// Temporary, may be more buffers
-			constexpr const uSize perModelIndex = 0;
+			const uSize uniformIndex = set;
 
-			pPerModelBuffer = &mPerModelBuffers[perModelIndex];
+			pBuffer = &mUniformBuffers[uniformIndex];
 
-			pPerModelBuffer->Allocate<uInt8>(perModelSizeBytes, perModelEntry, nullptr);
+			pBuffer->Allocate<uInt8>(uniformSizeBytes, entry, nullptr);
 
-			bufferLocation.perModelEntry	= perModelEntry;
-			bufferLocation.pPerModelBuffer	= pPerModelBuffer;
+			bufferLocation.entry	= entry;
+			bufferLocation.pBuffer	= pBuffer;
 		}
 		else
 		{
@@ -379,74 +383,77 @@ namespace Quartz
 			}
 
 			VulkanBufferInfo perModelBufferInfo = {};
-			perModelBufferInfo.sizeBytes			= perModelSizeBytes;
+			perModelBufferInfo.sizeBytes			= uniformSizeBytes;
 			perModelBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 			perModelBufferInfo.vkMemoryProperties	= memoryFlags;
 
-			pPerModelBuffer = &mPerModelBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perModelBufferInfo)));
+			pBuffer = &mUniformBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perModelBufferInfo)));
 
 			if (mSettings.useUniformStaging)
 			{
-				pPerModelBuffer->Allocate<uInt8>(perModelSizeBytes, perModelEntry, nullptr);
+				pBuffer->Allocate<uInt8>(uniformSizeBytes, entry, nullptr);
 			}
 			else
 			{
 				uInt8* pPerModelBufferData;
 
-				pPerModelBuffer->Map();
-				pPerModelBuffer->Allocate<uInt8>(perModelSizeBytes, perModelEntry, &pPerModelBufferData);
+				pBuffer->Map();
+				pBuffer->Allocate<uInt8>(uniformSizeBytes, entry, &pPerModelBufferData);
 
-				memcpy_s(pPerModelBufferData, perModelSizeBytes, pPerModelData, perModelSizeBytes);
+				memcpy_s(pPerModelBufferData, uniformSizeBytes, pUniformData, uniformSizeBytes);
 			}
 
-			bufferLocation.perModelEntry	= perModelEntry;
-			bufferLocation.pPerModelBuffer	= pPerModelBuffer;
+			bufferLocation.entry	= entry;
+			bufferLocation.pBuffer	= pBuffer;
 		}
 
-		return bufferLocation;
+		outUniformBuffer = bufferLocation;
+
+		return true;
 	}
 
-	PerModelBufferLocation VulkanBufferCache::AllocatePerModelStagingBuffer(void* pPerModelData, uSize perModelSizeBytes)
+	bool VulkanBufferCache::AllocateUniformStagingBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, uSize uniformSizeBytes)
 	{
-		PerModelBufferLocation	bufferLocation = {};
-		VulkanMultiBufferEntry	perModelStagingEntry;
-		uInt8*					pPerModelStagingData;
+		UniformBufferLocation	bufferLocation = {};
+		VulkanMultiBufferEntry	uniformStagingEntry;
+		uInt8*					pUniformStagingData;
 
 		if (!mSettings.useUniqueUniformStagingBuffers)
 		{
-			// Temporary, may be more buffers
-			constexpr const uSize perModelStagingIndex = 0;
+			const uSize uniformStagingIndex = set;
 
-			VulkanMultiBuffer* pPerModelStagingBuffer = &mPerModelStagingBuffers[perModelStagingIndex];
+			VulkanMultiBuffer* pUniformStagingBuffer = &mUniformStagingBuffers[uniformStagingIndex];
 
-			pPerModelStagingBuffer->Map();
-			pPerModelStagingBuffer->Allocate<uInt8>(perModelSizeBytes, perModelStagingEntry, &pPerModelStagingData);
+			pUniformStagingBuffer->Map();
+			pUniformStagingBuffer->Allocate<uInt8>(uniformSizeBytes, uniformStagingEntry, &pUniformStagingData);
 
-			memcpy_s(pPerModelStagingData, perModelSizeBytes, pPerModelData, perModelSizeBytes);
+			memcpy_s(pUniformStagingData, uniformSizeBytes, pUniformData, uniformSizeBytes);
 
-			bufferLocation.perModelEntry	= perModelStagingEntry;
-			bufferLocation.pPerModelBuffer	= pPerModelStagingBuffer;
+			bufferLocation.entry	= uniformStagingEntry;
+			bufferLocation.pBuffer	= pUniformStagingBuffer;
 		}
 		else
 		{
-			VulkanBufferInfo perModelStagingBufferInfo = {};
-			perModelStagingBufferInfo.sizeBytes				= perModelSizeBytes;
-			perModelStagingBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-			perModelStagingBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+			VulkanBufferInfo uniformStagingBufferInfo = {};
+			uniformStagingBufferInfo.sizeBytes				= uniformSizeBytes;
+			uniformStagingBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			uniformStagingBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 			VulkanMultiBuffer* pPerModelStagingBuffer = 
-				&mPerModelStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perModelStagingBufferInfo)));
+				&mUniformStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, uniformStagingBufferInfo)));
 
 			pPerModelStagingBuffer->Map();
-			pPerModelStagingBuffer->Allocate<uInt8>(perModelSizeBytes, perModelStagingEntry, &pPerModelStagingData);
+			pPerModelStagingBuffer->Allocate<uInt8>(uniformSizeBytes, uniformStagingEntry, &pUniformStagingData);
 
-			memcpy_s(pPerModelStagingData, perModelSizeBytes, pPerModelData, perModelSizeBytes);
+			memcpy_s(pUniformStagingData, uniformSizeBytes, pUniformData, uniformSizeBytes);
 
-			bufferLocation.perModelEntry	= perModelStagingEntry;
-			bufferLocation.pPerModelBuffer	= pPerModelStagingBuffer;
+			bufferLocation.entry	= uniformStagingEntry;
+			bufferLocation.pBuffer	= pPerModelStagingBuffer;
 		}
 
-		return bufferLocation;
+		outUniformBuffer = bufferLocation;
+
+		return true;
 	}
 
 	void VulkanBufferCache::ResetPerModelBuffers()
@@ -455,32 +462,32 @@ namespace Quartz
 		{
 			if (mSettings.useUniqueUniformBuffers)
 			{
-				for (VulkanMultiBuffer& buffer : mPerModelBuffers)
+				for (VulkanMultiBuffer& buffer : mUniformBuffers)
 				{
 					buffer.Unmap();
 					mpResourceManager->DestroyBuffer(buffer.GetVulkanBuffer());
 				}
 
-				mPerModelBuffers.Clear();
+				mUniformBuffers.Clear();
 
 				if (mSettings.useUniformStaging)
 				{
-					for (VulkanMultiBuffer& buffer : mPerModelStagingBuffers)
+					for (VulkanMultiBuffer& buffer : mUniformStagingBuffers)
 					{
 						buffer.Unmap();
 						mpResourceManager->DestroyBuffer(buffer.GetVulkanBuffer());
 					}
 
-					mPerModelStagingBuffers.Clear();
+					mUniformStagingBuffers.Clear();
 				}
 			}
 			else
 			{
-				mPerModelBuffers[0].FreeAll();
+				mUniformBuffers[0].FreeAll();
 
 				if (mSettings.useUniformStaging)
 				{
-					mPerModelStagingBuffers[0].FreeAll();
+					mUniformStagingBuffers[0].FreeAll();
 				}
 			}
 		}
@@ -542,26 +549,36 @@ namespace Quartz
 		return true;
 	}
 
-	bool VulkanBufferCache::FillRenderablePerModelData(VulkanRenderable& renderable, uInt64 renderableId, void* pPerModelData, uSize perModelSizeBytes)
+	bool VulkanBufferCache::AllocateAndWriteUniformData(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, uSize uniformSizeBytes)
 	{
-		PerModelBufferLocation perModelBufferLocation = AllocatePerModelBuffer(pPerModelData, perModelSizeBytes);
+		UniformBufferLocation uniformBufferLocation;
+
+		if (!AllocateUniformBuffer(uniformBufferLocation, set, pUniformData, uniformSizeBytes))
+		{
+			return false;
+		}
 
 		// @TODO: This is using a copy command for each object when one is sufficient for ubos
 
 		if (mSettings.useUniformStaging && !mSettings.usePerModelPushConstants)
 		{
-			PerModelBufferLocation perModelBufferStagingLocation = AllocatePerModelStagingBuffer(pPerModelData, perModelSizeBytes);
+			UniformBufferLocation uniformBufferStagingLocation;
+
+			if (!AllocateUniformStagingBuffer(uniformBufferStagingLocation, set, pUniformData, uniformSizeBytes))
+			{
+				return false;
+			}
 
 			TransferCommand perModelTransfer = {};
-			perModelTransfer.pSrcBuffer		= perModelBufferStagingLocation.pPerModelBuffer;
-			perModelTransfer.pDestBuffer	= perModelBufferLocation.pPerModelBuffer;
-			perModelTransfer.srcEntry		= perModelBufferStagingLocation.perModelEntry;
-			perModelTransfer.destEntry		= perModelBufferLocation.perModelEntry;
+			perModelTransfer.pSrcBuffer		= uniformBufferStagingLocation.pBuffer;
+			perModelTransfer.pDestBuffer	= uniformBufferLocation.pBuffer;
+			perModelTransfer.srcEntry		= uniformBufferStagingLocation.entry;
+			perModelTransfer.destEntry		= uniformBufferLocation.entry;
 
 			mReadyTransfers.PushBack(perModelTransfer);
 		}
 
-		renderable.perModelLocation = perModelBufferLocation;
+		outUniformBuffer = uniformBufferLocation;
 
 		return true;
 	}

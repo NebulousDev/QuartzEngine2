@@ -1,5 +1,6 @@
 #include "Vulkan/Renderers/VulkanSceneRenderer.h"
 
+#include "Resource/Assets/Shader.h"
 #include "Component/MeshComponent.h"
 #include "Component/MaterialComponent.h"
 
@@ -16,8 +17,8 @@ namespace Quartz
 		VulkanResourceManager*	pResources	= graphics.pResourceManager;
 		VulkanDevice*			pDevice		= graphics.pPrimaryDevice;
 
-		VulkanShader* pVertexShader = shaderCache.FindOrCreateShader("Shaders/default.qsvert");
-		VulkanShader* pFragmentShader = shaderCache.FindOrCreateShader("Shaders/default.qsfrag");
+		VulkanShader* pVertexShader = shaderCache.FindOrCreateShader("Shaders/basic_mesh.qsvert");
+		VulkanShader* pFragmentShader = shaderCache.FindOrCreateShader("Shaders/basic_color.qsfrag");
 
 		Array<VulkanAttachment, 2> attachments =
 		{
@@ -121,6 +122,14 @@ namespace Quartz
 			bufferCache.GetOrAllocateBuffers(*pModel, bufferLocation, stagingBufferLocation, 1, 4, vertexDataFound);
 			// @TODO: error check ^
 
+			VulkanRenderablePerModelUBO perModelUbo = {};
+			perModelUbo.model	= transformComponent.GetMatrix();
+			perModelUbo.view	= cameraTransform.GetViewMatrix();
+			perModelUbo.proj	= camera.GetProjectionMatrix();
+
+			UniformBufferLocation transformBufferLocation;
+			bufferCache.AllocateAndWriteUniformData(transformBufferLocation, 0, &perModelUbo, sizeof(VulkanRenderablePerModelUBO));
+
 			for (const Mesh& mesh : pModel->meshes)
 			{
 				VulkanRenderable renderable = {};
@@ -129,26 +138,39 @@ namespace Quartz
 				const IndexFormat indexType		= indexElement.format;
 				const uInt32 indexSize			= indexElement.FormatSize();
 
-				renderable.vkIndexType = indexType == INDEX_FORMAT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-
-				renderable.meshLocation = bufferLocation;
-				renderable.indexStart	= mesh.indicesStartBytes / indexSize;
-				renderable.indexCount	= mesh.indicesSizeBytes / indexSize; 
-
-				VulkanRenderablePerModelUBO perModelUbo = {};
-				perModelUbo.model	= transformComponent.GetMatrix();
-				perModelUbo.view	= cameraTransform.GetViewMatrix();
-				perModelUbo.proj	= camera.GetProjectionMatrix();
-
-				// @TODO: This can probably be optimized by moving out of the mesh and into the model
-				bufferCache.FillRenderablePerModelData(renderable, 0, &perModelUbo, sizeof(VulkanRenderablePerModelUBO));
+				renderable.meshBuffer		= bufferLocation;
+				renderable.transformBuffer	= transformBufferLocation;
+				renderable.indexStart		= mesh.indicesStartBytes / indexSize;
+				renderable.indexCount		= mesh.indicesSizeBytes / indexSize; 
+				renderable.vkIndexType		= indexType == INDEX_FORMAT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
 
 				if (world.HasComponent<MaterialComponent>(entity))
 				{
 					MaterialComponent& materialComponent = world.Get<MaterialComponent>(entity);
 
-					VulkanShader* pVertexShader		= shaderCache.FindOrCreateShader(materialComponent.vertexURI);
-					VulkanShader* pFragmentShader	= shaderCache.FindOrCreateShader(materialComponent.fragmentURI);
+					Array<VulkanShader*, 8> shaderList;
+
+					const String& materialPath = materialComponent.materialPaths[0]; // @TODO mesh materialIdx
+					Material* pMaterial = Engine::GetAssetManager().GetOrLoadAsset<Material>(materialPath); // @TODO: Cache
+					
+					if (!pMaterial)
+					{
+						LogError("Error prepairing Mesh [%s] for render: Invalid material path \"%s\"", mesh.name.Str(), materialPath.Str());
+						return;
+					}
+
+					for (const String& shaderPath : pMaterial->shaderPaths)
+					{
+						VulkanShader* pVulkanShader = shaderCache.FindOrCreateShader(shaderPath);
+
+						if (!pVulkanShader)
+						{
+							LogError("Error prepairing Mesh [%s] for render: Invalid shader path \"%s\"", mesh.name.Str(), shaderPath.Str());
+							return;
+						}
+						
+						shaderList.PushBack(pVulkanShader);
+					}
 
 					Array<VulkanAttachment, 2> attachments =
 					{
@@ -156,13 +178,53 @@ namespace Quartz
 						{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
 					};
 
-					VulkanGraphicsPipelineInfo pipelineInfo = pipelineCache.MakeGraphicsPipelineInfo(
-						{ pVertexShader, pFragmentShader }, attachments);
+					VulkanGraphicsPipelineInfo pipelineInfo = pipelineCache.MakeGraphicsPipelineInfo(shaderList, attachments);
 
 					pipelineInfo.vkFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 					pipelineInfo.vkCullMode = VK_CULL_MODE_NONE;
 
 					renderable.pPipeline = pipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
+
+					if (renderable.pPipeline->descriptorSetLayouts[0]->setBindings.Size() > 1) //
+					{
+						// @TODO: All of this is bad VVVVVVVV
+
+						uSize materialBufferSizeBytes = renderable.pPipeline->descriptorSetLayouts[0]->setBindings[1].sizeBytes;
+
+						if (materialBufferSizeBytes % 64 != 0)
+						{
+							materialBufferSizeBytes += 64 - (materialBufferSizeBytes % 64);
+						}
+
+						ByteBuffer materialBuffer(materialBufferSizeBytes + 64);
+						materialBuffer.Allocate(materialBufferSizeBytes + 64);
+
+						for (auto& valuePair : pMaterial->shaderValues)
+						{
+							const String& paramName				= valuePair.key;
+							const MaterialValue& paramValue		= valuePair.value;
+
+							uSize paramOffsetBytes = 0;
+
+							for (const VulkanShader* pVulkanShader : shaderList)
+							{
+								const Shader* pShaderAsset = pVulkanShader->pShaderAsset;
+								for (const ShaderParam& param : pShaderAsset->params)
+								{
+									if (param.name == paramName)
+									{
+										MemCopy(materialBuffer.Data() + param.valueOffsetBytes, &paramValue.vec4uVal, param.valueSizeBytes);
+										break;
+									}
+								}
+							}
+						}
+
+						UniformBufferLocation materialBufferLocation;//                VVV fake set 1 for different buffer
+						bufferCache.AllocateAndWriteUniformData(materialBufferLocation, 0, materialBuffer.Data(), materialBufferSizeBytes);
+					
+						renderable.materialBuffer = materialBufferLocation;
+					}
 				}
 				else
 				{
@@ -185,25 +247,38 @@ namespace Quartz
 		{
 			recorder.SetGraphicsPipeline(renderable.pPipeline);
 
-			recorder.SetIndexBuffer(renderable.meshLocation.pIndexBuffer->GetVulkanBuffer(),
-				renderable.meshLocation.indexEntry.offset, renderable.vkIndexType);
+			recorder.SetIndexBuffer(renderable.meshBuffer.pIndexBuffer->GetVulkanBuffer(),
+				renderable.meshBuffer.indexEntry.offset, renderable.vkIndexType);
 
 			VulkanBufferBind pVertexBufferBinds[] = 
 			{ 
-				{renderable.meshLocation.pVertexBuffer->GetVulkanBuffer(), renderable.meshLocation.vertexEntry.offset} 
+				{renderable.meshBuffer.pVertexBuffer->GetVulkanBuffer(), renderable.meshBuffer.vertexEntry.offset} 
 			};
 
 			recorder.SetVertexBuffers(pVertexBufferBinds, 1);
 
-			VulkanUniformBufferBind binding = {};
-			binding.binding = 0;
-			binding.pBuffer = renderable.perModelLocation.pPerModelBuffer->GetVulkanBuffer();
-			binding.offset	= renderable.perModelLocation.perModelEntry.offset;
-			binding.range	= renderable.perModelLocation.perModelEntry.sizeBytes;
+			Array<VulkanUniformBufferBind, 8> set0bufferBinds;
+			Array<VulkanUniformBufferBind, 8> set1bufferBinds;
 
-			VulkanUniformBufferBind pBufferBinds[] = { binding };
+			VulkanUniformBufferBind uniformTransform = {};
+			uniformTransform.binding	= 0;
+			uniformTransform.pBuffer	= renderable.transformBuffer.pBuffer->GetVulkanBuffer();
+			uniformTransform.offset		= renderable.transformBuffer.entry.offset;
+			uniformTransform.range		= renderable.transformBuffer.entry.sizeBytes;
+
+			set0bufferBinds.PushBack(uniformTransform);
+
+			VulkanUniformBufferBind uniformMaterial = {};
+			uniformMaterial.binding		= 1;
+			uniformMaterial.pBuffer		= renderable.materialBuffer.pBuffer->GetVulkanBuffer();
+			uniformMaterial.offset		= renderable.materialBuffer.entry.offset;
+			uniformMaterial.range		= renderable.materialBuffer.entry.sizeBytes;
+
+			set0bufferBinds.PushBack(uniformMaterial);
+			//set0bufferBinds.PushBack(uniformMaterial);
 			
-			recorder.BindUniforms(renderable.pPipeline, 0, pBufferBinds, 1, nullptr, 0);
+			recorder.BindUniforms(renderable.pPipeline, 0, set0bufferBinds.Data(), set0bufferBinds.Size(), nullptr, 0);
+			//recorder.BindUniforms(renderable.pPipeline, 1, set1bufferBinds.Data(), set1bufferBinds.Size(), nullptr, 0);
 
 			recorder.DrawIndexed(1, renderable.indexCount, renderable.indexStart, 0);
 		}

@@ -56,7 +56,7 @@ namespace Quartz
 	struct QModelMesh								// 448 bits
 	{
 		QStringID			nameID;					// 32 bitss
-		QStringID			materialPathID;			// 32 bits
+		uInt32				materialIdx;			// 32 bits
 		uInt16				lodIdx;					// 16 bits
 		uInt8				_reserved0;				// 8 bits
 		QModelIndexFormat	indexFormat;			// 8 bits

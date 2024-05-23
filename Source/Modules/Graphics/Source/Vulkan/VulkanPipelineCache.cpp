@@ -3,7 +3,7 @@
 namespace Quartz
 {
     VulkanGraphicsPipelineInfo VulkanPipelineCache::MakeGraphicsPipelineInfo(
-		const Array<VulkanShader*>& shaders,
+		const Array<VulkanShader*, 8>& shaders,
 		const Array<VulkanAttachment>& attachments,
 		const Array<VkVertexInputAttributeDescription>& vertexAttributes,
 		const Array<VkVertexInputBindingDescription>& vertexBindings)
@@ -53,7 +53,7 @@ namespace Quartz
 	// NOTE: This will use the SPIRV format guess and may not be correct
 	//       Also assumes one input buffer with vertex input rate at binding=0
 	VulkanGraphicsPipelineInfo VulkanPipelineCache::MakeGraphicsPipelineInfo(
-		const Array<VulkanShader*>& shaders,
+		const Array<VulkanShader*, 8>& shaders,
 		const Array<VulkanAttachment>& attachments)
 	{
 		Array<VkVertexInputAttributeDescription, 32> vertexAttributes;
