@@ -30,6 +30,7 @@ namespace Quartz
 		uInt32					indexStart;
 		uInt32					indexCount;
 		VkIndexType				vkIndexType;
+		Array<VulkanUniformImageBind, 16>	imageBinds;
 
 		//temp
 		bool					isTerrain;

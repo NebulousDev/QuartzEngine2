@@ -12,15 +12,38 @@ namespace Quartz
 	{
 		StringReader valueReader(paramValue);
 
-		if (paramValue.StartsWith("vec2"_WRAP))
+		if (paramValue.StartsWith("texture"_WRAP))
 		{
-			valueReader.ReadThrough("(");
+			valueReader.ReadThrough("("_WRAP);
+			valueReader.SkipWhitespace();
+			valueReader.ReadThrough("\""_WRAP);
+			String texturePath = valueReader.ReadThrough("\""_WRAP);
+			valueReader.ReadThrough(")"_WRAP);
+
+			outMaterialValue.type		= MATERIAL_VALUE_TEXTURE;
+			outMaterialValue.stringVal	= texturePath;
+		}
+
+		else if (paramValue.StartsWith("float"_WRAP))
+		{
+			valueReader.ReadThrough("("_WRAP);
+			valueReader.SkipWhitespace();
+			float val = valueReader.ReadFloat();
+			valueReader.ReadThrough(")"_WRAP);
+
+			outMaterialValue.type		= MATERIAL_VALUE_FLOAT;
+			outMaterialValue.floatVal	= val;
+		}
+
+		else if (paramValue.StartsWith("vec2"_WRAP))
+		{
+			valueReader.ReadThrough("("_WRAP);
 			valueReader.SkipWhitespace();
 			float x = valueReader.ReadFloat();
-			valueReader.ReadThrough(",");
+			valueReader.ReadThrough(","_WRAP);
 			valueReader.SkipWhitespace();
 			float y = valueReader.ReadFloat();
-			valueReader.ReadThrough(")");
+			valueReader.ReadThrough(")"_WRAP);
 
 			outMaterialValue.type		= MATERIAL_VALUE_VEC2;
 			outMaterialValue.vec2fVal	= Vec2f(x, y);
@@ -28,16 +51,16 @@ namespace Quartz
 
 		else if (paramValue.StartsWith("vec3"_WRAP))
 		{
-			valueReader.ReadThrough("(");
+			valueReader.ReadThrough("("_WRAP);
 			valueReader.SkipWhitespace();
 			float x = valueReader.ReadFloat();
-			valueReader.ReadThrough(",");
+			valueReader.ReadThrough(","_WRAP);
 			valueReader.SkipWhitespace();
 			float y = valueReader.ReadFloat();
-			valueReader.ReadThrough(",");
+			valueReader.ReadThrough(","_WRAP);
 			valueReader.SkipWhitespace();
 			float z = valueReader.ReadFloat();
-			valueReader.ReadThrough(")");
+			valueReader.ReadThrough(")"_WRAP);
 
 			outMaterialValue.type		= MATERIAL_VALUE_VEC3;
 			outMaterialValue.vec3fVal	= Vec3f(x, y, z);
@@ -45,19 +68,19 @@ namespace Quartz
 
 		else if (paramValue.StartsWith("vec3"_WRAP))
 		{
-			valueReader.ReadThrough("(");
+			valueReader.ReadThrough("("_WRAP);
 			valueReader.SkipWhitespace();
 			float x = valueReader.ReadFloat();
-			valueReader.ReadThrough(",");
+			valueReader.ReadThrough(","_WRAP);
 			valueReader.SkipWhitespace();
 			float y = valueReader.ReadFloat();
-			valueReader.ReadThrough(",");
+			valueReader.ReadThrough(","_WRAP);
 			valueReader.SkipWhitespace();
 			float z = valueReader.ReadFloat();
-			valueReader.ReadThrough(",");
+			valueReader.ReadThrough(","_WRAP);
 			valueReader.SkipWhitespace();
 			float w = valueReader.ReadFloat();
-			valueReader.ReadThrough(")");
+			valueReader.ReadThrough(")"_WRAP);
 
 			outMaterialValue.type		= MATERIAL_VALUE_VEC4;
 			outMaterialValue.vec4fVal	= Vec4f(x, y, z, w);
@@ -80,8 +103,8 @@ namespace Quartz
 			{
 				Substring shaderStr = line.Substring(7);
 
-				const uSize shaderPathStart = shaderStr.Find("\"");
-				const uSize shaderPathEnd = shaderStr.FindReverse("\"");
+				const uSize shaderPathStart = shaderStr.Find("\""_WRAP);
+				const uSize shaderPathEnd = shaderStr.FindReverse("\""_WRAP);
 
 				if (shaderPathStart == shaderStr.Length() ||
 					shaderPathEnd == 0)
@@ -99,7 +122,7 @@ namespace Quartz
 				Substring paramStr = line.Substring(6);
 
 				const uSize paramNameStart = 0;
-				const uSize paramNameEnd = paramStr.Find("=");
+				const uSize paramNameEnd = paramStr.Find("="_WRAP);
 
 				if (paramNameEnd == paramStr.Length())
 				{

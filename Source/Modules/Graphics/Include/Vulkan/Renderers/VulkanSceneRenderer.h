@@ -35,6 +35,10 @@ namespace Quartz
 		Array<VulkanRenderable>	mRenderables;
 		Array<VulkanRenderable>	mRenderablesSorted;
 
+		// TEMP
+		VkSampler mVkDefaultSampler;
+		Map<String, VulkanImageView*> mTextureCache;
+
 	public:
 		void Initialize(VulkanGraphics& graphics, VulkanDevice& device, VulkanShaderCache& shaderCache, 
 			VulkanPipelineCache& pipelineCache, uSize maxInFlightCount);

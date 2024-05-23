@@ -350,4 +350,82 @@ namespace Quartz
 			barrierInfo.imageMemoryBarrierCount,
 			barrierInfo.pImageMemoryBarriers);
 	}
+
+	void VulkanCommandRecorder::PipelineBarrierImageTransferDest(VulkanImage* pSwapchainImage)
+	{
+		VkImageMemoryBarrier vkImageMemoryBarrier = {};
+		vkImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		vkImageMemoryBarrier.srcAccessMask						= 0;
+		vkImageMemoryBarrier.dstAccessMask						= VK_ACCESS_TRANSFER_WRITE_BIT;
+		vkImageMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
+		vkImageMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		vkImageMemoryBarrier.image								= pSwapchainImage->vkImage;
+		vkImageMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		vkImageMemoryBarrier.subresourceRange.baseMipLevel		= 0;
+		vkImageMemoryBarrier.subresourceRange.levelCount		= 1;
+		vkImageMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
+		vkImageMemoryBarrier.subresourceRange.layerCount		= 1;
+
+		VulkanPipelineBarrierInfo barrierInfo = {};
+		barrierInfo.srcStage					= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		barrierInfo.dstStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
+		barrierInfo.dependencyFlags				= 0;
+		barrierInfo.memoryBarrierCount			= 0;
+		barrierInfo.pMemoryBarriers				= nullptr;
+		barrierInfo.bufferMemoryBarrierCount	= 0;
+		barrierInfo.pBufferMemoryBarriers		= nullptr;
+		barrierInfo.imageMemoryBarrierCount		= 1;
+		barrierInfo.pImageMemoryBarriers		= &vkImageMemoryBarrier;
+
+		vkCmdPipelineBarrier(
+			mpCommandBuffer->vkCommandBuffer,
+			barrierInfo.srcStage,
+			barrierInfo.dstStage,
+			barrierInfo.dependencyFlags,
+			barrierInfo.memoryBarrierCount,
+			barrierInfo.pMemoryBarriers,
+			barrierInfo.bufferMemoryBarrierCount,
+			barrierInfo.pBufferMemoryBarriers,
+			barrierInfo.imageMemoryBarrierCount,
+			barrierInfo.pImageMemoryBarriers);
+	}
+
+	void VulkanCommandRecorder::PipelineBarrierImageShaderRead(VulkanImage* pSwapchainImage)
+	{
+		VkImageMemoryBarrier vkImageMemoryBarrier = {};
+		vkImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		vkImageMemoryBarrier.srcAccessMask						= 0;
+		vkImageMemoryBarrier.dstAccessMask						= VK_ACCESS_SHADER_READ_BIT;
+		vkImageMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
+		vkImageMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		vkImageMemoryBarrier.image								= pSwapchainImage->vkImage;
+		vkImageMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		vkImageMemoryBarrier.subresourceRange.baseMipLevel		= 0;
+		vkImageMemoryBarrier.subresourceRange.levelCount		= 1;
+		vkImageMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
+		vkImageMemoryBarrier.subresourceRange.layerCount		= 1;
+
+		VulkanPipelineBarrierInfo barrierInfo = {};
+		barrierInfo.srcStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
+		barrierInfo.dstStage					= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		barrierInfo.dependencyFlags				= 0;
+		barrierInfo.memoryBarrierCount			= 0;
+		barrierInfo.pMemoryBarriers				= nullptr;
+		barrierInfo.bufferMemoryBarrierCount	= 0;
+		barrierInfo.pBufferMemoryBarriers		= nullptr;
+		barrierInfo.imageMemoryBarrierCount		= 1;
+		barrierInfo.pImageMemoryBarriers		= &vkImageMemoryBarrier;
+
+		vkCmdPipelineBarrier(
+			mpCommandBuffer->vkCommandBuffer,
+			barrierInfo.srcStage,
+			barrierInfo.dstStage,
+			barrierInfo.dependencyFlags,
+			barrierInfo.memoryBarrierCount,
+			barrierInfo.pMemoryBarriers,
+			barrierInfo.bufferMemoryBarrierCount,
+			barrierInfo.pBufferMemoryBarriers,
+			barrierInfo.imageMemoryBarrierCount,
+			barrierInfo.pImageMemoryBarriers);
+	}
 }

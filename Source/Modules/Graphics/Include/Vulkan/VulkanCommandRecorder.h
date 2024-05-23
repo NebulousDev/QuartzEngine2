@@ -111,6 +111,8 @@ namespace Quartz
 		void PipelineBarrier(const VulkanPipelineBarrierInfo& barrierInfo);
 		void PipelineBarrierSwapchainImageBegin(VulkanImage* pSwapchainImage);
 		void PipelineBarrierSwapchainImageEnd(VulkanImage* pSwapchainImage);
+		void PipelineBarrierImageTransferDest(VulkanImage* pSwapchainImage);
+		void PipelineBarrierImageShaderRead(VulkanImage* pSwapchainImage);
 
 		VulkanCommandBuffer& GetCommandBuffer() { return *mpCommandBuffer; }
 	};

@@ -49,17 +49,20 @@ namespace Quartz
 			Vec2u32 vec2uVal;
 			Vec3u32 vec3uVal;
 			Vec4u32 vec4uVal;
-			String	stringVal;
+			char    _data[16] = {};
 		};
+		
+		String	stringVal;
 
 		inline MaterialValue() : vec4fVal() {};
 		inline MaterialValue(const MaterialValue& value) : 
-			type(value.type), vec4uVal(value.vec4uVal) {}
+			type(value.type), _data{}, stringVal(value.stringVal) {}
 
 		inline MaterialValue& operator=(const MaterialValue& value)
 		{
 			type = value.type;
 			vec4uVal = value.vec4uVal;
+			stringVal = value.stringVal;
 			return *this;
 		}
 
@@ -68,13 +71,13 @@ namespace Quartz
 			return val0.type == val1.type;
 		}
 
-		inline ~MaterialValue()
-		{
-			if (type == MATERIAL_VALUE_TEXTURE)
-			{
-				stringVal.~StringBase();
-			}
-		}
+		//inline ~MaterialValue()
+		//{
+		//	if (type == MATERIAL_VALUE_TEXTURE)
+		//	{
+		//		stringVal.~StringBase();
+		//	}
+		//}
 	};
 
 	struct Material : public Asset
