@@ -8,7 +8,7 @@
 namespace Quartz
 {
 	template<>
-	uSize Hash<Vec2i>(const Vec2i& value)
+	hash64 Hash<Vec2i>(const Vec2i& value)
 	{
 		return Hash<uInt64>((uInt64)value.x + ((uInt64)value.y << 32));
 	}

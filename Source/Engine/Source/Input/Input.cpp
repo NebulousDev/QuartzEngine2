@@ -3,7 +3,7 @@
 namespace Quartz
 {
 	template<>
-	uInt32 Hash<Input::InputMapping>(const Input::InputMapping& value)
+	hash64 Hash<Input::InputMapping>(const Input::InputMapping& value)
 	{
 		return Hash<uInt64>(32101010123 + ((uInt64)value.type << 24) + ((uInt64)value.input << 16) + 1);
 	}

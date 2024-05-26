@@ -37,10 +37,10 @@ namespace Quartz
 		StringReader parser(data);
 
 		// @NOTE: if objects rehashes, the loader breaks
-		Map<String, ObjObject> objects(1024);
+		Map<Substring, ObjObject> objects(1024);
 		uSize nextMaterialIdx = 0;
 
-		ObjObject* pObjObject = &objects.Put("_obj_model_", ObjObject());
+		ObjObject* pObjObject = &objects.Put(("_obj_model_"_STR).Substring(0), ObjObject());
 
 		while (!parser.IsEnd())
 		{
@@ -52,17 +52,17 @@ namespace Quartz
 				continue;
 			}
 
-			Substring token = parser.ReadThrough(" ");
+			Substring token = parser.ReadThrough(" "_WRAP);
 
 			// Comment
-			if (token == "#")
+			if (token.StartsWith("#"_WRAP))
 			{
 				parser.ReadLine();
 				continue;
 			}
 
 			// Object
-			else if (token == "usemtl")
+			else if (token == "usemtl"_WRAP)
 			{
 				parser.SkipWhitespace();
 				
@@ -71,9 +71,7 @@ namespace Quartz
 
 				if (objectName.Length() > 0)
 				{
-					String objectNameStr(objectName);
-
-					auto& objectIt = objects.Find(objectNameStr);
+					auto& objectIt = objects.Find(objectName);
 					if (objectIt != objects.End())
 					{
 						pObjObject = &objectIt->value;
@@ -81,10 +79,10 @@ namespace Quartz
 					else
 					{
 						ObjObject newObject;
-						newObject.materialName = objectNameStr;
+						newObject.materialName = objectName;
 						newObject.materialIdx = nextMaterialIdx++;
 
-						pObjObject = &objects.Put(objectNameStr, newObject);
+						pObjObject = &objects.Put(objectName, newObject);
 					}
 				}
 
@@ -92,7 +90,7 @@ namespace Quartz
 			}
 
 			// Vertex position
-			else if (token == "v")
+			else if (token == "v"_WRAP)
 			{
 				parser.SkipWhitespace();
 
@@ -106,7 +104,7 @@ namespace Quartz
 			}
 
 			// Vertex normal
-			else if (token == "vn")
+			else if (token == "vn"_WRAP)
 			{
 				parser.SkipWhitespace();
 
@@ -120,7 +118,7 @@ namespace Quartz
 			}
 
 			// Vertex texture coordinates
-			else if (token == "vt")
+			else if (token == "vt"_WRAP)
 			{
 				parser.SkipWhitespace();
 
@@ -133,7 +131,7 @@ namespace Quartz
 			}
 
 			// Face
-			else if (token == "f")
+			else if (token == "f"_WRAP)
 			{
 				parser.SkipWhitespace();
 

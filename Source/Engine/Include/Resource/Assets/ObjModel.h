@@ -27,7 +27,7 @@ namespace Quartz
 	};
 
 	template<>
-	inline uSize Hash<OBJIndex>(const OBJIndex& value)
+	inline hash64 Hash<OBJIndex>(const OBJIndex& value)
 	{
 		uInt64 intVal = 0;
 		intVal = (value.posIdx & 0x001fffff);
@@ -40,7 +40,7 @@ namespace Quartz
 		hash *= 0x5bd1e9955bd1e995;
 		hash ^= hash >> 47;
 
-		return static_cast<uSize>(hash);
+		return static_cast<hash64>(hash);
 	}
 
 	struct ObjObject
