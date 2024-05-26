@@ -8,12 +8,37 @@
 
 namespace Quartz
 {
+	struct ObjConvertSettings
+	{
+		bool writePositions;
+		bool writeNormals;
+		bool writeTangents;
+		bool writeBiTangents;
+		bool writeTexCoords;
+
+		uInt32 positionStreamIdx;
+		uInt32 normalStreamIdx;
+		uInt32 tangentStreamIdx;
+		uInt32 biTangentStreamIdx;
+		uInt32 texCoordStreamIdx;
+
+		VertexFormat positionFormat;
+		VertexFormat normalFormat;
+		VertexFormat tangentFormat;
+		VertexFormat biTangentFormat;
+		VertexFormat texCoordFormat;
+
+		bool useTangentBiTanW;
+		bool flipNormals;
+	};
+
 	inline bool ParseOBJ(const String& data, ObjModel& outObjModel)
 	{
 		StringReader parser(data);
 
 		// @NOTE: if objects rehashes, the loader breaks
 		Map<String, ObjObject> objects(1024);
+		uSize nextMaterialIdx = 0;
 
 		ObjObject* pObjObject = &objects.Put("_obj_model_", ObjObject());
 
@@ -56,7 +81,8 @@ namespace Quartz
 					else
 					{
 						ObjObject newObject;
-						newObject.material = objectNameStr;
+						newObject.materialName = objectNameStr;
+						newObject.materialIdx = nextMaterialIdx++;
 
 						pObjObject = &objects.Put(objectNameStr, newObject);
 					}
@@ -133,9 +159,13 @@ namespace Quartz
 
 					index.posIdx = faceLine.ReadInt() - 1;
 
+					faceLine.SkipWhitespace();
+
 					if (faceLine.Peek() == '/')
 					{
 						faceLine.Read();
+
+						faceLine.SkipWhitespace();
 
 						// No texCoord
 						if (faceLine.Peek() == '/')
@@ -154,11 +184,11 @@ namespace Quartz
 							index.normIdx = faceLine.ReadInt() - 1;
 						}
 
-						indices.PushBack(index);
-						++indexCount;
-
 						faceLine.SkipWhitespace();
 					}
+
+					indices.PushBack(index);
+					++indexCount;
 				}
 			}
 
@@ -184,100 +214,350 @@ namespace Quartz
 		return true;
 	}
 
-	inline bool ConvertOBJToModel(const ObjModel& objModel, Model& outModel)
+	inline bool SetupOrAppendStream(uSize streamIdx, VertexElement& streamElement, Array<VertexStream, 8>& outVertexStreams)
 	{
-		VertexData& vertexData	= outModel.vertexData;
-		ByteBuffer& vertices	= *vertexData.pVertexBuffer;
-		ByteBuffer& indices		= *vertexData.pIndexBuffer;
-
-		uInt64 vertexBufferOffset	= 0;
-		uInt64 indexBufferOffset	= 0;
-
-		uInt32 idx = 0;
-
-		for (const ObjObject& object : objModel.objects)
+		if (outVertexStreams[streamIdx].vertexElements.Size() > 0)
 		{
-			Mesh mesh;
+			outVertexStreams[streamIdx].vertexElements.PushBack(streamElement);
+			outVertexStreams[streamIdx].strideBytes += streamElement.sizeBytes;
+		}
+		else
+		{
+			VertexStream vertexStream = { streamIdx, { streamElement }, nullptr, streamElement.sizeBytes };
+			outVertexStreams[streamIdx] = vertexStream;
+			streamIdx++;
+		}
 
-			Map<OBJIndex, uInt32>	indexMap;
-			bool					is16Bit;
+		return true;
+	}
 
-			mesh.name			= object.material;
-			mesh.materialIdx	= 0; //"/Materials/Path";
-			mesh.lod			= 0;
+	inline bool CreateStreams(const ObjConvertSettings& settings, Array<VertexStream, 8>& outVertexStreams)
+	{
+		Array<uInt32, 8> offsetBytes(8, 0);
 
-			mesh.elements =
+		outVertexStreams.Resize(8);
+
+		if (settings.writePositions)
+		{
+			VertexElement positionElement;
+			positionElement.attribute		= VERTEX_ATTRIBUTE_POSITION;
+			positionElement.format			= settings.positionFormat;
+			positionElement.offsetBytes		= offsetBytes[settings.positionStreamIdx];
+			positionElement.sizeBytes		= VertexFormatSize(positionElement.format);
+
+			SetupOrAppendStream(settings.positionStreamIdx, positionElement, outVertexStreams);
+
+			offsetBytes[settings.positionStreamIdx] += positionElement.sizeBytes;
+		}
+
+		if (settings.writeNormals)
+		{
+			VertexElement normalElement;
+			normalElement.attribute			= VERTEX_ATTRIBUTE_NORMAL;
+			normalElement.format			= settings.normalFormat;
+			normalElement.offsetBytes		= offsetBytes[settings.normalStreamIdx];
+			normalElement.sizeBytes			= VertexFormatSize(normalElement.format);
+
+			SetupOrAppendStream(settings.normalStreamIdx, normalElement, outVertexStreams);
+
+			offsetBytes[settings.normalStreamIdx] += normalElement.sizeBytes;
+		}
+
+		if (settings.writeTangents)
+		{
+			VertexElement tangentElement;
+			tangentElement.attribute		= VERTEX_ATTRIBUTE_TANGENT;
+			tangentElement.format			= settings.tangentFormat;
+			tangentElement.offsetBytes		= offsetBytes[settings.tangentStreamIdx];
+			tangentElement.sizeBytes		= VertexFormatSize(tangentElement.format);
+
+			SetupOrAppendStream(settings.tangentStreamIdx, tangentElement, outVertexStreams);
+
+			offsetBytes[settings.tangentStreamIdx] += tangentElement.sizeBytes;
+		}
+
+		if (settings.writeBiTangents)
+		{
+			VertexElement biTangentElement;
+			biTangentElement.attribute		= VERTEX_ATTRIBUTE_BITANGENT;
+			biTangentElement.format			= settings.biTangentFormat;
+			biTangentElement.offsetBytes	= offsetBytes[settings.biTangentStreamIdx];
+			biTangentElement.sizeBytes		= VertexFormatSize(biTangentElement.format);
+
+			SetupOrAppendStream(settings.biTangentStreamIdx, biTangentElement, outVertexStreams);
+
+			offsetBytes[settings.biTangentStreamIdx] += biTangentElement.sizeBytes;
+		}
+
+		if (settings.writeTexCoords)
+		{
+			VertexElement texCoordElement;
+			texCoordElement.attribute		= VERTEX_ATTRIBUTE_TEXCOORD;
+			texCoordElement.format			= settings.texCoordFormat;
+			texCoordElement.offsetBytes		= offsetBytes[settings.texCoordStreamIdx];
+			texCoordElement.sizeBytes		= VertexFormatSize(texCoordElement.format);
+
+			SetupOrAppendStream(settings.texCoordStreamIdx, texCoordElement, outVertexStreams);
+
+			offsetBytes[settings.texCoordStreamIdx] += texCoordElement.sizeBytes;
+		}
+
+		return true;
+	}
+
+	inline bool AllocateVertexStreamBuffers(Array<VertexStream, 8>& vertexStreams, uSize maxIndex, PoolAllocator<ByteBuffer>& bufferAllocator)
+	{
+		for (uSize i = 0; i < vertexStreams.Size(); i++)
+		{
+			if (vertexStreams[i].vertexElements.Size() > 0)
 			{
-				{ VERTEX_ATTRIBUTE_POSITION, VERTEX_FORMAT_FLOAT3 },
-				{ VERTEX_ATTRIBUTE_NORMAL, VERTEX_FORMAT_FLOAT3 }
-			};
+				const uSize bufferSizeBytes = maxIndex * vertexStreams[i].strideBytes;
 
-			if (objModel.maxIndex <= INDEX_MAX_UINT16)
+				ByteBuffer* pByteBuffer = bufferAllocator.Allocate(bufferSizeBytes);
+
+				if (!pByteBuffer)
+				{
+					return false;
+				}
+
+				vertexStreams[i].pVertexBuffer = pByteBuffer;
+			}
+		}
+
+		return true;
+	}
+
+	inline bool AllocateIndexStreamBuffer(IndexStream& indexStream, uSize indexCount, uSize indexSizeBytes, PoolAllocator<ByteBuffer>& bufferAllocator)
+	{
+		const uSize bufferSizeBytes = indexCount * indexSizeBytes;
+
+		ByteBuffer* pByteBuffer = bufferAllocator.Allocate(bufferSizeBytes);
+
+		if (!pByteBuffer)
+		{
+			return false;
+		}
+
+		indexStream.pIndexBuffer = pByteBuffer;
+
+		return true;
+	}
+
+	// Returns true if index was found, false otherwise
+	inline bool WriteIndex(const OBJIndex& objIndex, Map<OBJIndex, uInt32>& indexMap, 
+		uInt32& index, ByteBuffer& indices, bool is16Bit)
+	{
+		auto& idxIt0 = indexMap.Find(objIndex);
+		if (idxIt0 != indexMap.End())
+		{
+			if (is16Bit)
 			{
-				mesh.indexElement.format = INDEX_FORMAT_UINT16;
-				is16Bit = true;
+				indices.Write<uInt16>((uInt16)idxIt0->value);
 			}
 			else
 			{
-				mesh.indexElement.format = INDEX_FORMAT_UINT32;
-				is16Bit = false;
+				indices.Write<uInt32>((uInt32)idxIt0->value);
 			}
 
-			for (const OBJIndex& index : object.indices)
+			return true;
+		}
+		else
+		{
+			if (is16Bit)
 			{
-				auto& idxIt = indexMap.Find(index);
-				if (idxIt != indexMap.End())
-				{
-					if (is16Bit)
-					{
-						indices.Write<uInt16>((uInt16)idxIt->value);
-					}
-					else
-					{
-						indices.Write<uInt32>((uInt32)idxIt->value);
-					}
-				}
-				else
-				{
-					vertices.Write(objModel.positions[index.posIdx].x);
-					vertices.Write(objModel.positions[index.posIdx].y);
-					vertices.Write(objModel.positions[index.posIdx].z);
-
-					vertices.Write(objModel.normals[index.normIdx].x);
-					vertices.Write(objModel.normals[index.normIdx].y);
-					vertices.Write(objModel.normals[index.normIdx].z);
-
-					if (is16Bit)
-					{
-						indices.Write<uInt16>((uInt16)idx);
-					}
-					else
-					{
-						indices.Write<uInt32>((uInt32)idx);
-					}
-
-					indexMap.Put(index, idx);
-
-					idx++;
-				}
+				indices.Write<uInt16>((uInt16)index);
 			}
-
-			mesh.verticesStartBytes	= vertexBufferOffset;
-			mesh.verticesSizeBytes	= vertices.Size() - vertexBufferOffset;
-			mesh.indicesStartBytes	= indexBufferOffset;
-			mesh.indicesSizeBytes	= indices.Size() - indexBufferOffset;
-
-			if (is16Bit && indices.Size() % 4 != 0)
+			else
 			{
-				// Write a trailing zero for alignment with 32 bit indices
-				indices.Write<uInt16>((uInt16)0);
+				indices.Write<uInt32>((uInt32)index);
 			}
+
+			indexMap.Put(objIndex, index);
+			index++;
+
+			return false;
+		}
+	}
+
+	inline bool WritePosition(bool shouldWrite, uInt32 objPosIdx, const Array<Vec3f>& objPositions, ByteBuffer& vertices)
+	{
+		if (shouldWrite)
+		{
+			return vertices.Write<Vec3f>(objPositions[objPosIdx]);
+		}
+
+		return true;
+	}
+
+	inline bool WriteNormal(bool shouldWrite, uInt32 objNormIdx, const Array<Vec3f>& objNormals, ByteBuffer& normals,
+		const Array<Vec3f>& positions, uInt32 posIdx0, uInt32 posIdx1, uInt32 posIdx2, bool flipNormals)
+	{
+		if (shouldWrite)
+		{
+			if (objNormIdx < objNormals.Size())
+			{
+				Vec3f normal = objNormals[objNormIdx];
+
+				if (flipNormals)
+				{
+					normal *= -1;
+				}
+
+				return normals.Write<Vec3f>(objNormals[objNormIdx]);
+			}
+			else
+			{
+				const Vec3f& pos0 = positions[posIdx0];
+				const Vec3f& pos1 = positions[posIdx1];
+				const Vec3f& pos2 = positions[posIdx2];
+
+				const Vec3f dir0 = pos1 - pos0;
+				const Vec3f dir1 = pos2 - pos0;
+
+				Vec3f normal = Cross(dir0, dir1).Normalized();
+
+				if (flipNormals)
+				{
+					normal *= -1;
+				}
+
+				return normals.Write<Vec3f>(normal);
+			}
+		}
+		
+		return true;
+	}
+
+	inline bool WriteTangent(bool shouldWrite, ByteBuffer& tangents, 
+		const Array<Vec2f>& normals, const Array<Vec2f>& texCoords, 
+		const OBJIndex& objIndex0, const OBJIndex& objIndex1, const OBJIndex& objIndex2, bool writeBiTanW)
+	{
+		if (shouldWrite)
+		{
+			return tangents.Write<Vec3f>(Vec3f(0, 0, 0));
+		}
+		
+		return true;
+	}
+
+	inline bool WriteTexCoord(bool shouldWrite, uInt32 objTexIdx, const Array<Vec2f>& objTexCoords, ByteBuffer& texCoords)
+	{
+		if (shouldWrite)
+		{
+			if (objTexIdx < objTexCoords.Size())
+			{
+				return texCoords.Write<Vec2f>(objTexCoords[objTexIdx]);
+			}
+			else
+			{
+				return texCoords.Write<Vec2f>(Vec2f(0, 0));
+			}
+		}
+
+		return true;
+	}
+
+	inline bool ConvertOBJToModel(const ObjConvertSettings& settings, 
+		const ObjModel& objModel, Model& outModel, PoolAllocator<ByteBuffer>& bufferAllocator)
+	{
+		CreateStreams(settings, outModel.vertexStreams);
+
+		bool is16Bit = false;
+
+		if (objModel.maxIndex <= INDEX_MAX_UINT16)
+		{
+			outModel.indexStream.indexElement.format	= INDEX_FORMAT_UINT16;
+			outModel.indexStream.indexElement.sizeBytes = IndexFormatSize(INDEX_FORMAT_UINT16);
+			is16Bit = true;
+		}
+		else
+		{
+			outModel.indexStream.indexElement.format	= INDEX_FORMAT_UINT32;
+			outModel.indexStream.indexElement.sizeBytes = IndexFormatSize(INDEX_FORMAT_UINT32);
+			is16Bit = false;
+		}
+		
+		if (!AllocateVertexStreamBuffers(outModel.vertexStreams, objModel.maxIndex, bufferAllocator) ||
+			!AllocateIndexStreamBuffer(outModel.indexStream, objModel.maxIndex, 
+				outModel.indexStream.indexElement.sizeBytes, bufferAllocator))
+		{
+			// Free previous buffers
+			for (VertexStream& stream : outModel.vertexStreams)
+			{
+				if (stream.pVertexBuffer)
+				{
+					bufferAllocator.Free(stream.pVertexBuffer);
+					stream.pVertexBuffer = nullptr;
+				}
+			}
+
+			return false;
+		}
+
+		ByteBuffer& positions	= *outModel.vertexStreams[settings.positionStreamIdx].pVertexBuffer;
+		ByteBuffer& normals		= *outModel.vertexStreams[settings.normalStreamIdx].pVertexBuffer;
+		ByteBuffer& tangents	= *outModel.vertexStreams[settings.tangentStreamIdx].pVertexBuffer;
+		ByteBuffer& biTangents	= *outModel.vertexStreams[settings.biTangentStreamIdx].pVertexBuffer;
+		ByteBuffer& texCoords	= *outModel.vertexStreams[settings.texCoordStreamIdx].pVertexBuffer;
+
+		ByteBuffer& indices		= *outModel.indexStream.pIndexBuffer;
+
+		Map<OBJIndex, uInt32>	indexMap;
+		uInt32					index = 0;
+
+		for (const ObjObject& object : objModel.objects)
+		{
+			Mesh mesh = {};
+
+			const uSize meshIndexStart = indices.Size() / outModel.indexStream.indexElement.sizeBytes;
+
+			mesh.name			= object.materialName;
+			mesh.lod			= 0;
+			mesh.materialIdx	= object.materialIdx;
+			mesh.indexStart		= meshIndexStart;
+
+			for (uInt64 i = 0; i < object.indices.Size(); i += 3)
+			{
+				const OBJIndex& objIndex0 = object.indices[i + 0];
+				const OBJIndex& objIndex1 = object.indices[i + 1];
+				const OBJIndex& objIndex2 = object.indices[i + 2];
+
+				if (!WriteIndex(objIndex0, indexMap, index, indices, is16Bit))
+				{
+					WritePosition(settings.writePositions, objIndex0.posIdx, objModel.positions, positions);
+					WriteNormal(settings.writeNormals, objIndex0.normIdx, objModel.normals, normals, 
+						objModel.positions, objIndex0.posIdx, objIndex1.posIdx, objIndex2.posIdx, settings.flipNormals);
+					//WriteTangent(settings.writeTangents, i, tangents, normals, texCoords, i + 1, i + 2, i + 3, true);
+					WriteTexCoord(settings.writeTexCoords, objIndex0.texIdx, objModel.texCoords, texCoords);
+				}
+
+				if (!WriteIndex(objIndex1, indexMap, index, indices, is16Bit))
+				{
+					WritePosition(settings.writePositions, objIndex1.posIdx, objModel.positions, positions);
+					WriteNormal(settings.writeNormals, objIndex1.normIdx, objModel.normals, normals,
+						objModel.positions, objIndex2.posIdx, objIndex0.posIdx, objIndex1.posIdx, settings.flipNormals);
+					//WriteTangent(settings.writeTangents, i + 1, tangents, normals, texCoords, i + 1, i + 2, i + 3, true);
+					WriteTexCoord(settings.writeTexCoords, objIndex1.texIdx, objModel.texCoords, texCoords);
+				}
+
+				if (!WriteIndex(objIndex2, indexMap, index, indices, is16Bit))
+				{
+					WritePosition(settings.writePositions, objIndex2.posIdx, objModel.positions, positions);
+					WriteNormal(settings.writeNormals, objIndex2.normIdx, objModel.normals, normals,
+						objModel.positions, objIndex1.posIdx, objIndex2.posIdx, objIndex0.posIdx, settings.flipNormals);
+					WriteTexCoord(settings.writeTexCoords, objIndex2.texIdx, objModel.texCoords, texCoords);
+				}
+			}
+
+			const uSize meshIndexEnd = indices.Size() / outModel.indexStream.indexElement.sizeBytes;
+
+			mesh.indexCount = meshIndexEnd - meshIndexStart;
 
 			outModel.meshes.PushBack(mesh);
-
-			vertexBufferOffset += mesh.verticesSizeBytes;
-			indexBufferOffset += mesh.indicesSizeBytes;
 		}
+
+		outModel.indexStream.maxIndex = index;
+		outModel.indexStream.indexCount = indices.Size() / outModel.indexStream.indexElement.sizeBytes;
 
 		return true;
 	}

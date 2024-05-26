@@ -54,9 +54,9 @@ namespace Quartz
 		
 		String	stringVal;
 
-		inline MaterialValue() : vec4fVal() {};
+		inline MaterialValue() : _data{} {};
 		inline MaterialValue(const MaterialValue& value) : 
-			type(value.type), _data{}, stringVal(value.stringVal) {}
+			type(value.type), vec4uVal(value.vec4uVal), stringVal(value.stringVal) {}
 
 		inline MaterialValue& operator=(const MaterialValue& value)
 		{

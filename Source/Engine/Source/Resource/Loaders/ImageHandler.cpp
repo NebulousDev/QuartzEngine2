@@ -38,8 +38,8 @@ namespace Quartz
 		sSize imageHeight = 0;
 		sSize imageComponents = 0;
 
-		stbi_uc* pImageData = stbi_load(assetFile.GetPath().Str(), 
-			&imageWidth, &imageHeight, &imageComponents, STBI_default);
+		stbi_uc* pImageData = stbi_load(assetFile.GetPath().Str(),
+			&imageWidth, &imageHeight, &imageComponents, 4);//STBI_default);
 
 		if (!pImageData)
 		{
@@ -74,7 +74,7 @@ namespace Quartz
 		pImage->depth	= 1;
 		pImage->format	= imageFormat;
 
-		uSize imageSizeBytes = imageWidth * imageHeight * pImage->FormatSize();
+		uSize imageSizeBytes = imageWidth * imageHeight * 4;// pImage->FormatSize();
 		ByteBuffer* pImageDataBuffer = mBufferPool.Allocate(imageSizeBytes);
 
 		pImageDataBuffer->WriteData((void*)pImageData, imageSizeBytes);

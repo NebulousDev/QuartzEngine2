@@ -153,18 +153,76 @@ namespace Quartz
 			UniformBufferLocation transformBufferLocation;
 			bufferCache.AllocateAndWriteUniformData(transformBufferLocation, 0, &perModelUbo, sizeof(VulkanRenderablePerModelUBO));
 
+			Array<VulkanAttachment, 2> attachments =
+			{
+				{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
+				{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
+			};
+
+			Array<VkVertexInputAttributeDescription, 16> meshVertexAttributes;
+			Array<VkVertexInputBindingDescription, 16> meshVertexBindings;
+
+			uSize location = 0;
+			for (const VertexStream& stream : pModel->vertexStreams)
+			{
+				if (!stream.pVertexBuffer)
+				{
+					continue;
+				}
+
+				VkVertexInputBindingDescription vertexBufferBinding = {};
+				vertexBufferBinding.binding		= stream.streamIdx;
+				vertexBufferBinding.stride		= stream.strideBytes;
+				vertexBufferBinding.inputRate	= VK_VERTEX_INPUT_RATE_VERTEX;
+
+				for (const VertexElement& element : stream.vertexElements)
+				{
+					VkFormat vkAttribFormat = VK_FORMAT_R32G32B32_SFLOAT;
+
+					switch (element.format)
+					{
+						case VERTEX_FORMAT_FLOAT:				vkAttribFormat = VK_FORMAT_R32_SFLOAT; break;
+						case VERTEX_FORMAT_FLOAT2:				vkAttribFormat = VK_FORMAT_R32G32_SFLOAT; break;
+						case VERTEX_FORMAT_FLOAT3:				vkAttribFormat = VK_FORMAT_R32G32B32_SFLOAT; break;
+						case VERTEX_FORMAT_FLOAT4:				vkAttribFormat = VK_FORMAT_R32G32B32A32_SFLOAT; break;
+						case VERTEX_FORMAT_INT:					vkAttribFormat = VK_FORMAT_R32_SINT; break;
+						case VERTEX_FORMAT_INT2:				vkAttribFormat = VK_FORMAT_R32G32_SINT; break;
+						case VERTEX_FORMAT_INT3:				vkAttribFormat = VK_FORMAT_R32G32B32_SINT; break;
+						case VERTEX_FORMAT_INT4:				vkAttribFormat = VK_FORMAT_R32G32B32A32_SINT; break;
+						case VERTEX_FORMAT_UINT:				vkAttribFormat = VK_FORMAT_R32_UINT; break;
+						case VERTEX_FORMAT_UINT2:				vkAttribFormat = VK_FORMAT_R32G32_UINT; break;
+						case VERTEX_FORMAT_UINT3:				vkAttribFormat = VK_FORMAT_R32G32B32_UINT; break;
+						case VERTEX_FORMAT_UINT4:				vkAttribFormat = VK_FORMAT_R32G32B32A32_UINT; break;
+						case VERTEX_FORMAT_INT_2_10_10_10:		vkAttribFormat = VK_FORMAT_A2R10G10B10_SINT_PACK32; break;
+						case VERTEX_FORMAT_UINT_2_10_10_10:		vkAttribFormat = VK_FORMAT_A2R10G10B10_UINT_PACK32; break;
+						case VERTEX_FORMAT_FLOAT_10_11_11:		vkAttribFormat = VK_FORMAT_B10G11R11_UFLOAT_PACK32; break;
+						case VERTEX_FORMAT_FLOAT_16_16_16_16:	vkAttribFormat = VK_FORMAT_R16G16B16A16_SFLOAT; break;
+					}
+
+					VkVertexInputAttributeDescription elementAttrib = {};
+					elementAttrib.binding	= stream.streamIdx;
+					elementAttrib.location	= location++;
+					elementAttrib.format	= vkAttribFormat;
+					elementAttrib.offset	= element.offsetBytes;
+
+					meshVertexAttributes.PushBack(elementAttrib);
+				}
+
+				meshVertexBindings.PushBack(vertexBufferBinding);
+			}
+
+			const IndexElement indexElement = pModel->indexStream.indexElement;
+
 			for (const Mesh& mesh : pModel->meshes)
 			{
 				VulkanRenderable renderable = {};
 
-				const IndexElement indexElement	= mesh.indexElement;
-				const IndexFormat indexType		= indexElement.format;
-				const uInt32 indexSize			= indexElement.FormatSize();
+				const IndexFormat indexType = indexElement.format;
 
 				renderable.meshBuffer		= bufferLocation;
 				renderable.transformBuffer	= transformBufferLocation;
-				renderable.indexStart		= mesh.indicesStartBytes / indexSize;
-				renderable.indexCount		= mesh.indicesSizeBytes / indexSize; 
+				renderable.indexStart		= mesh.indexStart;
+				renderable.indexCount		= mesh.indexCount;
 				renderable.vkIndexType		= indexType == INDEX_FORMAT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
 
 				if (world.HasComponent<MaterialComponent>(entity))
@@ -173,7 +231,14 @@ namespace Quartz
 
 					Array<VulkanShader*, 8> shaderList;
 
-					const String& materialPath = materialComponent.materialPaths[0]; // @TODO mesh materialIdx
+					uSize materialIdx = mesh.materialIdx;
+
+					if (materialIdx >= materialComponent.materialPaths.Size())
+					{
+						materialIdx = 0; // @TODO: use default material instead
+					}
+
+					const String& materialPath = materialComponent.materialPaths[materialIdx];
 					Material* pMaterial = Engine::GetAssetManager().GetOrLoadAsset<Material>(materialPath); // @TODO: Cache
 					
 					if (!pMaterial)
@@ -195,18 +260,24 @@ namespace Quartz
 						shaderList.PushBack(pVulkanShader);
 					}
 
-					Array<VulkanAttachment, 2> attachments =
-					{
-						{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
-						{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
-					};
+					VulkanGraphicsPipelineInfo pipelineInfo = 
+						pipelineCache.MakeGraphicsPipelineInfo(shaderList, attachments, meshVertexAttributes, meshVertexBindings);
 
-					VulkanGraphicsPipelineInfo pipelineInfo = pipelineCache.MakeGraphicsPipelineInfo(shaderList, attachments);
-
-					pipelineInfo.vkFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-					pipelineInfo.vkCullMode = VK_CULL_MODE_NONE;
+					pipelineInfo.vkFrontFace	= VK_FRONT_FACE_COUNTER_CLOCKWISE;
+					pipelineInfo.vkCullMode		= VK_CULL_MODE_NONE;
 
 					renderable.pPipeline = pipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
+
+					// @TODO: Not the right place (or method, get from shader instead) VVV
+					for (const VertexStream& stream : pModel->vertexStreams)
+					{
+						VulkanBufferBind vertexBufferBind = {};
+						vertexBufferBind.pBuffer = bufferLocation.vertexBuffers[stream.streamIdx]->GetVulkanBuffer();
+						vertexBufferBind.offset = bufferLocation.vertexEntries[stream.streamIdx].offset;
+
+						// I dont like pushing 8 of these
+						renderable.vertexBinds.PushBack(vertexBufferBind);
+					}
 
 					uSize bindingCount = renderable.pPipeline->descriptorSetLayouts[0]->setBindings.Size();
 					for (uSize b = 1; b < bindingCount; b++) //
@@ -286,7 +357,7 @@ namespace Quartz
 									VkBufferImageCopy vkImageCopy = {};
 									vkImageCopy.imageExtent.width				= imageInfo.width;
 									vkImageCopy.imageExtent.height				= imageInfo.height;
-									vkImageCopy.imageExtent.depth				= imageInfo.depth;
+									vkImageCopy.imageExtent.depth				= 1; //imageInfo.depth;
 									vkImageCopy.imageOffset.x					= 0;
 									vkImageCopy.imageOffset.y					= 0;
 									vkImageCopy.imageOffset.z					= 0;
@@ -311,8 +382,19 @@ namespace Quartz
 									transferSubmition.waitStages		= { };
 									transferSubmition.signalSemaphores	= { };
 
-									mpGraphics->Submit(transferSubmition, mpDevice->queues.graphics, VK_NULL_HANDLE);
+									VkFence vkTransferFence = 0;
+
+									VkFenceCreateInfo fenceInfo = {};
+									fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+									fenceInfo.flags = 0;
+									fenceInfo.pNext = nullptr;
+
+									vkCreateFence(mpDevice->vkDevice, &fenceInfo, VK_NULL_HANDLE, &vkTransferFence);
+
+									mpGraphics->Submit(transferSubmition, mpDevice->queues.graphics, vkTransferFence);
 									vkDeviceWaitIdle(mpDevice->vkDevice);
+
+									vkWaitForFences(mpDevice->vkDevice, 1, &vkTransferFence, true, INT64_MAX);
 
 									mpGraphics->pResourceManager->DestroyBuffer(pImageTransferBuffer);
 
@@ -394,12 +476,14 @@ namespace Quartz
 			recorder.SetIndexBuffer(renderable.meshBuffer.pIndexBuffer->GetVulkanBuffer(),
 				renderable.meshBuffer.indexEntry.offset, renderable.vkIndexType);
 
-			VulkanBufferBind pVertexBufferBinds[] = 
-			{ 
-				{renderable.meshBuffer.pVertexBuffer->GetVulkanBuffer(), renderable.meshBuffer.vertexEntry.offset} 
-			};
+			//array<VulkanBufferBind, 8> vertexBufferBinds;
 
-			recorder.SetVertexBuffers(pVertexBufferBinds, 1);
+			//VulkanBufferBind pVertexBufferBinds[] = 
+			//{ 
+			//	{renderable.meshBuffer.pVertexBuffer->GetVulkanBuffer(), renderable.meshBuffer.vertexEntry.offset} 
+			//};
+
+			recorder.SetVertexBuffers(renderable.vertexBinds.Data(), renderable.vertexBinds.Size());
 
 			Array<VulkanUniformBufferBind, 8> set0bufferBinds;
 			Array<VulkanUniformBufferBind, 8> set1bufferBinds;

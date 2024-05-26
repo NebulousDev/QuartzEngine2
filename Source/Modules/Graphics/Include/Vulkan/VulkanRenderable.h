@@ -8,10 +8,10 @@ namespace Quartz
 {
 	struct MeshBufferLocation
 	{
-		VulkanMultiBufferEntry	vertexEntry;
-		VulkanMultiBufferEntry	indexEntry;
-		VulkanMultiBuffer*		pVertexBuffer;
-		VulkanMultiBuffer*		pIndexBuffer;
+		Array<VulkanMultiBufferEntry, 8>	vertexEntries;
+		VulkanMultiBufferEntry				indexEntry;
+		Array<VulkanMultiBuffer*, 8>		vertexBuffers;
+		VulkanMultiBuffer*					pIndexBuffer;
 	};
 
 	struct UniformBufferLocation
@@ -22,14 +22,15 @@ namespace Quartz
 
 	struct VulkanRenderable
 	{
-		MeshBufferLocation		meshBuffer;
-		UniformBufferLocation	transformBuffer;
-		UniformBufferLocation	materialBuffer;
-		VulkanGraphicsPipeline* pPipeline;
-		float					distFromCamera;
-		uInt32					indexStart;
-		uInt32					indexCount;
-		VkIndexType				vkIndexType;
+		MeshBufferLocation					meshBuffer;
+		UniformBufferLocation				transformBuffer;
+		UniformBufferLocation				materialBuffer;
+		VulkanGraphicsPipeline*				pPipeline;
+		float								distFromCamera;
+		uInt32								indexStart;
+		uInt32								indexCount;
+		VkIndexType							vkIndexType;
+		Array<VulkanBufferBind, 16>			vertexBinds;
 		Array<VulkanUniformImageBind, 16>	imageBinds;
 
 		//temp

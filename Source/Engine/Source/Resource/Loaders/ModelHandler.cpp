@@ -73,38 +73,40 @@ namespace Quartz
 			return false;
 		}
 
-		uInt64 indexBufferCount = 0;
-
-		for (const ObjObject& object : pObjModel->objects)
-		{
-			indexBufferCount += object.indices.Size();
-		}
-
-		// TODO: using indices could be too large
-		const uInt64 vertexBufferSizeBytes = indexBufferCount * sizeof(float) * 6;
-		const uInt64 indexBufferSizeBytes = indexBufferCount * sizeof(uInt32);
-
-		ByteBuffer* pVertexBuffer	= mBufferPool.Allocate(vertexBufferSizeBytes);
-		ByteBuffer* pIndexBuffer	= mBufferPool.Allocate(indexBufferSizeBytes);
-
-		if (!pVertexBuffer || !pIndexBuffer)
-		{
-			//LogError("Error. Failed to allocate buffer space [%d MiB] for obj file [%s].", 
-			//	(vertexBufferSizeBytes + indexBufferSizeBytes) / 1024, assetFile.GetPath().Str());
-			delete pObjModel;
-			return false;
-		}
-
 		Model* pModel = mModelPool.Allocate(&assetFile);
-		pModel->vertexData.pVertexBuffer	= pVertexBuffer;
-		pModel->vertexData.pIndexBuffer		= pIndexBuffer;
 
-		if (!ConvertOBJToModel(*pObjModel, *pModel))
+		ObjConvertSettings objConvertSettings = {};
+		objConvertSettings.writePositions		= true;
+		objConvertSettings.writeNormals			= true;
+		objConvertSettings.writeTangents		= false;
+		objConvertSettings.writeBiTangents		= false;
+		objConvertSettings.writeTexCoords		= true;
+		objConvertSettings.positionStreamIdx	= 0;
+		objConvertSettings.normalStreamIdx		= 0;
+		objConvertSettings.tangentStreamIdx		= 0;
+		objConvertSettings.biTangentStreamIdx	= 0;
+		objConvertSettings.texCoordStreamIdx	= 0;
+		objConvertSettings.positionFormat		= VERTEX_FORMAT_FLOAT3;
+		objConvertSettings.normalFormat			= VERTEX_FORMAT_FLOAT3;
+		objConvertSettings.tangentFormat		= VERTEX_FORMAT_FLOAT3;
+		objConvertSettings.biTangentFormat		= VERTEX_FORMAT_FLOAT3;
+		objConvertSettings.texCoordFormat		= VERTEX_FORMAT_FLOAT2;
+		objConvertSettings.useTangentBiTanW		= true;
+		objConvertSettings.flipNormals			= false;
+
+		if (!ConvertOBJToModel(objConvertSettings, *pObjModel, *pModel, mBufferPool))
 		{
 			LogError("Error. Failed to parse obj file [%s] into buffers.", assetFile.GetPath().Str());
+			
+			for (VertexStream& stream : pModel->vertexStreams)
+			{
+				mBufferPool.Free(stream.pVertexBuffer);
+			}
+
+			mBufferPool.Free(pModel->indexStream.pIndexBuffer);
+
 			mModelPool.Free(pModel);
-			mBufferPool.Free(pVertexBuffer);
-			mBufferPool.Free(pIndexBuffer);
+
 			delete pObjModel;
 			return false;
 		}
@@ -140,8 +142,8 @@ namespace Quartz
 	{
 		Model* pModel = static_cast<Model*>(pInAsset);
 
-		mBufferPool.Free(pModel->vertexData.pVertexBuffer);
-		mBufferPool.Free(pModel->vertexData.pIndexBuffer);
+		//mBufferPool.Free(pModel->vertexData.pVertexBuffer);
+		//mBufferPool.Free(pModel->vertexData.pIndexBuffer);
 		mModelPool.Free(pModel);
 
 		return true;

@@ -26,12 +26,16 @@ namespace Quartz
 		bool		BeginWriting();
 		bool		EndWriting();
 		bool		WriteStrings();
-		bool		WriteMesh(const Mesh& mesh, const VertexData& vertexData);
+		bool		WriteMesh(const Mesh& mesh);
+		bool		WriteVertexStream(const VertexStream& stream);
+		bool		WriteIndexStream(const IndexStream& stream);
 
 		bool		BeginReading();
 		bool		EndReading();
 		bool		ReadStrings();
 		bool		ReadMeshes();
+		bool		ReadVertexStreams();
+		bool		ReadIndexStream();
 
 	public:
 		QModelParser(File& qModelFile,

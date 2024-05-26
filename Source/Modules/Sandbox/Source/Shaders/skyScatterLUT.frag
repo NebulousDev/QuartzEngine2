@@ -22,7 +22,7 @@ struct Sun
 	float intensity;
 };
 
-layout(set = 0, binding = 0) uniform AtmosphereUBO
+layout(set = 0, binding = 0, std140) uniform AtmosphereUBO
 {
 	vec3 rayleighScattering;
 	float rayleighAbsorbtion;

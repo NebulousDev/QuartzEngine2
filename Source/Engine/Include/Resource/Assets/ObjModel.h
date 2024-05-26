@@ -45,7 +45,8 @@ namespace Quartz
 
 	struct ObjObject
 	{
-		String			material;
+		String			materialName;
+		uSize			materialIdx;
 		Array<OBJIndex>	indices;
 	};
 
