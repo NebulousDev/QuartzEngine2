@@ -37,6 +37,8 @@ namespace Quartz
 
 	void VulkanRenderer::Initialize()
 	{
+		// Color Pass
+
 		VulkanRenderSettings renderSettings = {};
 		renderSettings.useUniqueMeshBuffers				= false;
 		renderSettings.useUniqueMeshStagingBuffers		= false;
@@ -59,6 +61,30 @@ namespace Quartz
 
 		for (uSize i = 0; i < mMaxInFlightCount; i++)
 		{
+			VulkanImageInfo colorImageInfo = {};
+			colorImageInfo.vkFormat		= VK_FORMAT_R32G32B32A32_SFLOAT;
+			colorImageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
+			colorImageInfo.vkUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			colorImageInfo.width		= mpGraphics->pSurface->width;
+			colorImageInfo.height		= mpGraphics->pSurface->height;
+			colorImageInfo.depth		= 1;
+			colorImageInfo.layers		= 1;
+			colorImageInfo.mips			= 1;
+
+			mColorImages[i] = mpResourceManager->CreateImage(mpDevice, colorImageInfo);
+
+			VulkanImageViewInfo colorImageViewInfo = {};
+			colorImageViewInfo.pImage			= mColorImages[i];
+			colorImageViewInfo.vkFormat			= VK_FORMAT_R32G32B32A32_SFLOAT;
+			colorImageViewInfo.vkImageViewType	= VK_IMAGE_VIEW_TYPE_2D;
+			colorImageViewInfo.vkAspectFlags	= VK_IMAGE_ASPECT_COLOR_BIT;
+			colorImageViewInfo.layerStart		= 0;
+			colorImageViewInfo.layerCount		= 1;
+			colorImageViewInfo.mipStart			= 0;
+			colorImageViewInfo.mipCount			= 1;
+
+			mColorImageViews[i] = mpResourceManager->CreateImageView(mpDevice, colorImageViewInfo);
+
 			VulkanImageInfo depthImageInfo = {};
 			depthImageInfo.vkFormat		= VK_FORMAT_D24_UNORM_S8_UINT;
 			depthImageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
@@ -70,7 +96,6 @@ namespace Quartz
 			depthImageInfo.mips			= 1;
 
 			mDepthImages[i] = mpResourceManager->CreateImage(mpDevice, depthImageInfo);
-			LogInfo("Image %p", mDepthImages[i]);
 
 			VulkanImageViewInfo depthImageViewInfo = {};
 			depthImageViewInfo.pImage			= mDepthImages[i];
@@ -83,7 +108,6 @@ namespace Quartz
 			depthImageViewInfo.mipCount			= 1;
 
 			mDepthImageViews[i] = mpResourceManager->CreateImageView(mpDevice, depthImageViewInfo);
-			LogInfo("View %p", mDepthImageViews[i]);
 		}
 
 		VulkanCommandPoolInfo renderPoolInfo = {};
@@ -125,10 +149,48 @@ namespace Quartz
 		VkPipelineRenderingCreateInfo renderingInfo = {};
 		renderingInfo.sType						= VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 		renderingInfo.colorAttachmentCount		= 1;
-		renderingInfo.pColorAttachmentFormats	= &mpSwapchain->images[0]->vkFormat;
+		renderingInfo.pColorAttachmentFormats	= &mColorImages[0]->vkFormat;
 		renderingInfo.depthAttachmentFormat		= VK_FORMAT_D24_UNORM_S8_UINT;
 
 		mImGuiRenderer.Initialize(*mpGraphics, *mpDevice, *mpWindow, renderingInfo);
+
+		// Tonemap Pass
+
+		VulkanShader* pTonemapVertexShader		= mShaderCache.FindOrCreateShader("Shaders/fullscreen.qsvert");
+		VulkanShader* pTonemapFragmentShader	= mShaderCache.FindOrCreateShader("Shaders/tonemap_hdr-sdr.qsfrag");
+
+		Array<VulkanAttachment, 1> tonemapPassAttachments =
+		{
+			{ "Swapchain", VULKAN_ATTACHMENT_TYPE_SWAPCHAIN, VK_FORMAT_B8G8R8A8_UNORM }
+		};
+
+		VulkanGraphicsPipelineInfo tonemapPipelineInfo =
+			mPipelineCache.MakeGraphicsPipelineInfo(
+				{ pTonemapVertexShader, pTonemapFragmentShader }, tonemapPassAttachments);
+
+		tonemapPipelineInfo.vkCullMode = VK_CULL_MODE_NONE;
+
+		mpTonemapPipeline = mPipelineCache.FindOrCreateGraphicsPipeline(tonemapPipelineInfo);
+
+		VkSamplerCreateInfo tonemapSamplerInfo{};
+		tonemapSamplerInfo.sType					= VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		tonemapSamplerInfo.magFilter				= VK_FILTER_LINEAR;
+		tonemapSamplerInfo.minFilter				= VK_FILTER_LINEAR;
+		tonemapSamplerInfo.addressModeU				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		tonemapSamplerInfo.addressModeV				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		tonemapSamplerInfo.addressModeW				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		tonemapSamplerInfo.anisotropyEnable			= VK_FALSE;
+		tonemapSamplerInfo.maxAnisotropy			= 1;
+		tonemapSamplerInfo.borderColor				= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		tonemapSamplerInfo.unnormalizedCoordinates	= VK_FALSE;
+		tonemapSamplerInfo.compareEnable			= VK_FALSE;
+		tonemapSamplerInfo.compareOp				= VK_COMPARE_OP_ALWAYS;
+		tonemapSamplerInfo.mipmapMode				= VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		tonemapSamplerInfo.mipLodBias				= 0.0f;
+		tonemapSamplerInfo.minLod					= 0.0f;
+		tonemapSamplerInfo.maxLod					= 0.0f;
+
+		vkCreateSampler(mpDevice->vkDevice, &tonemapSamplerInfo, VK_NULL_HANDLE, &mVkTonemapSampler);
 	}
 
 	void VulkanRenderer::SetCamera(Entity cameraEntity)
@@ -180,6 +242,21 @@ namespace Quartz
 
 	}
 
+	void VulkanRenderer::RecordTonemapDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
+	{
+		recorder.SetGraphicsPipeline(mpTonemapPipeline);
+
+		VulkanUniformImageBind colorImageBind = {};
+		colorImageBind.binding		= 0;
+		colorImageBind.pImageView	= mColorImageViews[frameIdx];
+		colorImageBind.vkLayout		= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		colorImageBind.vkSampler	= mVkTonemapSampler;
+
+		recorder.BindUniforms(mpTonemapPipeline, 0, nullptr, 0, &colorImageBind, 1);
+
+		recorder.Draw(1, 3, 0);
+	}
+
 	void VulkanRenderer::RenderScene(EntityWorld& world, uSize frameIdx)
 	{
 		VulkanCommandBuffer* pCommandBuffer = mCommandBuffers[frameIdx];
@@ -187,7 +264,7 @@ namespace Quartz
 
 		VulkanSubmission renderSubmition	= {};
 		renderSubmition.commandBuffers		= { mCommandBuffers[frameIdx] };
-		renderSubmition.waitSemaphores		= { mSwapTimer.GetCurrentAcquiredSemaphore()}; //, mSkyRenderer.GetLUTsCompleteSemaphore(frameIdx) };
+		renderSubmition.waitSemaphores		= { mSwapTimer.GetCurrentAcquiredSemaphore()};
 		renderSubmition.waitStages			= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		renderSubmition.signalSemaphores	= { mSwapTimer.GetCurrentCompleteSemaphore() };
 
@@ -215,7 +292,33 @@ namespace Quartz
 
 		recorder.SetViewport(vkViewport, vkScissor);
 
-		recorder.PipelineBarrierSwapchainImageBegin(mpSwapchain->images[frameIdx]);
+		// Color Pass
+
+		VkImageMemoryBarrier vkColorImageMemoryBarrier = {};
+		vkColorImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		vkColorImageMemoryBarrier.srcAccessMask						= 0;
+		vkColorImageMemoryBarrier.dstAccessMask						= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		vkColorImageMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
+		vkColorImageMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		vkColorImageMemoryBarrier.image								= mColorImages[frameIdx]->vkImage;
+		vkColorImageMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		vkColorImageMemoryBarrier.subresourceRange.baseMipLevel		= 0;
+		vkColorImageMemoryBarrier.subresourceRange.levelCount		= 1;
+		vkColorImageMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
+		vkColorImageMemoryBarrier.subresourceRange.layerCount		= 1;
+
+		VulkanPipelineBarrierInfo colorImageBarrierInfo = {};
+		colorImageBarrierInfo.srcStage					= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		colorImageBarrierInfo.dstStage					= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		colorImageBarrierInfo.dependencyFlags			= 0;
+		colorImageBarrierInfo.memoryBarrierCount		= 0;
+		colorImageBarrierInfo.pMemoryBarriers			= nullptr;
+		colorImageBarrierInfo.bufferMemoryBarrierCount	= 0;
+		colorImageBarrierInfo.pBufferMemoryBarriers		= nullptr;
+		colorImageBarrierInfo.imageMemoryBarrierCount	= 1;
+		colorImageBarrierInfo.pImageMemoryBarriers		= &vkColorImageMemoryBarrier;
+
+		recorder.PipelineBarrier(colorImageBarrierInfo);
 
 		VkImageMemoryBarrier vkDepthImageMemoryBarrier = {};
 		vkDepthImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -230,26 +333,25 @@ namespace Quartz
 		vkDepthImageMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
 		vkDepthImageMemoryBarrier.subresourceRange.layerCount		= 1;
 
-		VulkanPipelineBarrierInfo barrierInfo = {};
-		barrierInfo.srcStage					= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-		barrierInfo.dstStage					= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-		barrierInfo.dependencyFlags				= 0;
-		barrierInfo.memoryBarrierCount			= 0;
-		barrierInfo.pMemoryBarriers				= nullptr;
-		barrierInfo.bufferMemoryBarrierCount	= 0;
-		barrierInfo.pBufferMemoryBarriers		= nullptr;
-		barrierInfo.imageMemoryBarrierCount		= 1;
-		barrierInfo.pImageMemoryBarriers		= &vkDepthImageMemoryBarrier;
+		VulkanPipelineBarrierInfo depthImageBarrierInfo = {};
+		depthImageBarrierInfo.srcStage					= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		depthImageBarrierInfo.dstStage					= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		depthImageBarrierInfo.dependencyFlags			= 0;
+		depthImageBarrierInfo.memoryBarrierCount		= 0;
+		depthImageBarrierInfo.pMemoryBarriers			= nullptr;
+		depthImageBarrierInfo.bufferMemoryBarrierCount	= 0;
+		depthImageBarrierInfo.pBufferMemoryBarriers		= nullptr;
+		depthImageBarrierInfo.imageMemoryBarrierCount	= 1;
+		depthImageBarrierInfo.pImageMemoryBarriers		= &vkDepthImageMemoryBarrier;
 
-		recorder.PipelineBarrier(barrierInfo);
+		recorder.PipelineBarrier(depthImageBarrierInfo);
 
-		VulkanRenderingAttachmentInfo swapchainRenderingAttachmentInfo = {};
-		swapchainRenderingAttachmentInfo.pImageView		= mpSwapchain->imageViews[frameIdx];
-		swapchainRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		swapchainRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
-		swapchainRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
-		//swapchainRenderingAttachmentInfo.clearValue		= { 0.02f, 0.05f, 0.05f, 1.0f };
-		swapchainRenderingAttachmentInfo.clearValue		= { 0.7f, 0.8f, 1.0f, 1.0f };
+		VulkanRenderingAttachmentInfo colorRenderingAttachmentInfo = {};
+		colorRenderingAttachmentInfo.pImageView		= mColorImageViews[frameIdx];
+		colorRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		colorRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
+		colorRenderingAttachmentInfo.clearValue		= { 0.02f, 0.05f, 0.05f, 1.0f };
 
 		VulkanRenderingAttachmentInfo depthRenderingAttachmentInfo = {};
 		depthRenderingAttachmentInfo.pImageView		= mDepthImageViews[frameIdx];
@@ -258,7 +360,7 @@ namespace Quartz
 		depthRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
 		depthRenderingAttachmentInfo.clearValue		= { 1.0f, 0 };
 
-		VulkanRenderingAttachmentInfo pColorAttachmentInfos[] = { swapchainRenderingAttachmentInfo };
+		VulkanRenderingAttachmentInfo pColorAttachmentInfos[] = { colorRenderingAttachmentInfo };
 
 		VulkanRenderingBeginInfo renderingBeginInfo = {};
 		renderingBeginInfo.pColorAttachments	= pColorAttachmentInfos;
@@ -269,6 +371,55 @@ namespace Quartz
 
 		recorder.BeginRendering(renderingBeginInfo);
 		RecordDraws(recorder, frameIdx);
+		recorder.EndRendering();
+
+		VkImageMemoryBarrier vkColorImageEndMemoryBarrier = {};
+		vkColorImageEndMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		vkColorImageEndMemoryBarrier.srcAccessMask						= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		vkColorImageEndMemoryBarrier.dstAccessMask						= 0;
+		vkColorImageEndMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		vkColorImageEndMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		vkColorImageEndMemoryBarrier.image								= mColorImages[frameIdx]->vkImage;
+		vkColorImageEndMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		vkColorImageEndMemoryBarrier.subresourceRange.baseMipLevel		= 0;
+		vkColorImageEndMemoryBarrier.subresourceRange.levelCount		= 1;
+		vkColorImageEndMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
+		vkColorImageEndMemoryBarrier.subresourceRange.layerCount		= 1;
+
+		VulkanPipelineBarrierInfo colorImageEndBarrierInfo = {};
+		colorImageEndBarrierInfo.srcStage					= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		colorImageEndBarrierInfo.dstStage					= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		colorImageEndBarrierInfo.dependencyFlags			= 0;
+		colorImageEndBarrierInfo.memoryBarrierCount			= 0;
+		colorImageEndBarrierInfo.pMemoryBarriers			= nullptr;
+		colorImageEndBarrierInfo.bufferMemoryBarrierCount	= 0;
+		colorImageEndBarrierInfo.pBufferMemoryBarriers		= nullptr;
+		colorImageEndBarrierInfo.imageMemoryBarrierCount	= 1;
+		colorImageEndBarrierInfo.pImageMemoryBarriers		= &vkColorImageEndMemoryBarrier;
+
+		recorder.PipelineBarrier(colorImageEndBarrierInfo);
+
+		// Tonemap Pass
+
+		recorder.PipelineBarrierSwapchainImageBegin(mpSwapchain->images[frameIdx]);
+
+		VulkanRenderingAttachmentInfo swapchainRenderingAttachmentInfo = {};
+		swapchainRenderingAttachmentInfo.pImageView		= mpSwapchain->imageViews[frameIdx];
+		swapchainRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		swapchainRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		swapchainRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
+
+		VulkanRenderingAttachmentInfo pSwapchainAttachmentInfos[] = { swapchainRenderingAttachmentInfo };
+
+		VulkanRenderingBeginInfo tonemapRenderingBeginInfo = {};
+		tonemapRenderingBeginInfo.pColorAttachments		= pSwapchainAttachmentInfos;
+		tonemapRenderingBeginInfo.colorAttachmentCount	= 1;
+		tonemapRenderingBeginInfo.pDepthAttachment		= nullptr;
+		tonemapRenderingBeginInfo.pStencilAttachment	= nullptr;
+		tonemapRenderingBeginInfo.renderArea			= { { 0, 0 }, { mpGraphics->pSurface->width, mpGraphics->pSurface->height } };
+
+		recorder.BeginRendering(tonemapRenderingBeginInfo);
+		RecordTonemapDraws(recorder, frameIdx);
 		recorder.EndRendering();
 
 		RecordPostDraws(recorder, frameIdx);

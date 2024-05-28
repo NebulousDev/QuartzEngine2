@@ -271,7 +271,7 @@ namespace Quartz
 
 		Array<VulkanAttachment, 2> attachments =
 		{
-			{ "Swapchain",			VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
+			{ "Color Pass",			VULKAN_ATTACHMENT_TYPE_COLOR,			VK_FORMAT_R32G32B32A32_SFLOAT },
 			{ "Depth-Stencil",		VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
 		};
 

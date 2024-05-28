@@ -4,22 +4,28 @@
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
-//layout(location = 2) in vec2 inUV;
 
 layout(location = 0) out vec4 fragOut;
 
-layout(set = 0, binding = 1) uniform Material
+layout(std140, set = 0, binding = 0) uniform SceneUBO
+{
+	vec3 cameraPosition;
+}
+scene;
+
+layout(std140, set = 0, binding = 2) uniform Material
 {
     vec3 color;
 };
 
 const vec3 lightPos = vec3(-15.0, 55.0, 15.0);
-const vec3 viewPos = vec3(-10.0, 25.0, 1.0);
 const float shininess = 8;
 const vec3 lightColor = vec3(1,1,1);
 
 void main()
 {
+    vec3 viewPos = scene.cameraPosition;
+
     vec3 lightDir   = normalize(lightPos - inPosition);
     vec3 viewDir    = normalize(viewPos - inPosition);
     vec3 halfwayDir = normalize(lightDir + viewDir);

@@ -4,31 +4,44 @@
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec2 inUV;
+layout(location = 2) in vec4 inTangent;
+layout(location = 3) in vec2 inTexCoord;
+layout(location = 4) in mat3 inTBN;
 
 layout(location = 0) out vec4 fragOut;
 
-layout(set = 0, binding = 1) uniform sampler2D diffuseTexture;
+layout(std140, set = 0, binding = 0) uniform SceneUBO
+{
+	vec3 cameraPosition;
+}
+scene;
+
+layout(set = 0, binding = 2) uniform sampler2D diffuseTexture;
+layout(set = 0, binding = 3) uniform sampler2D normalTexture;
 
 const vec3 lightPos = vec3(-15.0, 55.0, 15.0);
-const vec3 viewPos = vec3(-10.0, 25.0, 1.0);
 const float shininess = 8;
 const vec3 lightColor = vec3(1,1,1);
 
 void main()
 {
+    vec3 normal = texture(normalTexture, inTexCoord).rgb;
+    normal = normal * 2.0 - 1.0;
+    normal = normalize(inTBN * normal);
+
+    vec3 viewPos = scene.cameraPosition;
+
     vec3 lightDir   = normalize(lightPos - inPosition);
     vec3 viewDir    = normalize(viewPos - inPosition);
     vec3 halfwayDir = normalize(lightDir + viewDir);
 
-    float spec = pow(max(dot(inNormal, halfwayDir), 0.0), shininess);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
     vec3 specular = lightColor * spec;
 
-    float diff = max(dot(inNormal, lightDir), 0.0);
+    float diff = max(dot(normal, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
 
     vec3 lighting = (diffuse * lightColor) + specular;
-    //vec3 color = texture(diffuseTexture, vec2(0,0)).rgb;
-    vec3 color = texture(diffuseTexture, inUV).rgb;
+    vec3 color = texture(diffuseTexture, inTexCoord).rgb;
 	fragOut = vec4(color * lighting, 1.0);
 }

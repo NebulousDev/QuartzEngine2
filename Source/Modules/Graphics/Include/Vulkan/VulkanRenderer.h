@@ -43,6 +43,8 @@ namespace Quartz
 
 		uSize						mMaxInFlightCount;
 		VulkanCommandBuffer*		mCommandBuffers[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VulkanImage*				mColorImages[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
+		VulkanImageView*			mColorImageViews[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
 		VulkanImage*				mDepthImages[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
 		VulkanImageView*			mDepthImageViews[VULKAN_GRAPHICS_MAX_IN_FLIGHT];
 
@@ -52,6 +54,9 @@ namespace Quartz
 		VulkanTerrainRenderer		mTerrainRenderer;
 		VulkanSkyRenderer			mSkyRenderer;
 		VulkanImGuiRenderer			mImGuiRenderer;
+
+		VkSampler					mVkTonemapSampler;
+		VulkanGraphicsPipeline*		mpTonemapPipeline;
 
 	public:
 		VulkanRenderer(VulkanGraphics& graphics, VulkanDevice& device, Window& activeWindow, uSize maxInFlightCount);
@@ -66,6 +71,8 @@ namespace Quartz
 		void RecordPreDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
 		void RecordDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
 		void RecordPostDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
+
+		void RecordTonemapDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
 
 		void RenderScene(EntityWorld& world, uSize frameIdx);
 

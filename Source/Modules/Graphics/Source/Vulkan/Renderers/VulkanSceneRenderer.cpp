@@ -20,22 +20,27 @@ namespace Quartz
 		VulkanResourceManager*	pResources	= graphics.pResourceManager;
 		VulkanDevice*			pDevice		= graphics.pPrimaryDevice;
 
-		VulkanShader* pVertexShader = shaderCache.FindOrCreateShader("Shaders/basic_mesh.qsvert");
-		VulkanShader* pFragmentShader = shaderCache.FindOrCreateShader("Shaders/basic_color.qsfrag");
+		VulkanShader* pDefaultVertexShader		= shaderCache.FindOrCreateShader("Shaders/basic_mesh.qsvert");
+		VulkanShader* pDefaultFragmentShader	= shaderCache.FindOrCreateShader("Shaders/basic_color.qsfrag");
 
-		Array<VulkanAttachment, 2> attachments =
+		Array<VulkanAttachment, 2> colorPassAttachments =
 		{
-			{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
+			{ "ColorPass0",		VULKAN_ATTACHMENT_TYPE_COLOR,			VK_FORMAT_R32G32B32A32_SFLOAT },
 			{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
+		};
+
+		Array<VulkanAttachment, 2> tonemapPassAttachments =
+		{
+			{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM }
 		};
 
 		VkSamplerCreateInfo defaultSamplerInfo{};
 		defaultSamplerInfo.sType					= VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 		defaultSamplerInfo.magFilter				= VK_FILTER_LINEAR;
 		defaultSamplerInfo.minFilter				= VK_FILTER_LINEAR;
-		defaultSamplerInfo.addressModeU				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		defaultSamplerInfo.addressModeV				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		defaultSamplerInfo.addressModeW				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		defaultSamplerInfo.addressModeU				= VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		defaultSamplerInfo.addressModeV				= VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		defaultSamplerInfo.addressModeW				= VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		defaultSamplerInfo.anisotropyEnable			= VK_FALSE;
 		defaultSamplerInfo.maxAnisotropy			= 1;
 		defaultSamplerInfo.borderColor				= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -49,64 +54,18 @@ namespace Quartz
 
 		vkCreateSampler(mpDevice->vkDevice, &defaultSamplerInfo, VK_NULL_HANDLE, &mVkDefaultSampler);
 
-		/*
-		VkVertexInputBindingDescription vertexBufferAttachment = {};
-		vertexBufferAttachment.binding		= 0;
-		vertexBufferAttachment.stride		= 6 * sizeof(float);
-		vertexBufferAttachment.inputRate	= VK_VERTEX_INPUT_RATE_VERTEX;
-
-		Array<VkVertexInputBindingDescription> vertexBindings;
-
-		vertexBindings.PushBack(vertexBufferAttachment);
-
-		VkVertexInputAttributeDescription positionAttrib = {};
-		positionAttrib.binding				= 0;
-		positionAttrib.location				= 0;
-		positionAttrib.format				= VK_FORMAT_R32G32B32_SFLOAT;
-		positionAttrib.offset				= 0;
-
-		VkVertexInputAttributeDescription normalAttrib = {};
-		normalAttrib.binding				= 0;
-		normalAttrib.location				= 1;
-		normalAttrib.format					= VK_FORMAT_R32G32B32_SFLOAT;
-		normalAttrib.offset					= 3 * sizeof(float);
-
-		VkVertexInputAttributeDescription tangentAttrib = {};
-		tangentAttrib.binding				= 0;
-		tangentAttrib.location				= 2;
-		tangentAttrib.format				= VK_FORMAT_R32G32B32_SFLOAT;
-		tangentAttrib.offset				= 6 * sizeof(float);
-
-		VkVertexInputAttributeDescription texCoordAttrib = {};
-		texCoordAttrib.binding				= 0;
-		texCoordAttrib.location				= 3;
-		texCoordAttrib.format				= VK_FORMAT_R32G32_SFLOAT;
-		texCoordAttrib.offset				= 9 * sizeof(float);
-
-		Array<VkVertexInputAttributeDescription> vertexAttributes;
-
-		vertexAttributes.PushBack(positionAttrib);
-		vertexAttributes.PushBack(normalAttrib);
-
-		VulkanGraphicsPipelineInfo pipelineInfo = 
+		VulkanGraphicsPipelineInfo defaultPipelineInfo =
 			pipelineCache.MakeGraphicsPipelineInfo(
-			{ pVertexShader, pFragmentShader },
-			attachments, vertexAttributes, vertexBindings
-		);
-		*/
+				{ pDefaultVertexShader, pDefaultFragmentShader }, colorPassAttachments);
 
-		VulkanGraphicsPipelineInfo pipelineInfo =
-			pipelineCache.MakeGraphicsPipelineInfo(
-				{ pVertexShader, pFragmentShader }, attachments);
+		defaultPipelineInfo.vkFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		defaultPipelineInfo.vkCullMode = VK_CULL_MODE_BACK_BIT;
 
-		pipelineInfo.vkFrontFace = VK_FRONT_FACE_CLOCKWISE;
-		pipelineInfo.vkCullMode = VK_CULL_MODE_NONE;
-
-		mpDefaultPipeline = pipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
+		mpDefaultPipeline = pipelineCache.FindOrCreateGraphicsPipeline(defaultPipelineInfo);
 
 		if (!mpDefaultPipeline)
 		{
-			LogFatal("Failed to create Pipeline!");
+			LogFatal("Failed to create VulkanSceneRenderer default pipeline!");
 		}
 	}
 
@@ -140,10 +99,16 @@ namespace Quartz
 			}
 
 			bool vertexDataFound;
-			MeshBufferLocation bufferLocation;
-			MeshBufferLocation stagingBufferLocation;
+			InputBufferLocation bufferLocation;
+			InputBufferLocation stagingBufferLocation;
 			bufferCache.GetOrAllocateBuffers(*pModel, bufferLocation, stagingBufferLocation, 1, 4, vertexDataFound);
 			// @TODO: error check ^
+
+			VulkanRenderableSceneUBO sceneUbo = {};
+			sceneUbo.cameraPosition = cameraTransform.position;
+
+			UniformBufferLocation sceneBufferLocation;
+			bufferCache.AllocateAndWriteUniformData(sceneBufferLocation, 0, &sceneUbo, sizeof(VulkanRenderableSceneUBO), 64);
 
 			VulkanRenderablePerModelUBO perModelUbo = {};
 			perModelUbo.model	= transformComponent.GetMatrix();
@@ -151,11 +116,11 @@ namespace Quartz
 			perModelUbo.proj	= camera.GetProjectionMatrix();
 
 			UniformBufferLocation transformBufferLocation;
-			bufferCache.AllocateAndWriteUniformData(transformBufferLocation, 0, &perModelUbo, sizeof(VulkanRenderablePerModelUBO));
+			bufferCache.AllocateAndWriteUniformData(transformBufferLocation, 0, &perModelUbo, sizeof(VulkanRenderablePerModelUBO), 64);
 
 			Array<VulkanAttachment, 2> attachments =
 			{
-				{ "Swapchain",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM },
+				{ "Color Pass",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_R32G32B32A32_SFLOAT },
 				{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
 			};
 
@@ -219,7 +184,8 @@ namespace Quartz
 
 				const IndexFormat indexType = indexElement.format;
 
-				renderable.meshBuffer		= bufferLocation;
+				renderable.inputBuffer		= bufferLocation;
+				renderable.sceneBuffer		= sceneBufferLocation;
 				renderable.transformBuffer	= transformBufferLocation;
 				renderable.indexStart		= mesh.indexStart;
 				renderable.indexCount		= mesh.indexCount;
@@ -264,7 +230,7 @@ namespace Quartz
 						pipelineCache.MakeGraphicsPipelineInfo(shaderList, attachments, meshVertexAttributes, meshVertexBindings);
 
 					pipelineInfo.vkFrontFace	= VK_FRONT_FACE_COUNTER_CLOCKWISE;
-					pipelineInfo.vkCullMode		= VK_CULL_MODE_NONE;
+					//pipelineInfo.vkCullMode		= VK_CULL_MODE_NONE;
 
 					renderable.pPipeline = pipelineCache.FindOrCreateGraphicsPipeline(pipelineInfo);
 
@@ -279,175 +245,193 @@ namespace Quartz
 						renderable.vertexBinds.PushBack(vertexBufferBind);
 					}
 
-					uSize bindingCount = renderable.pPipeline->descriptorSetLayouts[0]->setBindings.Size();
-					for (uSize b = 1; b < bindingCount; b++) //
+					for (auto& valuePair : pMaterial->shaderValues)
 					{
-						// @TODO: All of this is bad VVVVVVVV
+						const String& paramName				= valuePair.key;
+						const MaterialValue& paramValue		= valuePair.value;
 
-						uSize materialBufferSizeBytes = renderable.pPipeline->descriptorSetLayouts[0]->setBindings[b].sizeBytes;
-						bool isTextureBind = false;
-
-						if (materialBufferSizeBytes % 64 != 0)
+						/// VVV absolutely horrendous
+						if (paramValue.type == MATERIAL_VALUE_TEXTURE)
 						{
-							materialBufferSizeBytes += 64 - (materialBufferSizeBytes % 64);
-						}
-
-						ByteBuffer materialBuffer(materialBufferSizeBytes + 64);
-						materialBuffer.Allocate(materialBufferSizeBytes + 64);
-
-						for (auto& valuePair : pMaterial->shaderValues)
-						{
-							const String& paramName				= valuePair.key;
-							const MaterialValue& paramValue		= valuePair.value;
-
-							/// VVV absolutely horrendous
-							if (paramValue.type == MATERIAL_VALUE_TEXTURE)
-							{
-								isTextureBind = true;
-
-								const String& texturePath = paramValue.stringVal;
-
-								auto& textureIt = mTextureCache.Find(texturePath);
-								if (textureIt != mTextureCache.End())
-								{
-									VulkanUniformImageBind imageBind = {};
-									imageBind.binding		= b;
-									imageBind.pImageView	= textureIt->value;
-									imageBind.vkLayout		= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-									imageBind.vkSampler		= mVkDefaultSampler;
-
-									renderable.imageBinds.PushBack(imageBind);
-								}
-								else
-								{
-									Image* pImage = Engine::GetAssetManager().GetOrLoadAsset<Image>(texturePath);
-
-									VulkanImageInfo imageInfo = {};
-									imageInfo.width			= pImage->width;
-									imageInfo.height		= pImage->height;
-									imageInfo.depth			= 1;
-									imageInfo.layers		= 1;
-									imageInfo.mips			= 1;
-									imageInfo.vkFormat		= VK_FORMAT_R8G8B8A8_UNORM;
-									imageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
-									imageInfo.vkUsageFlags	= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-
-									VulkanImage* pVulkanImage = mpGraphics->pResourceManager->CreateImage(mpDevice, imageInfo);
-
-									VulkanBufferInfo bufferInfo = {};
-									bufferInfo.sizeBytes			= pImage->pImageData->Size();
-									bufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-									bufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-									VulkanBuffer* pImageTransferBuffer = mpGraphics->pResourceManager->CreateBuffer(mpDevice, bufferInfo);
-
-									VulkanBufferWriter imageBufferWriter(pImageTransferBuffer);
-									void* pBufferData = imageBufferWriter.Map();
-									MemCopy(pBufferData, pImage->pImageData->Data(), pImage->pImageData->Size());
-									imageBufferWriter.Unmap();
-
-									VulkanCommandPoolInfo terrainCommandPoolInfo = {};
-									terrainCommandPoolInfo.queueFamilyIndex			= mpDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
-									terrainCommandPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-									VulkanCommandPool* pImmediateCommandPool = mpGraphics->pResourceManager->CreateCommandPool(mpDevice, terrainCommandPoolInfo);
-									VulkanCommandBuffer* pImmediateCommandBuffer;
-									mpGraphics->pResourceManager->CreateCommandBuffers(pImmediateCommandPool, 1, &pImmediateCommandBuffer);
-
-									VkBufferImageCopy vkImageCopy = {};
-									vkImageCopy.imageExtent.width				= imageInfo.width;
-									vkImageCopy.imageExtent.height				= imageInfo.height;
-									vkImageCopy.imageExtent.depth				= 1; //imageInfo.depth;
-									vkImageCopy.imageOffset.x					= 0;
-									vkImageCopy.imageOffset.y					= 0;
-									vkImageCopy.imageOffset.z					= 0;
-									vkImageCopy.imageSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-									vkImageCopy.imageSubresource.baseArrayLayer = 0;
-									vkImageCopy.imageSubresource.layerCount		= 1;
-									vkImageCopy.imageSubresource.mipLevel		= 0;
-									vkImageCopy.bufferOffset					= 0;
-									vkImageCopy.bufferRowLength					= 0;
-									vkImageCopy.bufferImageHeight				= 0;
-
-									VulkanCommandRecorder immediateRecorder(pImmediateCommandBuffer);
-									immediateRecorder.BeginRecording();
-									immediateRecorder.PipelineBarrierImageTransferDest(pVulkanImage);
-									immediateRecorder.CopyBufferToImage(pImageTransferBuffer, pVulkanImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkImageCopy });
-									immediateRecorder.PipelineBarrierImageShaderRead(pVulkanImage);
-									immediateRecorder.EndRecording();
-
-									VulkanSubmission transferSubmition = {};
-									transferSubmition.commandBuffers	= { pImmediateCommandBuffer };
-									transferSubmition.waitSemaphores	= { };
-									transferSubmition.waitStages		= { };
-									transferSubmition.signalSemaphores	= { };
-
-									VkFence vkTransferFence = 0;
-
-									VkFenceCreateInfo fenceInfo = {};
-									fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-									fenceInfo.flags = 0;
-									fenceInfo.pNext = nullptr;
-
-									vkCreateFence(mpDevice->vkDevice, &fenceInfo, VK_NULL_HANDLE, &vkTransferFence);
-
-									mpGraphics->Submit(transferSubmition, mpDevice->queues.graphics, vkTransferFence);
-									vkDeviceWaitIdle(mpDevice->vkDevice);
-
-									vkWaitForFences(mpDevice->vkDevice, 1, &vkTransferFence, true, INT64_MAX);
-
-									mpGraphics->pResourceManager->DestroyBuffer(pImageTransferBuffer);
-
-									VulkanImageViewInfo viewInfo = {};
-									viewInfo.pImage				= pVulkanImage;
-									viewInfo.vkAspectFlags		= VK_IMAGE_ASPECT_COLOR_BIT;
-									viewInfo.vkFormat			= VK_FORMAT_R8G8B8A8_UNORM;
-									viewInfo.vkImageViewType	= VK_IMAGE_VIEW_TYPE_2D;
-									viewInfo.layerCount			= 1;
-									viewInfo.layerStart			= 0;
-									viewInfo.mipCount			= 1;
-									viewInfo.mipStart			= 0;
-
-									VulkanImageView* pVulkanImageView = mpGraphics->pResourceManager->CreateImageView(mpDevice, viewInfo);
-
-									VulkanUniformImageBind imageBind = {};
-									imageBind.binding		= b;
-									imageBind.pImageView	= pVulkanImageView;
-									imageBind.vkLayout		= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-									imageBind.vkSampler		= mVkDefaultSampler;
-
-									renderable.imageBinds.PushBack(imageBind);
-
-									mTextureCache.Put(texturePath, pVulkanImageView);
-								}
-
-								continue;
-							}
-
-							uSize paramOffsetBytes = 0;
+							uSize bindIdx = 0;
 
 							for (const VulkanShader* pVulkanShader : shaderList)
 							{
 								const Shader* pShaderAsset = pVulkanShader->pShaderAsset;
 								for (const ShaderParam& param : pShaderAsset->params)
 								{
-									if (param.binding == b)
+									if (param.name == paramName)
 									{
-										if (param.name == paramName)
-										{
-											MemCopy(materialBuffer.Data() + param.valueOffsetBytes, &paramValue.vec4uVal, param.valueSizeBytes);
-											break;
-										}
+										bindIdx = param.binding;
+										break;
 									}
 								}
 							}
-						}
 
-						if (!isTextureBind)
+							const String& texturePath = paramValue.stringVal;
+
+							auto& textureIt = mTextureCache.Find(texturePath);
+							if (textureIt != mTextureCache.End())
+							{
+								VulkanUniformImageBind imageBind = {};
+								imageBind.binding		= bindIdx;
+								imageBind.pImageView	= textureIt->value;
+								imageBind.vkLayout		= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+								imageBind.vkSampler		= mVkDefaultSampler;
+
+								renderable.imageBinds.PushBack(imageBind);
+							}
+							else
+							{
+								Image* pImage = Engine::GetAssetManager().GetOrLoadAsset<Image>(texturePath);
+
+								VulkanImageInfo imageInfo = {};
+								imageInfo.width			= pImage->width;
+								imageInfo.height		= pImage->height;
+								imageInfo.depth			= 1;
+								imageInfo.layers		= 1;
+								imageInfo.mips			= 1;
+								imageInfo.vkFormat		= VK_FORMAT_R8G8B8A8_UNORM;
+								imageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
+								imageInfo.vkUsageFlags	= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+								VulkanImage* pVulkanImage = mpGraphics->pResourceManager->CreateImage(mpDevice, imageInfo);
+
+								VulkanBufferInfo bufferInfo = {};
+								bufferInfo.sizeBytes			= pImage->pImageData->Size();
+								bufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+								bufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+								VulkanBuffer* pImageTransferBuffer = mpGraphics->pResourceManager->CreateBuffer(mpDevice, bufferInfo);
+
+								VulkanBufferWriter imageBufferWriter(pImageTransferBuffer);
+								void* pBufferData = imageBufferWriter.Map();
+								MemCopy(pBufferData, pImage->pImageData->Data(), pImage->pImageData->Size());
+								imageBufferWriter.Unmap();
+
+								VulkanCommandPoolInfo terrainCommandPoolInfo = {};
+								terrainCommandPoolInfo.queueFamilyIndex			= mpDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
+								terrainCommandPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+								VulkanCommandPool* pImmediateCommandPool = mpGraphics->pResourceManager->CreateCommandPool(mpDevice, terrainCommandPoolInfo);
+								VulkanCommandBuffer* pImmediateCommandBuffer;
+								mpGraphics->pResourceManager->CreateCommandBuffers(pImmediateCommandPool, 1, &pImmediateCommandBuffer);
+
+								VkBufferImageCopy vkImageCopy = {};
+								vkImageCopy.imageExtent.width				= imageInfo.width;
+								vkImageCopy.imageExtent.height				= imageInfo.height;
+								vkImageCopy.imageExtent.depth				= 1; //imageInfo.depth;
+								vkImageCopy.imageOffset.x					= 0;
+								vkImageCopy.imageOffset.y					= 0;
+								vkImageCopy.imageOffset.z					= 0;
+								vkImageCopy.imageSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+								vkImageCopy.imageSubresource.baseArrayLayer = 0;
+								vkImageCopy.imageSubresource.layerCount		= 1;
+								vkImageCopy.imageSubresource.mipLevel		= 0;
+								vkImageCopy.bufferOffset					= 0;
+								vkImageCopy.bufferRowLength					= 0;
+								vkImageCopy.bufferImageHeight				= 0;
+
+								VulkanCommandRecorder immediateRecorder(pImmediateCommandBuffer);
+								immediateRecorder.BeginRecording();
+								immediateRecorder.PipelineBarrierImageTransferDest(pVulkanImage);
+								immediateRecorder.CopyBufferToImage(pImageTransferBuffer, pVulkanImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkImageCopy });
+								immediateRecorder.PipelineBarrierImageShaderRead(pVulkanImage);
+								immediateRecorder.EndRecording();
+
+								VulkanSubmission transferSubmition = {};
+								transferSubmition.commandBuffers	= { pImmediateCommandBuffer };
+								transferSubmition.waitSemaphores	= { };
+								transferSubmition.waitStages		= { };
+								transferSubmition.signalSemaphores	= { };
+
+								VkFence vkTransferFence = 0;
+
+								VkFenceCreateInfo fenceInfo = {};
+								fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+								fenceInfo.flags = 0;
+								fenceInfo.pNext = nullptr;
+
+								vkCreateFence(mpDevice->vkDevice, &fenceInfo, VK_NULL_HANDLE, &vkTransferFence);
+
+								mpGraphics->Submit(transferSubmition, mpDevice->queues.graphics, vkTransferFence);
+								vkDeviceWaitIdle(mpDevice->vkDevice);
+
+								vkWaitForFences(mpDevice->vkDevice, 1, &vkTransferFence, true, INT64_MAX);
+
+								mpGraphics->pResourceManager->DestroyBuffer(pImageTransferBuffer);
+
+								VulkanImageViewInfo viewInfo = {};
+								viewInfo.pImage				= pVulkanImage;
+								viewInfo.vkAspectFlags		= VK_IMAGE_ASPECT_COLOR_BIT;
+								viewInfo.vkFormat			= VK_FORMAT_R8G8B8A8_UNORM;
+								viewInfo.vkImageViewType	= VK_IMAGE_VIEW_TYPE_2D;
+								viewInfo.layerCount			= 1;
+								viewInfo.layerStart			= 0;
+								viewInfo.mipCount			= 1;
+								viewInfo.mipStart			= 0;
+
+								VulkanImageView* pVulkanImageView = mpGraphics->pResourceManager->CreateImageView(mpDevice, viewInfo);
+
+								VulkanUniformImageBind imageBind = {};
+								imageBind.binding		= bindIdx;
+								imageBind.pImageView	= pVulkanImageView;
+								imageBind.vkLayout		= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+								imageBind.vkSampler		= mVkDefaultSampler;
+
+								renderable.imageBinds.PushBack(imageBind);
+
+								mTextureCache.Put(texturePath, pVulkanImageView);
+							}
+
+							continue;
+						}
+						else
 						{
+							uSize bindIdx = 0;
+							uSize offsetBytes = 0;
+							uSize sizeBytes = 0;
+
+							for (const VulkanShader* pVulkanShader : shaderList)
+							{
+								const Shader* pShaderAsset = pVulkanShader->pShaderAsset;
+								for (const ShaderParam& param : pShaderAsset->params)
+								{
+									if (param.name == paramName)
+									{
+										bindIdx = param.binding;
+										offsetBytes = param.valueOffsetBytes;
+										sizeBytes = param.valueSizeBytes;
+										break;
+									}
+								}
+							}
+
+							uSize materialBufferSizeBytes = 0;
+
+							for (const VulkanDesctiptorSetLayoutBinding& binding : renderable.pPipeline->descriptorSetLayouts[0]->setBindings)
+							{
+								if (binding.vkBinding.binding == bindIdx)
+								{
+									materialBufferSizeBytes = binding.sizeBytes;
+								}
+							}
+
+							if (materialBufferSizeBytes % 64 != 0)
+							{
+								materialBufferSizeBytes += 64 - (materialBufferSizeBytes % 64);
+							}
+								
+							ByteBuffer materialBuffer(materialBufferSizeBytes + 64);
+							materialBuffer.Allocate(materialBufferSizeBytes + 64);
+
+							uSize paramOffsetBytes = 0;
+
+							MemCopy(materialBuffer.Data() + offsetBytes, &paramValue.vec4uVal, sizeBytes);
+
 							UniformBufferLocation materialBufferLocation;//                VVV fake set 1 for different buffer
-							bufferCache.AllocateAndWriteUniformData(materialBufferLocation, 0, materialBuffer.Data(), materialBufferSizeBytes);
-					
+							bufferCache.AllocateAndWriteUniformData(materialBufferLocation, 0, materialBuffer.Data(), materialBufferSizeBytes, 64);
+
 							renderable.materialBuffer = materialBufferLocation;
 						}
 					}
@@ -473,23 +457,23 @@ namespace Quartz
 		{
 			recorder.SetGraphicsPipeline(renderable.pPipeline);
 
-			recorder.SetIndexBuffer(renderable.meshBuffer.pIndexBuffer->GetVulkanBuffer(),
-				renderable.meshBuffer.indexEntry.offset, renderable.vkIndexType);
-
-			//array<VulkanBufferBind, 8> vertexBufferBinds;
-
-			//VulkanBufferBind pVertexBufferBinds[] = 
-			//{ 
-			//	{renderable.meshBuffer.pVertexBuffer->GetVulkanBuffer(), renderable.meshBuffer.vertexEntry.offset} 
-			//};
+			recorder.SetIndexBuffer(renderable.inputBuffer.pIndexBuffer->GetVulkanBuffer(),
+				renderable.inputBuffer.indexEntry.offset, renderable.vkIndexType);
 
 			recorder.SetVertexBuffers(renderable.vertexBinds.Data(), renderable.vertexBinds.Size());
 
 			Array<VulkanUniformBufferBind, 8> set0bufferBinds;
-			Array<VulkanUniformBufferBind, 8> set1bufferBinds;
+
+			VulkanUniformBufferBind uniformGlobal = {}; // TODO
+			uniformGlobal.binding		= 0;
+			uniformGlobal.pBuffer		= renderable.sceneBuffer.pBuffer->GetVulkanBuffer();
+			uniformGlobal.offset		= renderable.sceneBuffer.entry.offset;
+			uniformGlobal.range			= renderable.sceneBuffer.entry.sizeBytes;
+
+			set0bufferBinds.PushBack(uniformGlobal);
 
 			VulkanUniformBufferBind uniformTransform = {}; // Move into the Renderable
-			uniformTransform.binding	= 0;
+			uniformTransform.binding	= 1;
 			uniformTransform.pBuffer	= renderable.transformBuffer.pBuffer->GetVulkanBuffer();
 			uniformTransform.offset		= renderable.transformBuffer.entry.offset;
 			uniformTransform.range		= renderable.transformBuffer.entry.sizeBytes;
@@ -499,7 +483,7 @@ namespace Quartz
 			if (renderable.materialBuffer.pBuffer)
 			{
 				VulkanUniformBufferBind uniformMaterial = {}; // Move into the Renderable
-				uniformMaterial.binding		= 1;
+				uniformMaterial.binding		= 2;
 				uniformMaterial.pBuffer		= renderable.materialBuffer.pBuffer->GetVulkanBuffer();
 				uniformMaterial.offset		= renderable.materialBuffer.entry.offset;
 				uniformMaterial.range		= renderable.materialBuffer.entry.sizeBytes;
@@ -509,7 +493,6 @@ namespace Quartz
 
 			recorder.BindUniforms(renderable.pPipeline, 0, set0bufferBinds.Data(), set0bufferBinds.Size(), 
 				renderable.imageBinds.Data(), renderable.imageBinds.Size());
-			//recorder.BindUniforms(renderable.pPipeline, 1, set1bufferBinds.Data(), set1bufferBinds.Size(), nullptr, 0);
 
 			recorder.DrawIndexed(1, renderable.indexCount, renderable.indexStart, 0);
 		}

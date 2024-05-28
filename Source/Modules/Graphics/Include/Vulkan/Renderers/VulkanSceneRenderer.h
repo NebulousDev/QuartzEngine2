@@ -17,6 +17,11 @@
 
 namespace Quartz
 {
+	struct VulkanRenderableSceneUBO
+	{
+		Vec3f cameraPosition;
+	};
+
 	struct VulkanRenderablePerModelUBO
 	{
 		Mat4f model;
@@ -31,6 +36,7 @@ namespace Quartz
 		VulkanDevice*	mpDevice;
 
 		VulkanGraphicsPipeline* mpDefaultPipeline;
+		VulkanGraphicsPipeline* mpTonemapPipeline;
 
 		Array<VulkanRenderable>	mRenderables;
 		Array<VulkanRenderable>	mRenderablesSorted;
