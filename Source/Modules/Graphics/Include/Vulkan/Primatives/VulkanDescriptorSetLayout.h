@@ -20,9 +20,9 @@ namespace Quartz
 
 	struct VulkanDescriptorSetLayout
 	{
-		VkDescriptorSetLayout					vkDescriptorSetLayout;
-		uInt32									set;
-		Array<VulkanDesctiptorSetLayoutBinding> setBindings;
-		uInt32									sizeBytes;
+		VkDescriptorSetLayout						vkDescriptorSetLayout;
+		uInt32										set;
+		Array<VulkanDesctiptorSetLayoutBinding, 16> setBindings;
+		uInt32										sizeBytes;
 	};
 }

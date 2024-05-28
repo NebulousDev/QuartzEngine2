@@ -6,7 +6,7 @@
 
 namespace Quartz
 {
-	struct MeshBufferLocation
+	struct InputBufferLocation
 	{
 		Array<VulkanMultiBufferEntry, 8>	vertexEntries;
 		VulkanMultiBufferEntry				indexEntry;
@@ -22,7 +22,8 @@ namespace Quartz
 
 	struct VulkanRenderable
 	{
-		MeshBufferLocation					meshBuffer;
+		InputBufferLocation					inputBuffer;
+		UniformBufferLocation				sceneBuffer;
 		UniformBufferLocation				transformBuffer;
 		UniformBufferLocation				materialBuffer;
 		VulkanGraphicsPipeline*				pPipeline;

@@ -893,11 +893,11 @@ namespace Quartz
 	{
 		VkPipeline vkPipeline = VK_NULL_HANDLE;
 
-		Array<VkPipelineShaderStageCreateInfo>					shaderStageInfos;
+		Array<VkPipelineShaderStageCreateInfo,16>				shaderStageInfos;
 		Array<Map<String, VkDescriptorSetLayoutBinding>, 16>	descriptorSetBindings(16); // @Todo: querry max supported sets
 		Array<uInt32, 16>										descriptorSetSizes(16, 0);
-		Array<VulkanDescriptorSetLayout*>						descriptorSetLayouts;
-		Array<VkDescriptorSetLayout>							vkDescriptorSetLayouts;
+		Array<VulkanDescriptorSetLayout*,16>					descriptorSetLayouts;
+		Array<VkDescriptorSetLayout, 16>						vkDescriptorSetLayouts;
 		Array<Array<uInt32, 16>, 16>							setBindingSizes(16, Array<uInt32, 16>(16, 0));
 		
 		uSize maxSetIndex = 0;
@@ -996,6 +996,13 @@ namespace Quartz
 				VulkanDesctiptorSetLayoutBinding vulkanBinding = {};
 				vulkanBinding.vkBinding = binding.value;
 				vulkanBinding.sizeBytes = setBindingSizes[setIndex][binding.value.binding]; // @TODO: improve
+
+				//if (descriptorSetLayout.setBindings.Size() <= binding.value.binding) // @TODO: improve
+				//{
+				//	descriptorSetLayout.setBindings.Resize(binding.value.binding + 1);
+				//}
+
+				//descriptorSetLayout.setBindings[binding.value.binding] = vulkanBinding;
 
 				descriptorSetLayout.setBindings.PushBack(vulkanBinding);
 			}

@@ -14,7 +14,6 @@
 #include "Component/MeshComponent.h"
 #include "Component/TransformComponent.h"
 
-
 namespace Quartz
 {
 	struct VulkanRenderSettings
@@ -72,8 +71,8 @@ namespace Quartz
 		Array<VulkanMultiBuffer>	mUniformBuffers;
 		Array<VulkanMultiBuffer>	mUniformStagingBuffers;
 
-		Map<AssetID, MeshBufferLocation>	mMeshBufferLookup;
-		Map<AssetID, MeshBufferLocation>	mMeshStagingBufferLookup;
+		Map<AssetID, InputBufferLocation>	mMeshBufferLookup;
+		Map<AssetID, InputBufferLocation>	mMeshStagingBufferLookup;
 		Array<VulkanRenderable>				mRenderables;
 		Array<VulkanRenderable>				mRenderablesSorted;
 		Array<TransferCommand>				mReadyTransfers;
@@ -83,21 +82,24 @@ namespace Quartz
 	private:
 		void InitializeDefaultBuffers();
 			 
-		bool GetOrAllocateMeshBuffers(const Model& model, MeshBufferLocation& outBufferLocation, 
-			 	uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound);
-		bool GetOrAllocateMeshStagingBuffers(const Model& model, MeshBufferLocation& outStagingBufferLocation, 
-			 	uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound);
-		bool AllocateUniformBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pPerModelData, uSize perModelSizeBytes);
-		bool AllocateUniformStagingBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pPerModelData, uSize perModelSizeBytes);
+		bool GetOrAllocateMeshBuffers(const Model& model, InputBufferLocation& outBufferLocation, 
+			uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound);
+		bool GetOrAllocateMeshStagingBuffers(const Model& model, InputBufferLocation& outStagingBufferLocation, 
+			uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound);
+		bool AllocateUniformBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pPerModelData, 
+			uSize perModelSizeBytes, uSize offsetAlignment);
+		bool AllocateUniformStagingBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pPerModelData, 
+			uSize perModelSizeBytes, uSize offsetAlignment);
 
 	public:
 		void Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, const VulkanRenderSettings& settings);
 			 
 		void ResetPerModelBuffers();
 			 
-		bool GetOrAllocateBuffers(const Model& model, MeshBufferLocation& outbufferLocation,
-			 	MeshBufferLocation& outStagingbufferLocation, uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound);
-		bool AllocateAndWriteUniformData(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, uSize uniformSizeBytes);
+		bool GetOrAllocateBuffers(const Model& model, InputBufferLocation& outbufferLocation,
+			InputBufferLocation& outStagingbufferLocation, uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound);
+		bool AllocateAndWriteUniformData(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, 
+			uSize uniformSizeBytes, uSize offsetAlignment);
 			 
 		void RecordTransfers(VulkanCommandRecorder& recorder);
 	};

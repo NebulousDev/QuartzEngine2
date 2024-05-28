@@ -158,7 +158,7 @@ namespace Quartz
 	}
 
 	bool VulkanBufferCache::GetOrAllocateMeshBuffers(const Model& model, 
-		MeshBufferLocation& outBufferLocation, 
+		InputBufferLocation& outBufferLocation, 
 		uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound)
 	{
 		auto& it = mMeshBufferLookup.Find(model.GetAssetID());
@@ -170,7 +170,7 @@ namespace Quartz
 			return true;
 		}
 
-		MeshBufferLocation bufferLocation = {};
+		InputBufferLocation bufferLocation = {};
 		
 		for (const VertexStream& vertexStream : model.vertexStreams)
 		{
@@ -306,7 +306,7 @@ namespace Quartz
 	}
 
 	bool VulkanBufferCache::GetOrAllocateMeshStagingBuffers(const Model& model, 
-		MeshBufferLocation& outStagingBufferLocation, 
+		InputBufferLocation& outStagingBufferLocation, 
 		uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound)
 	{
 		auto& it = mMeshStagingBufferLookup.Find(model.GetAssetID());
@@ -318,7 +318,7 @@ namespace Quartz
 			return true;
 		}
 
-		MeshBufferLocation stagingBufferLocation = {};
+		InputBufferLocation stagingBufferLocation = {};
 		
 		for (const VertexStream& vertexStream : model.vertexStreams)
 		{
@@ -417,7 +417,8 @@ namespace Quartz
 		return true;
 	}
 
-	bool VulkanBufferCache::AllocateUniformBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, uSize uniformSizeBytes)
+	bool VulkanBufferCache::AllocateUniformBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, 
+		uSize uniformSizeBytes, uSize offsetAlignment)
 	{
 		VkBufferUsageFlags		usageFlags = 0;
 		VkMemoryPropertyFlags	memoryFlags = 0;
@@ -427,13 +428,20 @@ namespace Quartz
 
 		VulkanMultiBuffer*		pBuffer;
 
+		uSize calculatedSizeBytes = uniformSizeBytes;
+		uSize remainder = calculatedSizeBytes % offsetAlignment;
+		if (remainder)
+		{
+			calculatedSizeBytes += offsetAlignment - remainder;
+		}
+
 		if (!mSettings.useUniqueMeshStagingBuffers)
 		{
 			const uSize uniformIndex = set;
 
 			pBuffer = &mUniformBuffers[uniformIndex];
 
-			pBuffer->Allocate<uInt8>(uniformSizeBytes, entry, nullptr);
+			pBuffer->Allocate<uInt8>(calculatedSizeBytes, entry, nullptr);
 
 			bufferLocation.entry	= entry;
 			bufferLocation.pBuffer	= pBuffer;
@@ -452,7 +460,7 @@ namespace Quartz
 			}
 
 			VulkanBufferInfo perModelBufferInfo = {};
-			perModelBufferInfo.sizeBytes			= uniformSizeBytes;
+			perModelBufferInfo.sizeBytes			= calculatedSizeBytes;
 			perModelBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 			perModelBufferInfo.vkMemoryProperties	= memoryFlags;
 
@@ -460,16 +468,16 @@ namespace Quartz
 
 			if (mSettings.useUniformStaging)
 			{
-				pBuffer->Allocate<uInt8>(uniformSizeBytes, entry, nullptr);
+				pBuffer->Allocate<uInt8>(calculatedSizeBytes, entry, nullptr);
 			}
 			else
 			{
 				uInt8* pPerModelBufferData;
 
 				pBuffer->Map();
-				pBuffer->Allocate<uInt8>(uniformSizeBytes, entry, &pPerModelBufferData);
+				pBuffer->Allocate<uInt8>(calculatedSizeBytes, entry, &pPerModelBufferData);
 
-				memcpy_s(pPerModelBufferData, uniformSizeBytes, pUniformData, uniformSizeBytes);
+				memcpy_s(pPerModelBufferData, calculatedSizeBytes, pUniformData, calculatedSizeBytes);
 			}
 
 			bufferLocation.entry	= entry;
@@ -481,11 +489,19 @@ namespace Quartz
 		return true;
 	}
 
-	bool VulkanBufferCache::AllocateUniformStagingBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, uSize uniformSizeBytes)
+	bool VulkanBufferCache::AllocateUniformStagingBuffer(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData,
+		uSize uniformSizeBytes, uSize offsetAlignment)
 	{
 		UniformBufferLocation	bufferLocation = {};
 		VulkanMultiBufferEntry	uniformStagingEntry;
 		uInt8*					pUniformStagingData;
+
+		uSize calculatedSizeBytes = uniformSizeBytes;
+		uSize remainder = calculatedSizeBytes % offsetAlignment;
+		if (remainder)
+		{
+			calculatedSizeBytes + offsetAlignment - remainder;
+		}
 
 		if (!mSettings.useUniqueUniformStagingBuffers)
 		{
@@ -494,9 +510,9 @@ namespace Quartz
 			VulkanMultiBuffer* pUniformStagingBuffer = &mUniformStagingBuffers[uniformStagingIndex];
 
 			pUniformStagingBuffer->Map();
-			pUniformStagingBuffer->Allocate<uInt8>(uniformSizeBytes, uniformStagingEntry, &pUniformStagingData);
+			pUniformStagingBuffer->Allocate<uInt8>(calculatedSizeBytes, uniformStagingEntry, &pUniformStagingData);
 
-			memcpy_s(pUniformStagingData, uniformSizeBytes, pUniformData, uniformSizeBytes);
+			memcpy_s(pUniformStagingData, calculatedSizeBytes, pUniformData, calculatedSizeBytes);
 
 			bufferLocation.entry	= uniformStagingEntry;
 			bufferLocation.pBuffer	= pUniformStagingBuffer;
@@ -504,7 +520,7 @@ namespace Quartz
 		else
 		{
 			VulkanBufferInfo uniformStagingBufferInfo = {};
-			uniformStagingBufferInfo.sizeBytes				= uniformSizeBytes;
+			uniformStagingBufferInfo.sizeBytes				= calculatedSizeBytes;
 			uniformStagingBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			uniformStagingBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -512,9 +528,9 @@ namespace Quartz
 				&mUniformStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, uniformStagingBufferInfo)));
 
 			pPerModelStagingBuffer->Map();
-			pPerModelStagingBuffer->Allocate<uInt8>(uniformSizeBytes, uniformStagingEntry, &pUniformStagingData);
+			pPerModelStagingBuffer->Allocate<uInt8>(calculatedSizeBytes, uniformStagingEntry, &pUniformStagingData);
 
-			memcpy_s(pUniformStagingData, uniformSizeBytes, pUniformData, uniformSizeBytes);
+			memcpy_s(pUniformStagingData, calculatedSizeBytes, pUniformData, calculatedSizeBytes);
 
 			bufferLocation.entry	= uniformStagingEntry;
 			bufferLocation.pBuffer	= pPerModelStagingBuffer;
@@ -563,11 +579,11 @@ namespace Quartz
 	}
 
 	bool VulkanBufferCache::GetOrAllocateBuffers(const Model& model,
-		MeshBufferLocation& outbufferLocation, MeshBufferLocation& outStagingbufferLocation,
+		InputBufferLocation& outbufferLocation, InputBufferLocation& outStagingbufferLocation,
 		uSize vertexAlignBytes, uSize indexAlignBytes, bool& outFound)
 	{
 		bool meshBufferFound;
-		MeshBufferLocation meshBufferLocation;
+		InputBufferLocation meshBufferLocation;
 		if (!GetOrAllocateMeshBuffers(model, meshBufferLocation, 
 			vertexAlignBytes, indexAlignBytes, meshBufferFound))
 		{
@@ -583,7 +599,7 @@ namespace Quartz
 		if (mSettings.useMeshStaging)
 		{
 			bool meshStagingBufferFound;
-			MeshBufferLocation meshStagingBufferLocation;
+			InputBufferLocation meshStagingBufferLocation;
 			if (!GetOrAllocateMeshStagingBuffers(model, meshStagingBufferLocation, 
 				vertexAlignBytes, indexAlignBytes, meshStagingBufferFound))
 			{
@@ -621,11 +637,12 @@ namespace Quartz
 		return true;
 	}
 
-	bool VulkanBufferCache::AllocateAndWriteUniformData(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, uSize uniformSizeBytes)
+	bool VulkanBufferCache::AllocateAndWriteUniformData(UniformBufferLocation& outUniformBuffer, uSize set, void* pUniformData, 
+		uSize uniformSizeBytes, uSize offsetAlignment)
 	{
 		UniformBufferLocation uniformBufferLocation;
 
-		if (!AllocateUniformBuffer(uniformBufferLocation, set, pUniformData, uniformSizeBytes))
+		if (!AllocateUniformBuffer(uniformBufferLocation, set, pUniformData, uniformSizeBytes, offsetAlignment))
 		{
 			return false;
 		}
@@ -636,7 +653,7 @@ namespace Quartz
 		{
 			UniformBufferLocation uniformBufferStagingLocation;
 
-			if (!AllocateUniformStagingBuffer(uniformBufferStagingLocation, set, pUniformData, uniformSizeBytes))
+			if (!AllocateUniformStagingBuffer(uniformBufferStagingLocation, set, pUniformData, uniformSizeBytes, offsetAlignment))
 			{
 				return false;
 			}
