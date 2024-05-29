@@ -70,14 +70,6 @@ namespace Quartz
 		{
 			return val0.type == val1.type;
 		}
-
-		//inline ~MaterialValue()
-		//{
-		//	if (type == MATERIAL_VALUE_TEXTURE)
-		//	{
-		//		stringVal.~StringBase();
-		//	}
-		//}
 	};
 
 	struct Material : public Asset

@@ -12,9 +12,18 @@ layout(location = 4) in mat3 inTBN;
 
 layout(location = 0) out vec4 fragOut;
 
+struct PointLight
+{
+    vec4    position;
+    vec3    color;
+    float   intensity;
+};
+
 layout(std140, set = 0, binding = 0) uniform SceneUBO
 {
-	vec3 cameraPosition;
+	vec3        cameraPosition;
+    uint        pointLightCount;
+    PointLight  pointLights[10];
 }
 scene;
 
@@ -58,9 +67,6 @@ float PBR_Smith(float nDotV, float nDotL, float roughness)
 
 void main()
 {
-    const vec3 lightPos     = vec3(-0.5, 11.0, 1.0);
-    const vec3 lightColor   = vec3(1,1,1) * 0.25;
-
     vec3 viewPos = scene.cameraPosition;
     vec3 viewDir = normalize(viewPos - inPosition);
 
@@ -76,12 +82,20 @@ void main()
     vec3 F0 = mix(vec3(0.04), color, metallic);
 
     vec3 totalLight = vec3(0);
-    for(uint i = 0; i < 1; i++)
+
+    // Point lights
+    for(uint i = 0; i < scene.pointLightCount; i++)
     {
+        const PointLight pointLight = scene.pointLights[i];
+        const vec3 lightPos         = pointLight.position.xyz;
+        const vec3 lightColor       = pointLight.color * pointLight.intensity;
+
         vec3 lightDir       = normalize(lightPos - inPosition);
+        //lightDir            = mix(lightDir, sunDirs[i], isSun[i]);
         vec3 halfwayDir     = normalize(lightDir + viewDir);
         float distance      = length(lightPos - inPosition);
         float attenuation   = 1.0 / (distance * distance);
+        //attenuation         = mix(attenuation, 1.0, isSun[i]);
         vec3 radiance       = lightColor * attenuation;
 
         float nDotL         = max(dot(normal, lightDir), 0.0);
@@ -105,9 +119,6 @@ void main()
     
     vec3 ambient = vec3(0.001) * color * ao;
     vec3 outColor = ambient + totalLight;
-
-    outColor = outColor / (outColor + vec3(1.0));
-    outColor = pow(outColor, vec3(1.0/2.2));
 
 	fragOut = vec4(outColor, 1.0);
 }

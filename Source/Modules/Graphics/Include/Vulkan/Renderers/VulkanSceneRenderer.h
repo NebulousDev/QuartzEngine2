@@ -14,12 +14,25 @@
 
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
+#include "Component/LightComponent.h"
 
 namespace Quartz
 {
+
+#pragma pack(push,1)
+
+	struct VulkanPointLight
+	{
+		Vec4f position;
+		Vec3f color;
+		float intensity;
+	};
+
 	struct VulkanRenderableSceneUBO
 	{
 		Vec3f cameraPosition;
+		uInt32 pointLightsCount;
+		VulkanPointLight pointLights[10];
 	};
 
 	struct VulkanRenderablePerModelUBO
@@ -28,6 +41,8 @@ namespace Quartz
 		Mat4f view;
 		Mat4f proj;
 	};
+
+#pragma pack(pop)
 
 	class QUARTZ_GRAPHICS_API VulkanSceneRenderer
 	{

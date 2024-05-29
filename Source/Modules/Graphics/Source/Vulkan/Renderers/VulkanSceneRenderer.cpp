@@ -74,9 +74,33 @@ namespace Quartz
 		CameraComponent& camera, TransformComponent& cameraTransform, uSize frameIdx)
 	{
 		auto& renderableView = world.CreateView<MeshComponent, TransformComponent>();
+		auto& lightView = world.CreateView<LightComponent, TransformComponent>();
 
 		mRenderables.Clear();
 		bufferCache.ResetPerModelBuffers();
+
+		VulkanRenderableSceneUBO sceneUbo = {};
+		sceneUbo.cameraPosition		= cameraTransform.position;
+		sceneUbo.pointLightsCount	= 0;
+
+		for (Entity light : lightView)
+		{
+			LightComponent& lightComponent			= world.Get<LightComponent>(light);
+			TransformComponent& transformComponent	= world.Get<TransformComponent>(light);
+
+			VulkanPointLight& pointLight = sceneUbo.pointLights[sceneUbo.pointLightsCount++];
+			pointLight.position		= Vec4f(transformComponent.position, 1.0f);
+			pointLight.color		= lightComponent.pointLight.color;
+			pointLight.intensity	= lightComponent.pointLight.intensity;
+
+			if (sceneUbo.pointLightsCount > 10)
+			{
+				break;
+			}
+		}
+
+		UniformBufferLocation sceneBufferLocation;
+		bufferCache.AllocateAndWriteUniformData(sceneBufferLocation, 0, &sceneUbo, sizeof(VulkanRenderableSceneUBO), 64);
 
 		for (Entity& entity : renderableView)
 		{
@@ -103,12 +127,6 @@ namespace Quartz
 			InputBufferLocation stagingBufferLocation;
 			bufferCache.GetOrAllocateBuffers(*pModel, bufferLocation, stagingBufferLocation, 1, 4, vertexDataFound);
 			// @TODO: error check ^
-
-			VulkanRenderableSceneUBO sceneUbo = {};
-			sceneUbo.cameraPosition = cameraTransform.position;
-
-			UniformBufferLocation sceneBufferLocation;
-			bufferCache.AllocateAndWriteUniformData(sceneBufferLocation, 0, &sceneUbo, sizeof(VulkanRenderableSceneUBO), 64);
 
 			VulkanRenderablePerModelUBO perModelUbo = {};
 			perModelUbo.model	= transformComponent.GetMatrix();

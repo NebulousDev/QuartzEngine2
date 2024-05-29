@@ -10,18 +10,25 @@ layout(location = 4) in mat3 inTBN;
 
 layout(location = 0) out vec4 fragOut;
 
+struct PointLight
+{
+    vec4    position;
+    vec3    color;
+    float   intensity;
+};
+
 layout(std140, set = 0, binding = 0) uniform SceneUBO
 {
-	vec3 cameraPosition;
+	vec3        cameraPosition;
+    uint        pointLightCount;
+    PointLight  pointLights[10];
 }
 scene;
 
 layout(set = 0, binding = 2) uniform sampler2D diffuseTexture;
 layout(set = 0, binding = 3) uniform sampler2D normalTexture;
 
-const vec3 lightPos = vec3(-15.0, 55.0, 15.0);
 const float shininess = 8;
-const vec3 lightColor = vec3(1,1,1);
 
 void main()
 {
@@ -31,17 +38,26 @@ void main()
 
     vec3 viewPos = scene.cameraPosition;
 
-    vec3 lightDir   = normalize(lightPos - inPosition);
-    vec3 viewDir    = normalize(viewPos - inPosition);
-    vec3 halfwayDir = normalize(lightDir + viewDir);
+    vec3 totalLight = vec3(0);
+    for(uint i = 0; i < scene.pointLightCount; i++)
+    {
+        const PointLight pointLight = scene.pointLights[i];
+        const vec3 lightPos         = pointLight.position.xyz;
+        const vec3 lightColor       = pointLight.color * pointLight.intensity;
 
-    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
-    vec3 specular = lightColor * spec;
+        vec3 lightDir   = normalize(lightPos - inPosition);
+        vec3 viewDir    = normalize(viewPos - inPosition);
+        vec3 halfwayDir = normalize(lightDir + viewDir);
 
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor;
+        float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
+        vec3 specular = lightColor * spec;
 
-    vec3 lighting = (diffuse * lightColor) + specular;
+        float diff = max(dot(normal, lightDir), 0.0);
+        vec3 diffuse = diff * lightColor;
+
+        totalLight += (diffuse * lightColor) + specular;
+    }
+
     vec3 color = texture(diffuseTexture, inTexCoord).rgb;
-	fragOut = vec4(color * lighting, 1.0);
+	fragOut = vec4(color * totalLight, 1.0);
 }

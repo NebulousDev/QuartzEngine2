@@ -53,7 +53,7 @@ vec3 uncharted2_filmic(vec3 color, float exposure, vec3 whitePoint)
 
 void main()
 {
-    float exposure = 2.0;
+    float exposure = 1.0;
     vec3 whitePoint = vec3(11.2f);
 
     vec3 color = texture(colorTexture, inUV).rgb;
