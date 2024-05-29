@@ -500,7 +500,7 @@ namespace Quartz
 		uSize remainder = calculatedSizeBytes % offsetAlignment;
 		if (remainder)
 		{
-			calculatedSizeBytes + offsetAlignment - remainder;
+			calculatedSizeBytes += offsetAlignment - remainder;
 		}
 
 		if (!mSettings.useUniqueUniformStagingBuffers)

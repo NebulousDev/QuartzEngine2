@@ -42,7 +42,7 @@ namespace Quartz
 		defaultSamplerInfo.addressModeV				= VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		defaultSamplerInfo.addressModeW				= VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		defaultSamplerInfo.anisotropyEnable			= VK_FALSE;
-		defaultSamplerInfo.maxAnisotropy			= 1;
+		defaultSamplerInfo.maxAnisotropy			= 16;
 		defaultSamplerInfo.borderColor				= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 		defaultSamplerInfo.unnormalizedCoordinates	= VK_FALSE;
 		defaultSamplerInfo.compareEnable			= VK_FALSE;
@@ -50,7 +50,7 @@ namespace Quartz
 		defaultSamplerInfo.mipmapMode				= VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		defaultSamplerInfo.mipLodBias				= 0.0f;
 		defaultSamplerInfo.minLod					= 0.0f;
-		defaultSamplerInfo.maxLod					= 0.0f;
+		defaultSamplerInfo.maxLod					= 12.0f;
 
 		vkCreateSampler(mpDevice->vkDevice, &defaultSamplerInfo, VK_NULL_HANDLE, &mVkDefaultSampler);
 
@@ -60,13 +60,93 @@ namespace Quartz
 
 		defaultPipelineInfo.vkFrontFace = VK_FRONT_FACE_CLOCKWISE;
 		defaultPipelineInfo.vkCullMode = VK_CULL_MODE_BACK_BIT;
-
+		 
 		mpDefaultPipeline = pipelineCache.FindOrCreateGraphicsPipeline(defaultPipelineInfo);
 
 		if (!mpDefaultPipeline)
 		{
 			LogFatal("Failed to create VulkanSceneRenderer default pipeline!");
 		}
+	}
+
+	void VulkanSceneRenderer::GenAndCopyImageMipmapped(const Image* pImage, VulkanImage*& pVulkanImage, uInt32 mipCount)
+	{
+		VulkanImageInfo imageInfo = {};
+		imageInfo.width			= pImage->width;
+		imageInfo.height		= pImage->height;
+		imageInfo.depth			= 1;
+		imageInfo.layers		= 1;
+		imageInfo.mips			= mipCount;
+		imageInfo.vkFormat		= VK_FORMAT_R8G8B8A8_UNORM;
+		imageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
+		imageInfo.vkUsageFlags	= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+		pVulkanImage = mpGraphics->pResourceManager->CreateImage(mpDevice, imageInfo);
+
+		VulkanBufferInfo bufferInfo = {};
+		bufferInfo.sizeBytes			= pImage->pImageData->Size();
+		bufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		bufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+		VulkanBuffer* pImageTransferBuffer = mpGraphics->pResourceManager->CreateBuffer(mpDevice, bufferInfo);
+
+		VulkanBufferWriter imageBufferWriter(pImageTransferBuffer);
+		void* pBufferData = imageBufferWriter.Map();
+		MemCopy(pBufferData, pImage->pImageData->Data(), pImage->pImageData->Size());
+		imageBufferWriter.Unmap();
+
+		VulkanCommandPoolInfo terrainCommandPoolInfo = {};
+		terrainCommandPoolInfo.queueFamilyIndex			= mpDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
+		terrainCommandPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		VulkanCommandPool* pImmediateCommandPool = mpGraphics->pResourceManager->CreateCommandPool(mpDevice, terrainCommandPoolInfo);
+		VulkanCommandBuffer* pImmediateCommandBuffer;
+		mpGraphics->pResourceManager->CreateCommandBuffers(pImmediateCommandPool, 1, &pImmediateCommandBuffer);
+
+		VkBufferImageCopy vkImageCopy = {};
+		vkImageCopy.imageExtent.width				= imageInfo.width;
+		vkImageCopy.imageExtent.height				= imageInfo.height;
+		vkImageCopy.imageExtent.depth				= 1; //imageInfo.depth;
+		vkImageCopy.imageOffset.x					= 0;
+		vkImageCopy.imageOffset.y					= 0;
+		vkImageCopy.imageOffset.z					= 0;
+		vkImageCopy.imageSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		vkImageCopy.imageSubresource.baseArrayLayer = 0;
+		vkImageCopy.imageSubresource.layerCount		= 1;
+		vkImageCopy.imageSubresource.mipLevel		= 0;
+		vkImageCopy.bufferOffset					= 0;
+		vkImageCopy.bufferRowLength					= 0;
+		vkImageCopy.bufferImageHeight				= 0;
+
+		VulkanCommandRecorder immediateRecorder(pImmediateCommandBuffer);
+		immediateRecorder.BeginRecording();
+		immediateRecorder.PipelineBarrierImageTransferDest(pVulkanImage, 0, mipCount);
+		immediateRecorder.CopyBufferToImage(pImageTransferBuffer, pVulkanImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkImageCopy });
+		immediateRecorder.PipelineBarrierGenerateMipmaps(pVulkanImage, mipCount);
+		immediateRecorder.PipelineBarrierImageShaderRead(pVulkanImage, 0, mipCount);
+		immediateRecorder.EndRecording();
+
+		VulkanSubmission transferSubmition = {};
+		transferSubmition.commandBuffers	= { pImmediateCommandBuffer };
+		transferSubmition.waitSemaphores	= { };
+		transferSubmition.waitStages		= { };
+		transferSubmition.signalSemaphores	= { };
+
+		VkFence vkTransferFence = 0;
+
+		VkFenceCreateInfo fenceInfo = {};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = 0;
+		fenceInfo.pNext = nullptr;
+
+		vkCreateFence(mpDevice->vkDevice, &fenceInfo, VK_NULL_HANDLE, &vkTransferFence);
+
+		mpGraphics->Submit(transferSubmition, mpDevice->queues.graphics, vkTransferFence);
+		vkDeviceWaitIdle(mpDevice->vkDevice);
+
+		vkWaitForFences(mpDevice->vkDevice, 1, &vkTransferFence, true, INT64_MAX);
+
+		mpGraphics->pResourceManager->DestroyBuffer(pImageTransferBuffer);
 	}
 
 	void VulkanSceneRenderer::Update(EntityWorld& world, VulkanBufferCache& bufferCache,
@@ -303,81 +383,11 @@ namespace Quartz
 							{
 								Image* pImage = Engine::GetAssetManager().GetOrLoadAsset<Image>(texturePath);
 
-								VulkanImageInfo imageInfo = {};
-								imageInfo.width			= pImage->width;
-								imageInfo.height		= pImage->height;
-								imageInfo.depth			= 1;
-								imageInfo.layers		= 1;
-								imageInfo.mips			= 1;
-								imageInfo.vkFormat		= VK_FORMAT_R8G8B8A8_UNORM;
-								imageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
-								imageInfo.vkUsageFlags	= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+								VulkanImage* pVulkanImage = VK_NULL_HANDLE;
 
-								VulkanImage* pVulkanImage = mpGraphics->pResourceManager->CreateImage(mpDevice, imageInfo);
+								uInt32 mipCount = log2(Max(pImage->width, pImage->height)) + 1;
 
-								VulkanBufferInfo bufferInfo = {};
-								bufferInfo.sizeBytes			= pImage->pImageData->Size();
-								bufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-								bufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-								VulkanBuffer* pImageTransferBuffer = mpGraphics->pResourceManager->CreateBuffer(mpDevice, bufferInfo);
-
-								VulkanBufferWriter imageBufferWriter(pImageTransferBuffer);
-								void* pBufferData = imageBufferWriter.Map();
-								MemCopy(pBufferData, pImage->pImageData->Data(), pImage->pImageData->Size());
-								imageBufferWriter.Unmap();
-
-								VulkanCommandPoolInfo terrainCommandPoolInfo = {};
-								terrainCommandPoolInfo.queueFamilyIndex			= mpDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
-								terrainCommandPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-								VulkanCommandPool* pImmediateCommandPool = mpGraphics->pResourceManager->CreateCommandPool(mpDevice, terrainCommandPoolInfo);
-								VulkanCommandBuffer* pImmediateCommandBuffer;
-								mpGraphics->pResourceManager->CreateCommandBuffers(pImmediateCommandPool, 1, &pImmediateCommandBuffer);
-
-								VkBufferImageCopy vkImageCopy = {};
-								vkImageCopy.imageExtent.width				= imageInfo.width;
-								vkImageCopy.imageExtent.height				= imageInfo.height;
-								vkImageCopy.imageExtent.depth				= 1; //imageInfo.depth;
-								vkImageCopy.imageOffset.x					= 0;
-								vkImageCopy.imageOffset.y					= 0;
-								vkImageCopy.imageOffset.z					= 0;
-								vkImageCopy.imageSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-								vkImageCopy.imageSubresource.baseArrayLayer = 0;
-								vkImageCopy.imageSubresource.layerCount		= 1;
-								vkImageCopy.imageSubresource.mipLevel		= 0;
-								vkImageCopy.bufferOffset					= 0;
-								vkImageCopy.bufferRowLength					= 0;
-								vkImageCopy.bufferImageHeight				= 0;
-
-								VulkanCommandRecorder immediateRecorder(pImmediateCommandBuffer);
-								immediateRecorder.BeginRecording();
-								immediateRecorder.PipelineBarrierImageTransferDest(pVulkanImage);
-								immediateRecorder.CopyBufferToImage(pImageTransferBuffer, pVulkanImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { vkImageCopy });
-								immediateRecorder.PipelineBarrierImageShaderRead(pVulkanImage);
-								immediateRecorder.EndRecording();
-
-								VulkanSubmission transferSubmition = {};
-								transferSubmition.commandBuffers	= { pImmediateCommandBuffer };
-								transferSubmition.waitSemaphores	= { };
-								transferSubmition.waitStages		= { };
-								transferSubmition.signalSemaphores	= { };
-
-								VkFence vkTransferFence = 0;
-
-								VkFenceCreateInfo fenceInfo = {};
-								fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-								fenceInfo.flags = 0;
-								fenceInfo.pNext = nullptr;
-
-								vkCreateFence(mpDevice->vkDevice, &fenceInfo, VK_NULL_HANDLE, &vkTransferFence);
-
-								mpGraphics->Submit(transferSubmition, mpDevice->queues.graphics, vkTransferFence);
-								vkDeviceWaitIdle(mpDevice->vkDevice);
-
-								vkWaitForFences(mpDevice->vkDevice, 1, &vkTransferFence, true, INT64_MAX);
-
-								mpGraphics->pResourceManager->DestroyBuffer(pImageTransferBuffer);
+								GenAndCopyImageMipmapped(pImage, pVulkanImage, mipCount);
 
 								VulkanImageViewInfo viewInfo = {};
 								viewInfo.pImage				= pVulkanImage;
@@ -386,7 +396,7 @@ namespace Quartz
 								viewInfo.vkImageViewType	= VK_IMAGE_VIEW_TYPE_2D;
 								viewInfo.layerCount			= 1;
 								viewInfo.layerStart			= 0;
-								viewInfo.mipCount			= 1;
+								viewInfo.mipCount			= mipCount;
 								viewInfo.mipStart			= 0;
 
 								VulkanImageView* pVulkanImageView = mpGraphics->pResourceManager->CreateImageView(mpDevice, viewInfo);
