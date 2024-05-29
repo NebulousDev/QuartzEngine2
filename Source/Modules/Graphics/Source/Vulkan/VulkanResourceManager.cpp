@@ -348,7 +348,7 @@ namespace Quartz
 
 		VkResult result = CreateVkImageView(pDevice->vkDevice, &vkImageView, info.pImage->vkImage,
 			info.vkImageViewType, info.vkAspectFlags, info.vkFormat, 
-			info.mipStart, info.mipCount, info.layerStart, info.layerCount);
+			info.layerStart, info.layerCount, info.mipStart, info.mipCount);
 
 		if (result != VK_SUCCESS)
 		{
