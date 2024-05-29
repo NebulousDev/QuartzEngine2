@@ -11,10 +11,13 @@
 #include "Vulkan/VulkanShaderCache.h"
 #include "Vulkan/VulkanBufferWriter.h"
 #include "Vulkan/VulkanRenderable.h"
+#include "Vulkan/Primatives/VulkanImage.h"
 
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
 #include "Component/LightComponent.h"
+
+#include "Resource/Assets/Image.h"
 
 namespace Quartz
 {
@@ -59,6 +62,9 @@ namespace Quartz
 		// TEMP
 		VkSampler mVkDefaultSampler;
 		Map<String, VulkanImageView*> mTextureCache;
+
+	private:
+		void GenAndCopyImageMipmapped(const Image* pImage, VulkanImage*& pVulkanImage, uInt32 mipCount);
 
 	public:
 		void Initialize(VulkanGraphics& graphics, VulkanDevice& device, VulkanShaderCache& shaderCache, 
