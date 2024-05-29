@@ -1,5 +1,6 @@
 #include "Vulkan/VulkanCommandRecorder.h"
 
+#include "Vulkan/VulkanTransitionHelper.h"
 #include "Log.h"
 
 namespace Quartz
@@ -351,7 +352,7 @@ namespace Quartz
 			barrierInfo.pImageMemoryBarriers);
 	}
 
-	void VulkanCommandRecorder::PipelineBarrierImageTransferDest(VulkanImage* pSwapchainImage)
+	void VulkanCommandRecorder::PipelineBarrierImageTransferDest(VulkanImage* pImage, uInt32 baseMip, uInt32 mipCount)
 	{
 		VkImageMemoryBarrier vkImageMemoryBarrier = {};
 		vkImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -359,15 +360,15 @@ namespace Quartz
 		vkImageMemoryBarrier.dstAccessMask						= VK_ACCESS_TRANSFER_WRITE_BIT;
 		vkImageMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
 		vkImageMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		vkImageMemoryBarrier.image								= pSwapchainImage->vkImage;
+		vkImageMemoryBarrier.image								= pImage->vkImage;
 		vkImageMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-		vkImageMemoryBarrier.subresourceRange.baseMipLevel		= 0;
-		vkImageMemoryBarrier.subresourceRange.levelCount		= 1;
+		vkImageMemoryBarrier.subresourceRange.baseMipLevel		= baseMip;
+		vkImageMemoryBarrier.subresourceRange.levelCount		= mipCount;
 		vkImageMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
 		vkImageMemoryBarrier.subresourceRange.layerCount		= 1;
 
 		VulkanPipelineBarrierInfo barrierInfo = {};
-		barrierInfo.srcStage					= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		barrierInfo.srcStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
 		barrierInfo.dstStage					= VK_PIPELINE_STAGE_TRANSFER_BIT;
 		barrierInfo.dependencyFlags				= 0;
 		barrierInfo.memoryBarrierCount			= 0;
@@ -390,7 +391,7 @@ namespace Quartz
 			barrierInfo.pImageMemoryBarriers);
 	}
 
-	void VulkanCommandRecorder::PipelineBarrierImageShaderRead(VulkanImage* pSwapchainImage)
+	void VulkanCommandRecorder::PipelineBarrierImageShaderRead(VulkanImage* pImage, uInt32 baseMip, uInt32 mipCount)
 	{
 		VkImageMemoryBarrier vkImageMemoryBarrier = {};
 		vkImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -398,10 +399,10 @@ namespace Quartz
 		vkImageMemoryBarrier.dstAccessMask						= VK_ACCESS_SHADER_READ_BIT;
 		vkImageMemoryBarrier.oldLayout							= VK_IMAGE_LAYOUT_UNDEFINED;
 		vkImageMemoryBarrier.newLayout							= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		vkImageMemoryBarrier.image								= pSwapchainImage->vkImage;
+		vkImageMemoryBarrier.image								= pImage->vkImage;
 		vkImageMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
-		vkImageMemoryBarrier.subresourceRange.baseMipLevel		= 0;
-		vkImageMemoryBarrier.subresourceRange.levelCount		= 1;
+		vkImageMemoryBarrier.subresourceRange.baseMipLevel		= baseMip;
+		vkImageMemoryBarrier.subresourceRange.levelCount		= mipCount;
 		vkImageMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
 		vkImageMemoryBarrier.subresourceRange.layerCount		= 1;
 
@@ -427,5 +428,85 @@ namespace Quartz
 			barrierInfo.pBufferMemoryBarriers,
 			barrierInfo.imageMemoryBarrierCount,
 			barrierInfo.pImageMemoryBarriers);
+	}
+
+	void VulkanCommandRecorder::PipelineBarrierGenerateMipmaps(VulkanImage* pImage, uInt32 mipCount)
+	{
+		// https://vulkan-tutorial.com/Generating_Mipmaps
+
+		VkImageMemoryBarrier vkImageMemoryBarrier = {};
+		vkImageMemoryBarrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		vkImageMemoryBarrier.image								= pImage->vkImage;
+		vkImageMemoryBarrier.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		vkImageMemoryBarrier.subresourceRange.baseMipLevel		= 0;
+		vkImageMemoryBarrier.subresourceRange.levelCount		= 1;
+		vkImageMemoryBarrier.subresourceRange.baseArrayLayer	= 0;
+		vkImageMemoryBarrier.subresourceRange.layerCount		= 1;
+
+		int32 mipWidth = pImage->width;
+		int32 mipHeight = pImage->height;
+
+		for (uSize i = 1; i < mipCount; i++)
+		{
+			vkImageMemoryBarrier.subresourceRange.baseMipLevel = i - 1;
+			vkImageMemoryBarrier.oldLayout		= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			vkImageMemoryBarrier.newLayout		= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			vkImageMemoryBarrier.srcAccessMask	= VK_ACCESS_TRANSFER_WRITE_BIT;
+			vkImageMemoryBarrier.dstAccessMask	= VK_ACCESS_TRANSFER_READ_BIT;
+
+			vkCmdPipelineBarrier(mpCommandBuffer->vkCommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &vkImageMemoryBarrier);
+
+			VkImageBlit imageBlit = {};
+			imageBlit.srcOffsets[0]					= { 0, 0, 0 };
+			imageBlit.srcOffsets[1]					= { mipWidth, mipHeight, 1 };
+			imageBlit.srcSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBlit.srcSubresource.mipLevel		= i - 1;
+			imageBlit.srcSubresource.baseArrayLayer = 0;
+			imageBlit.srcSubresource.layerCount		= 1;
+			imageBlit.dstOffsets[0]					= { 0, 0, 0 };
+			imageBlit.dstOffsets[1]					= { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+			imageBlit.dstSubresource.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBlit.dstSubresource.mipLevel		= i;
+			imageBlit.dstSubresource.baseArrayLayer = 0;
+			imageBlit.dstSubresource.layerCount		= 1;
+
+			vkCmdBlitImage(mpCommandBuffer->vkCommandBuffer,
+				pImage->vkImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				pImage->vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1, &imageBlit,
+				VK_FILTER_LINEAR);
+
+			vkImageMemoryBarrier.oldLayout		= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			vkImageMemoryBarrier.newLayout		= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			vkImageMemoryBarrier.srcAccessMask	= VK_ACCESS_TRANSFER_READ_BIT;
+			vkImageMemoryBarrier.dstAccessMask	= VK_ACCESS_SHADER_READ_BIT;
+
+            vkCmdPipelineBarrier(mpCommandBuffer->vkCommandBuffer,
+                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+                0, nullptr,
+                0, nullptr,
+                1, &vkImageMemoryBarrier);
+
+			if (mipWidth > 1)	mipWidth /= 2;
+			if (mipHeight > 1)	mipHeight /= 2;
+		}
+
+		vkImageMemoryBarrier.subresourceRange.baseMipLevel	= mipCount - 1;
+		vkImageMemoryBarrier.oldLayout						= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		vkImageMemoryBarrier.newLayout						= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		vkImageMemoryBarrier.srcAccessMask					= VK_ACCESS_TRANSFER_WRITE_BIT;
+		vkImageMemoryBarrier.dstAccessMask					= VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(mpCommandBuffer->vkCommandBuffer,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+            0, nullptr,
+            0, nullptr,
+            1, &vkImageMemoryBarrier);
 	}
 }

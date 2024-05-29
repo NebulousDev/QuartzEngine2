@@ -17,6 +17,7 @@
 #include "Component/MeshComponent.h"
 #include "Component/MaterialComponent.h"
 #include "Component/CameraComponent.h"
+#include "Component/LightComponent.h"
 //#include "Component/TerrainComponent.h"
 
 #include "Physics.h"
@@ -155,20 +156,6 @@ namespace Quartz
 			}
 		};
 
-		TransformComponent transformCube
-		(
-			{ 0.0f, 10.0f, 0.0f },
-			Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
-			{ 1.0f, 1.0f, 1.0f }
-		);
-
-		TransformComponent transformCube2
-		(
-			{ 0.0f, 10.0f, 0.0f },
-			Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
-			{ 2.0f, 2.0f, 2.0f }
-		);
-
 		TransformComponent transformPlane
 		(
 			{ 0.0f, 10.0f, 0.0f },
@@ -207,13 +194,85 @@ namespace Quartz
 		MaterialComponent testMaterial
 		{
 			{
-				"Assets/Materials/material_brick.qmaterial",
-				"Assets/Materials/material_gray.qmaterial",
-				"Assets/Materials/material_crate.qmaterial",
-				"Assets/Materials/material_default.qmaterial",
+				"Assets/Materials/material_worn_stone.qmaterial",
+				"Assets/Materials/material_polished_tile.qmaterial",
+				"Assets/Materials/material_gold.qmaterial",
+				"Assets/Materials/material_treebark.qmaterial",
+				"Assets/Materials/material_marble.qmaterial",
+				"Assets/Materials/material_worn_stone.qmaterial",
+				"Assets/Materials/material_worn_stone.qmaterial",
+				"Assets/Materials/material_wood.qmaterial",
+				"Assets/Materials/material_worn_stone.qmaterial",
+				"Assets/Materials/material_gold.qmaterial",
+				"Assets/Materials/material_worn_stone.qmaterial",
 				"Assets/Materials/material_gold.qmaterial",
 				"Assets/Materials/material_wood.qmaterial",
-				"Assets/Materials/material_gray.qmaterial"
+				"Assets/Materials/material_wood.qmaterial",
+				"Assets/Materials/material_gold.qmaterial",
+				"Assets/Materials/material_gold.qmaterial",
+				"Assets/Materials/material_wood.qmaterial",
+				"Assets/Materials/material_gold.qmaterial",
+				"Assets/Materials/material_gold.qmaterial",
+				"Assets/Materials/material_worn_stone.qmaterial",
+				"Assets/Materials/material_worn_stone.qmaterial",
+				"Assets/Materials/material_worn_stone.qmaterial",
+				"Assets/Materials/material_worn_stone.qmaterial"
+			}
+		};
+
+		MaterialComponent gunMaterial
+		{
+			{
+				"Assets/Materials/gun/material_gun.qmaterial"
+			}
+		};
+
+		MaterialComponent testSceneMaterial
+		{
+			{
+				"Assets/Materials/material_wood.qmaterial"
+			}
+		};
+
+		MaterialComponent goldMaterial
+		{
+			{
+				"Assets/Materials/material_gold.qmaterial"
+			}
+		};
+
+		MaterialComponent marbleMaterial
+		{
+			{
+				"Assets/Materials/material_marble.qmaterial"
+			}
+		};
+
+		MaterialComponent treebarkMaterial
+		{
+			{
+				"Assets/Materials/material_treebark.qmaterial"
+			}
+		};
+
+		MaterialComponent polishedMaterial
+		{
+			{
+				"Assets/Materials/material_polished_tile.qmaterial"
+			}
+		};
+
+		MaterialComponent scifiMaterial
+		{
+			{
+				"Assets/Materials/material_space_cruiser.qmaterial"
+			}
+		};
+
+		MaterialComponent wornStoneMaterial
+		{
+			{
+				"Assets/Materials/material_worn_stone.qmaterial"
 			}
 		};
 
@@ -262,6 +321,7 @@ namespace Quartz
 			Engine::GetAssetManager().RegisterAssetHandler("bmp", pImageHandler);
 			Engine::GetAssetManager().RegisterAssetHandler("gif", pImageHandler);
 			Engine::GetAssetManager().RegisterAssetHandler("hdr", pImageHandler);
+			Engine::GetAssetManager().RegisterAssetHandler("tga", pImageHandler);
 
 			NativeShaderHandler* pNativeShaderHandler = new NativeShaderHandler;
 			Engine::GetAssetManager().RegisterAssetHandler("vert", pNativeShaderHandler);
@@ -273,8 +333,6 @@ namespace Quartz
 
 			MaterialHandler* pMaterialHandler = new MaterialHandler;
 			Engine::GetAssetManager().RegisterAssetHandler("qmaterial", pMaterialHandler);
-
-			int i = 0;
 
 			//QuckConvertToQShader("Shaders/visualize_normal.frag", "Shaders/visualize_normal.qsfrag");
 			//QuckConvertToQShader("Shaders/visualize_normal.vert", "Shaders/visualize_normal.qsvert");
@@ -292,42 +350,14 @@ namespace Quartz
 
 			//QuckConvertToQShader("Shaders/basic_mesh.vert", "Shaders/basic_mesh.qsvert");
 			//QuckConvertToQShader("Shaders/basic_color.frag", "Shaders/basic_color.qsfrag");
-
 			//QuckConvertToQShader("Shaders/basic_texture.frag", "Shaders/basic_texture.qsfrag");
 
+			//QuckConvertToQShader("Shaders/pbr_rma.frag", "Shaders/Dva/pbr_rma.qsfrag");
+			//QuckConvertToQShader("Shaders/pbr_rma_separate.frag", "Shaders/pbr_rma_separate.qsfrag");
 
-			//Shader* pqShader = Engine::GetAssetManager().GetOrLoadAsset<Shader>("Shaders/skyScatterLUT.qsfrag");
+			//QuckConvertToQShader("Shaders/tonemap_hdr-sdr.frag", "Shaders/tonemap_hdr-sdr.qsfrag");
 
-			//File* pShaderFile = Engine::GetFilesystem().CreateFile("Shaders/skyScatterLUT.qsfrag");
-			//Shader* pShader = Engine::GetAssetManager().GetOrLoadAsset<Shader>("Shaders/skyScatterLUT.frag");
-
-			//QShaderParser qShaderWriter(*pShaderFile);
-			//qShaderWriter.SetShader(*pShader);
-			//qShaderWriter.Write();
-
-			//PoolAllocator<Shader> shaderAllocs(200);
-			//PoolAllocator<ByteBuffer> bufferAllocs(200);
-			//QShaderParser qShaderReader(*pShaderFile, &shaderAllocs, &bufferAllocs);
-			//qShaderReader.Read();
-			//Shader* pReadShader = qShaderReader.GetShader();
-
-			//File* pQMFFile = Engine::GetFilesystem().CreateFile("Assets/Models/dva.qmod");
-			//Model* pModel = Engine::GetAssetManager().GetOrLoadAsset<Model>("Assets/Models/dva.obj");
-			//
-			//QModelParser qmfWriter(*pQMFFile);
-			//
-			//qmfWriter.SetModel(*pModel);
-			//qmfWriter.Write();
-			//
-			//PoolAllocator<Model> modelAllocs(200);
-			//PoolAllocator<ByteBuffer> bufferAllocs(200);
-			//QModelParser qmfReader(*pQMFFile, &modelAllocs, &bufferAllocs);
-			//
-			//qmfReader.Read();
-			//
-			//Model* pModelRead = qmfReader.GetModel();
-
-			Folder* pFolder = Engine::GetFilesystem().GetFolder("Assets/Models");
+			//Folder* pFolder = Engine::GetFilesystem().GetFolder("Assets/Models");
 			
 			//for (File* pFile : pFolder->GetFiles())
 			//{
@@ -354,6 +384,9 @@ namespace Quartz
 			//QuickConvertToQModel("Assets/Models/sibenik.obj", "Assets/Models/sibenik.qmodel");
 			//QuickConvertToQModel("Assets/Models/sponza.obj", "Assets/Models/sponza.qmodel");
 			//QuickConvertToQModel("Assets/Models/testScene.obj", "Assets/Models/testScene.qmodel");
+			//QuickConvertToQModel("Assets/Models/gun.obj", "Assets/Models/gun.qmodel");
+
+			//int j = 25;
 
 			RigidBodyComponent cubePhysics(cubeRigidBody, cubeCollider);
 			RigidBodyComponent cubePhysics2(cubeRigidBody2, cubeCollider2);
@@ -394,21 +427,86 @@ namespace Quartz
 
 			gPhysics.Initialize();
 
-			//Image* pImage = Engine::GetAssetManager().GetOrLoadAsset<Image>("Assets/Textures/default.png");
+			TransformComponent transform0
+			(
+				{ 0.0f, 10.0f, 0.0f },
+				Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
+				{ 1.0f, 1.0f, 1.0f }
+			);
 
-			transformCube.scale /= 1000.0f;
-			transformCube2.scale /= 100.0f;
+			TransformComponent transform1
+			(
+				{ -0.5f, 10.0f, 0.0f },
+				Quatf({ 1.0f, 0.0f, 0.0f }, ToRadians(0.0f)),
+				{ 1.0f, 1.0f, 1.0f }
+			);
 
-			gEntity0 = world.CreateEntity(transformCube, MeshComponent("Assets/Models/bistro.qmodel"), testMaterial);
-			//gEntity1 = world.CreateEntity(transformCube2, MeshComponent("Assets/Models/bunny.qmodel"), testMaterial);
-			//Entity gEntity2 = world.CreateEntity(transformCube, MeshComponent("Assets/Models/sponza.qmodel"), testMaterial);
-			//Entity gEntity3 = world.CreateEntity(transformCube2, MeshComponent("Assets/Models/testScene.obj"), testMaterial);
-			Entity plane = world.CreateEntity(transformPlane, testMaterial, planePhysics);
+			TransformComponent transform2
+			(
+				{ 0.2f, 10.08f, 0.0f }, 
+				Quatf({ 0.0f, 1.0f, 0.0f }, ToRadians(-90.0f)),
+				{ 1.0f, 1.0f, 1.0f }
+			);
 
-			Entity planeL = world.CreateEntity(transformPlaneL, testMaterial, planePhysics2);
-			Entity planeR = world.CreateEntity(transformPlaneR, testMaterial, planePhysics2);
-			Entity planeF = world.CreateEntity(transformPlaneF, testMaterial, planePhysics2);
-			Entity planeB = world.CreateEntity(transformPlaneB, testMaterial, planePhysics2);
+			TransformComponent transform3
+			(
+				{ -0.2f, 9.5f, 0.0f },
+				Quatf({ 0.0f, 1.0f, 0.0f }, ToRadians(-90.0f)),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			transform0.scale /= 1000.0f;
+			//transform1.scale /= 100.0f;
+			transform1.scale /= 12.0f;
+			transform2.scale /= 8.0f;
+
+			Entity entity0 = world.CreateEntity(transform0, MeshComponent("Assets/Models/sponza.qmodel"), testMaterial);
+			Entity entity1 = world.CreateEntity(transform1, MeshComponent("Assets/Models/bmw.qmodel"), scifiMaterial);
+			Entity entity2 = world.CreateEntity(transform2, MeshComponent("Assets/Models/gun.qmodel"), gunMaterial);
+			Entity entity3 = world.CreateEntity(transform3, MeshComponent("Assets/Models/testScene.qmodel"), testSceneMaterial);
+
+			TransformComponent lightTransform0
+			(
+				{ 0.5f, 10.2f, 0.0f },
+				Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			TransformComponent lightTransform1
+			(
+				{ 0.0f, 10.2f, 0.0f },
+				Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			TransformComponent lightTransform2
+			(
+				{ -0.5f, 10.2f, 0.0f },
+				Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			TransformComponent lightTransform3
+			(
+				{ 1.0f, 15.0f, 2.0f },
+				Quatf({ 1.0f, 1.0f, 0.0f }, ToRadians(0.0f)),
+				{ 1.0f, 1.0f, 1.0f }
+			);
+
+			Entity light0 = world.CreateEntity(lightTransform0, LightComponent({ {1,0,0}, 0.5 }));
+			Entity light1 = world.CreateEntity(lightTransform1, LightComponent({ {0,1,0}, 0.5 }));
+			Entity light2 = world.CreateEntity(lightTransform2, LightComponent({ {0,0,1}, 0.5 }));
+
+			Entity light3 = world.CreateEntity(lightTransform3, LightComponent({ {1,1,1}, 100.0 }));
+
+			//Entity plane = world.CreateEntity(transformPlane, testMaterial, planePhysics);
+			//Entity planeL = world.CreateEntity(transformPlaneL, testMaterial, planePhysics2);
+			//Entity planeR = world.CreateEntity(transformPlaneR, testMaterial, planePhysics2);
+			//Entity planeF = world.CreateEntity(transformPlaneF, testMaterial, planePhysics2);
+			//Entity planeB = world.CreateEntity(transformPlaneB, testMaterial, planePhysics2);
+			
+			//gEntity0 = entity0;
+			//gEntity1 = entity1;
 
 			//TerrainSettings terrainSettings;
 			//terrainSettings.resolution		= 200;
@@ -429,8 +527,8 @@ namespace Quartz
 			pRenderer->Initialize();
 			pRenderer->Register(runtime);
 			pRenderer->SetCamera(gCamera);
-			pRenderer->SetTargetFPS(350);
-			//pRenderer->SetTargetFPS(5000);
+			pRenderer->SetTargetFPS(144);
+			pRenderer->SetTargetFPS(5000);
 			 
 			//runtime.SetTargetUps(350);
 			runtime.SetTargetUps(5000);

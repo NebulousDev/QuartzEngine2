@@ -111,8 +111,10 @@ namespace Quartz
 		void PipelineBarrier(const VulkanPipelineBarrierInfo& barrierInfo);
 		void PipelineBarrierSwapchainImageBegin(VulkanImage* pSwapchainImage);
 		void PipelineBarrierSwapchainImageEnd(VulkanImage* pSwapchainImage);
-		void PipelineBarrierImageTransferDest(VulkanImage* pSwapchainImage);
-		void PipelineBarrierImageShaderRead(VulkanImage* pSwapchainImage);
+		void PipelineBarrierImageTransferDest(VulkanImage* pImage, uInt32 baseMip = 0, uInt32 mipCount = 1);
+		void PipelineBarrierImageShaderRead(VulkanImage* pImage, uInt32 baseMip = 0, uInt32 mipCount = 1);
+
+		void PipelineBarrierGenerateMipmaps(VulkanImage* pImage, uInt32 mipCount);
 
 		VulkanCommandBuffer& GetCommandBuffer() { return *mpCommandBuffer; }
 	};
