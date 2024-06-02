@@ -9,7 +9,7 @@ namespace Quartz
 	QShader QShaderParser::WriteBlankQShaderHeader()
 	{
 		QStringTable stringTable;
-		stringTable.encoding		= Q_STRING_UTF8;
+		stringTable.encoding		= STRING_ENCODING_UTF8;
 		stringTable._reserved0		= 0;
 		stringTable.stringCount		= 0;
 		stringTable.strsOffset		= 0;

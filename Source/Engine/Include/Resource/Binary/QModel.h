@@ -4,61 +4,18 @@
 
 namespace Quartz
 {
-	enum QModelVertexAttribute : uInt8
-	{
-		QMODEL_VERTEX_ATTRIBUTE_INVALID = 0,
-		QMODEL_VERTEX_ATTRIBUTE_POSITION,
-		QMODEL_VERTEX_ATTRIBUTE_NORMAL,
-		QMODEL_VERTEX_ATTRIBUTE_BITANGENT,
-		QMODEL_VERTEX_ATTRIBUTE_TANGENT,
-		QMODEL_VERTEX_ATTRIBUTE_TEXCOORD,
-		QMODEL_VERTEX_ATTRIBUTE_COLOR,
-		QMODEL_VERTEX_ATTRIBUTE_DATA
-	};
-
-	enum QModelVertexFormat : uInt8
-	{
-		QMODEL_VERTEX_FORMAT_INVALID = 0,
-		QMODEL_VERTEX_FORMAT_FLOAT,
-		QMODEL_VERTEX_FORMAT_FLOAT2,
-		QMODEL_VERTEX_FORMAT_FLOAT3,
-		QMODEL_VERTEX_FORMAT_FLOAT4,
-		QMODEL_VERTEX_FORMAT_INT,
-		QMODEL_VERTEX_FORMAT_INT2,
-		QMODEL_VERTEX_FORMAT_INT3,
-		QMODEL_VERTEX_FORMAT_INT4,
-		QMODEL_VERTEX_FORMAT_UINT,
-		QMODEL_VERTEX_FORMAT_UINT2,
-		QMODEL_VERTEX_FORMAT_UINT3,
-		QMODEL_VERTEX_FORMAT_UINT4,
-		QMODEL_VERTEX_FORMAT_INT_2_10_10_10,
-		QMODEL_VERTEX_FORMAT_UINT_2_10_10_10,
-		QMODEL_VERTEX_FORMAT_FLOAT_10_11_11,
-		QMODEL_VERTEX_FORMAT_FLOAT_16_16_16_16
-	};
-
-	enum QModelIndexFormat : uInt8
-	{
-		QMODEL_INDEX_FORMAT_INVALID = 0,
-		QMODEL_INDEX_FORMAT_UINT8,
-		QMODEL_INDEX_FORMAT_UINT16,
-		QMODEL_INDEX_FORMAT_UINT32
-	};
-
-#pragma pack(push,1)
-
 	struct QModelVertexElement						// 64 bits
 	{
-		QModelVertexAttribute	attribute;			// 8 bits
-		QModelVertexFormat		format;				// 8 bits
-		uInt16					_reserved0;			// 16 bits
-		uInt16					offsetBytes;		// 16 bits
-		uInt16					sizeBytes;			// 16 bits
+		VertexAttribute		attribute;				// 8 bits
+		VertexFormat		format;					// 8 bits
+		uInt16				_reserved0;				// 16 bits
+		uInt16				offsetBytes;			// 16 bits
+		uInt16				sizeBytes;				// 16 bits
 	};
 
 	struct QModelIndexElement						// 64 bits
 	{
-		QModelIndexFormat	format;					// 8 bits
+		IndexFormat			format;					// 8 bits
 		uInt8				_reserved0;				// 8 bits
 		uInt16				sizeBytes;				// 16 bits
 		uInt32				_reserved1;				// 32 bits

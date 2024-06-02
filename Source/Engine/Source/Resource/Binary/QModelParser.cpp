@@ -7,7 +7,7 @@ namespace Quartz
 	QModel QModelParser::WriteBlankQModelHeader()
 	{
 		QStringTable stringTable;
-		stringTable.encoding			= Q_STRING_UTF8;
+		stringTable.encoding			= STRING_ENCODING_UTF8;
 		stringTable._reserved0			= 0;
 		stringTable.stringCount			= 0;
 		stringTable.strsOffset			= 0;
@@ -179,8 +179,8 @@ namespace Quartz
 		for (const VertexElement& vertexElement : stream.vertexElements)
 		{
 			QModelVertexElement qVertexElement;
-			qVertexElement.attribute	= (QModelVertexAttribute)vertexElement.attribute;
-			qVertexElement.format		= (QModelVertexFormat)VertexFormatID(vertexElement.format);
+			qVertexElement.attribute	= vertexElement.attribute;
+			qVertexElement.format		= vertexElement.format;
 			qVertexElement._reserved0	= 0;
 			qVertexElement.offsetBytes	= vertexElement.offsetBytes;
 			qVertexElement.sizeBytes	= vertexElement.sizeBytes;
@@ -215,7 +215,7 @@ namespace Quartz
 		}
 
 		QModelIndexElement qIndexElement;
-		qIndexElement.format		= (QModelIndexFormat)IndexFormatID(stream.indexElement.format);
+		qIndexElement.format		= stream.indexElement.format;
 		qIndexElement._reserved0	= 0;
 		qIndexElement.sizeBytes		= stream.indexElement.sizeBytes;
 		qIndexElement._reserved1	= 0;
@@ -401,29 +401,10 @@ namespace Quartz
 				}
 
 				VertexElement& vertexElement	= vertexStream.vertexElements[j];
-				vertexElement.attribute			= (VertexAttribute)qVertexElement.attribute;
+				vertexElement.attribute			= qVertexElement.attribute;
 				vertexElement.offsetBytes		= qVertexElement.offsetBytes;
 				vertexElement.sizeBytes			= qVertexElement.sizeBytes;
-
-				switch (qVertexElement.format)
-				{
-					case QMODEL_VERTEX_FORMAT_FLOAT:			vertexElement.format = VERTEX_FORMAT_FLOAT;				break;
-					case QMODEL_VERTEX_FORMAT_FLOAT2:			vertexElement.format = VERTEX_FORMAT_FLOAT2;			break;
-					case QMODEL_VERTEX_FORMAT_FLOAT3:			vertexElement.format = VERTEX_FORMAT_FLOAT3;			break;
-					case QMODEL_VERTEX_FORMAT_FLOAT4:			vertexElement.format = VERTEX_FORMAT_FLOAT4;			break;
-					case QMODEL_VERTEX_FORMAT_INT:				vertexElement.format = VERTEX_FORMAT_INT;				break;
-					case QMODEL_VERTEX_FORMAT_INT2:				vertexElement.format = VERTEX_FORMAT_INT2;				break;
-					case QMODEL_VERTEX_FORMAT_INT3:				vertexElement.format = VERTEX_FORMAT_INT3;				break;
-					case QMODEL_VERTEX_FORMAT_INT4:				vertexElement.format = VERTEX_FORMAT_INT4;				break;
-					case QMODEL_VERTEX_FORMAT_UINT:				vertexElement.format = VERTEX_FORMAT_UINT;				break;
-					case QMODEL_VERTEX_FORMAT_UINT2:			vertexElement.format = VERTEX_FORMAT_UINT2;				break;
-					case QMODEL_VERTEX_FORMAT_UINT3:			vertexElement.format = VERTEX_FORMAT_UINT3;				break;
-					case QMODEL_VERTEX_FORMAT_UINT4:			vertexElement.format = VERTEX_FORMAT_UINT4;				break;
-					case QMODEL_VERTEX_FORMAT_INT_2_10_10_10:	vertexElement.format = VERTEX_FORMAT_INT_2_10_10_10;	break;
-					case QMODEL_VERTEX_FORMAT_UINT_2_10_10_10:	vertexElement.format = VERTEX_FORMAT_UINT_2_10_10_10;	break;
-					case QMODEL_VERTEX_FORMAT_FLOAT_10_11_11:	vertexElement.format = VERTEX_FORMAT_FLOAT_10_11_11;	break;
-					default: break;
-				}
+				vertexElement.format			= qVertexElement.format;
 			}
 
 			vertexStream.pVertexBuffer = mpBufferAllocator->Allocate(qModelVertexStream.streamSizeBytes);
@@ -463,19 +444,11 @@ namespace Quartz
 			return false;
 		}
 
-		IndexStream& indexStream	= mpModel->indexStream;
-		indexStream.indexCount		= qModelIndexStream.indexCount;
-		indexStream.maxIndex		= qModelIndexStream.maxIndex;
-		
-		switch (qModelIndexStream.indexElement.format)
-		{
-			case QMODEL_INDEX_FORMAT_UINT8:		indexStream.indexElement.format = INDEX_FORMAT_UINT8;	break;
-			case QMODEL_INDEX_FORMAT_UINT16:	indexStream.indexElement.format = INDEX_FORMAT_UINT16;	break;
-			case QMODEL_INDEX_FORMAT_UINT32:	indexStream.indexElement.format = INDEX_FORMAT_UINT32;	break;
-			default: break;
-		}
-
-		indexStream.indexElement.sizeBytes = qModelIndexStream.indexElement.sizeBytes;
+		IndexStream& indexStream			= mpModel->indexStream;
+		indexStream.indexCount				= qModelIndexStream.indexCount;
+		indexStream.maxIndex				= qModelIndexStream.maxIndex;
+		indexStream.indexElement.format		= qModelIndexStream.indexElement.format;
+		indexStream.indexElement.sizeBytes	= qModelIndexStream.indexElement.sizeBytes;
 
 		indexStream.pIndexBuffer = mpBufferAllocator->Allocate(qModelIndexStream.streamSizeBytes);
 

@@ -1,0 +1,381 @@
+#pragma once
+
+#include "Types/Types.h"
+#include <assert.h>
+
+namespace Quartz
+{
+	enum ImageFormat : uInt32
+	{
+		IMAGE_FORMAT_INVALID = 0,
+		IMAGE_FORMAT_R8,
+		IMAGE_FORMAT_R8G8,
+		IMAGE_FORMAT_R8G8B8,
+		IMAGE_FORMAT_R8G8B8A8,
+		_MAX_IMAGE_FORMAT_ENUM
+	};
+
+	enum ImageUsageFlagBits : flags32
+	{
+		IMAGE_USAGE_INVALID						= 0x0 << 0,
+		IMAGE_USAGE_COLOR_INPUT					= 0x1 << 0,
+		IMAGE_USAGE_COLOR_OUTPUT				= 0x1 << 1,
+		IMAGE_USAGE_DEPTH_INPUT					= 0x1 << 2,
+		IMAGE_USAGE_DEPTH_OUTPUT				= 0x1 << 3,
+		IMAGE_USAGE_DEPTH_STENCIL_INPUT			= 0x1 << 4,
+		IMAGE_USAGE_DEPTH_STENCIL_OUTPUT		= 0x1 << 5,
+		IMAGE_USAGE_SAMPLED_TEXUTRE				= 0x1 << 6,
+		IMAGE_USAGE_TRANSFER_SOURCE				= 0x1 << 7,
+		IMAGE_USAGE_TRANSFER_DESTINATION		= 0x1 << 8
+	};
+
+	using ImageUsageFlags = flags32;
+
+	enum ImageType : uInt32
+	{
+		IMAGE_TYPE_INVALID = 0,
+		IMAGE_TYPE_1D,
+		IMAGE_TYPE_2D,
+		IMAGE_TYPE_3D,
+		_MAX_IMAGE_TYPE_ENUM
+	};
+
+	enum BufferUsageFlagBits : flags32
+	{
+		BUFFER_USAGE_INVALID					= 0x0 << 0,
+		BUFFER_USAGE_VERTEX_INPUT				= 0x1 << 0,
+		BUFFER_USAGE_INDEX_INPUT				= 0x1 << 1,
+		BUFFER_USAGE_UNIFORM_INPUT				= 0x1 << 2,
+		BUFFER_USAGE_TRANSFER_SOURCE			= 0x1 << 3,
+		BUFFER_USAGE_TRANSFER_DESTINATION		= 0x1 << 4
+	};
+
+	using BufferUsageFlags = flags32;
+
+	enum ShaderStageFlagBits : flags32
+	{
+		SHADER_STAGE_INVALID					= 0x0 <<  0,
+		SHADER_STAGE_VERTEX						= 0x1 <<  0,
+		SHADER_STAGE_TESSELLATION_CONTROL		= 0x1 <<  1,
+		SHADER_STAGE_TESSELLATION_EVALUATION	= 0x1 <<  2,
+		SHADER_STAGE_GEOMETRY					= 0x1 <<  3,
+		SHADER_STAGE_FRAGMENT					= 0x1 <<  4,
+		SHADER_STAGE_COMPUTE					= 0x1 <<  5,
+		SHADER_STAGE_KERNEL						= 0x1 <<  6,
+		SHADER_STAGE_TASK						= 0x1 <<  7,
+		SHADER_STAGE_MESH						= 0x1 <<  8,
+		SHADER_STAGE_RAY_GENERATION				= 0x1 <<  9,
+		SHADER_STAGE_INTERSECTION				= 0x1 << 10,
+		SHADER_STAGE_ANY_HIT					= 0x1 << 11,
+		SHADER_STAGE_CLOSEST_HIT				= 0x1 << 12,
+		SHADER_STAGE_MISS						= 0x1 << 13,
+		SHADER_STAGE_CALLABLE					= 0x1 << 14
+	};
+
+	using ShaderStage		= ShaderStageFlagBits;
+	using ShaderStageFlags	= flags32;
+
+	enum AccessFlagBits : flags32
+	{
+		ACCESS_INVALID							= 0x0 <<  0,
+		ACCESS_VERTEX_READ						= 0x1 <<  0,
+		ACCESS_INDEX_READ						= 0x1 <<  1,
+		ACCESS_UNIFORM_READ						= 0x1 <<  2,
+		ACCESS_SHADER_READ						= 0x1 <<  3,
+		ACCESS_SHADER_WRITE						= 0x1 <<  4,
+		ACCESS_COLOR_INPUT_READ					= 0x1 <<  5,
+		ACCESS_COLOR_INPUT_WRITE				= 0x1 <<  6,
+		ACCESS_DEPTH_INPUT_READ					= 0x1 <<  7,
+		ACCESS_DEPTH_INPUT_WRITE				= 0x1 <<  8,
+		ACCESS_DEPTH_STENCIL_INPUT_READ			= 0x1 <<  9,
+		ACCESS_DEPTH_STENCIL_INPUT_WRITE		= 0x1 << 10,
+		ACCESS_TRANSFER_READ					= 0x1 << 11,
+		ACCESS_TRANSFER_WRITE					= 0x1 << 12,
+		ACCESS_SAMPLED_READ						= 0x1 << 13,
+		ACCESS_STORAGE_READ						= 0x1 << 14,
+		ACCESS_STORAGE_WRITE					= 0x1 << 15
+	};
+
+	using AccessFlags = flags32;
+
+	enum QueueFlagBits : flags32
+	{
+		QUEUE_INVALID							= 0x0 << 0,
+		QUEUE_GRAPHICS							= 0x1 << 0,
+		QUEUE_TRANSFER							= 0x1 << 1,
+		QUEUE_PRESENT							= 0x1 << 2
+	};
+
+	using QueueFlags = flags32;
+
+	enum ShaderLang : uInt32
+	{
+		SHADER_LANG_INVALID = 0,
+		SHADER_LANG_GLSL_TEXT,
+		SHADER_LANG_GLSL_SPIRV,
+		SHADER_LANG_HLSL_TEXT,
+		SHADER_LANG_HLSL_DXBC,
+		SHADER_LANG_HLSL_DXIL,
+		_MAX_SHADER_LANG_ENUM
+	};
+
+	enum ShaderParamType : uInt32
+	{
+		SHADER_PARAM_TYPE_INVALID = 0,
+		SHADER_PARAM_TYPE_BOOL,		
+		SHADER_PARAM_TYPE_INT,		
+		SHADER_PARAM_TYPE_UINT,		
+		SHADER_PARAM_TYPE_FLOAT,	
+		SHADER_PARAM_TYPE_DOUBLE,	
+		SHADER_PARAM_TYPE_BVEC2,	
+		SHADER_PARAM_TYPE_BVEC3,	
+		SHADER_PARAM_TYPE_BVEC4,	
+		SHADER_PARAM_TYPE_IVEC2,	
+		SHADER_PARAM_TYPE_IVEC3,	
+		SHADER_PARAM_TYPE_IVEC4,	
+		SHADER_PARAM_TYPE_UVEC2,	
+		SHADER_PARAM_TYPE_UVEC3,	
+		SHADER_PARAM_TYPE_UVEC4,	
+		SHADER_PARAM_TYPE_VEC2,		
+		SHADER_PARAM_TYPE_VEC3,		
+		SHADER_PARAM_TYPE_VEC4,		
+		SHADER_PARAM_TYPE_DVEC2,	
+		SHADER_PARAM_TYPE_DVEC3,	
+		SHADER_PARAM_TYPE_DVEC4,	
+		SHADER_PARAM_TYPE_MAT2X2,	
+		SHADER_PARAM_TYPE_MAT2X3,	
+		SHADER_PARAM_TYPE_MAT2X4,	
+		SHADER_PARAM_TYPE_MAT3X2,	
+		SHADER_PARAM_TYPE_MAT3X3,	
+		SHADER_PARAM_TYPE_MAT3X4,	
+		SHADER_PARAM_TYPE_MAT4X2,	
+		SHADER_PARAM_TYPE_MAT4X3,	
+		SHADER_PARAM_TYPE_MAT4X4,	
+		SHADER_PARAM_TYPE_MAT2,		
+		SHADER_PARAM_TYPE_MAT3,		
+		SHADER_PARAM_TYPE_MAT4,		
+		SHADER_PARAM_TYPE_DMAT2X2,	
+		SHADER_PARAM_TYPE_DMAT2X3,	
+		SHADER_PARAM_TYPE_DMAT2X4,	
+		SHADER_PARAM_TYPE_DMAT3X2,	
+		SHADER_PARAM_TYPE_DMAT3X3,	
+		SHADER_PARAM_TYPE_DMAT3X4,	
+		SHADER_PARAM_TYPE_DMAT4X2,	
+		SHADER_PARAM_TYPE_DMAT4X3,	
+		SHADER_PARAM_TYPE_DMAT4X4,	
+		SHADER_PARAM_TYPE_DMAT2,	
+		SHADER_PARAM_TYPE_DMAT3,	
+		SHADER_PARAM_TYPE_DMAT4,	
+		SHADER_PARAM_TYPE_SAMPLER,	
+		SHADER_PARAM_TYPE_IMAGE,	
+		SHADER_PARAM_TYPE_ATOMIC,	
+		_MAX_SHADER_PARAM_ENUM
+	};
+
+	enum VertexAttribute : uInt32
+	{
+		VERTEX_ATTRIBUTE_INVALID = 0,
+		VERTEX_ATTRIBUTE_POSITION,
+		VERTEX_ATTRIBUTE_NORMAL,
+		VERTEX_ATTRIBUTE_BITANGENT,
+		VERTEX_ATTRIBUTE_TANGENT,
+		VERTEX_ATTRIBUTE_TEXCOORD,
+		VERTEX_ATTRIBUTE_COLOR,
+		VERTEX_ATTRIBUTE_DATA,
+		_MAX_VERTEX_ATTRIBUTE_ENUM
+	};
+
+	enum VertexFormat : uInt32
+	{
+		VERTEX_FORMAT_INVALID = 0,
+		VERTEX_FORMAT_FLOAT,
+		VERTEX_FORMAT_FLOAT2,
+		VERTEX_FORMAT_FLOAT3,
+		VERTEX_FORMAT_FLOAT4,
+		VERTEX_FORMAT_INT,
+		VERTEX_FORMAT_INT2,
+		VERTEX_FORMAT_INT3,
+		VERTEX_FORMAT_INT4,
+		VERTEX_FORMAT_UINT,
+		VERTEX_FORMAT_UINT2,
+		VERTEX_FORMAT_UINT3,
+		VERTEX_FORMAT_UINT4,
+		VERTEX_FORMAT_INT_2_10_10_10,
+		VERTEX_FORMAT_UINT_2_10_10_10,
+		VERTEX_FORMAT_FLOAT_10_11_11,
+		VERTEX_FORMAT_FLOAT_16_16_16_16,
+		_MAX_VERTEX_FORMAT_ENUM
+	};
+
+	enum IndexFormat : uInt32
+	{
+		INDEX_FORMAT_INVALID = 0,
+		INDEX_FORMAT_UINT8,
+		INDEX_FORMAT_UINT16,
+		INDEX_FORMAT_UINT32,
+		_MAX_INDEX_FORMAT_ENUM
+	};
+
+	enum StringEncoding : uInt16
+	{ 
+		STRING_ENCODING_INVALID	= 0,
+		STRING_ENCODING_UTF8,
+		STRING_ENCODING_UTF16,
+		STRING_ENCODING_UTF32,
+		_MAX_STRING_ENCODING_ENUM
+	};
+
+	inline constexpr uSize ImageFormatSizeBytes(ImageFormat format)
+	{
+		constexpr uSize sFormatSizes[]
+		{
+			0, // IMAGE_FORMAT_INVALID,
+			1, // IMAGE_FORMAT_R8,
+			2, // IMAGE_FORMAT_R8G8,
+			3, // IMAGE_FORMAT_R8G8B8,
+			4, // IMAGE_FORMAT_R8G8B8A8,
+			0  //_MAX_IMAGE_FORMAT_ENUM
+		};
+
+		assert((uSize)format < _MAX_IMAGE_FORMAT_ENUM && "ImageFormatSizeBytes(): ImageFormat enum out of bounds");
+
+		return sFormatSizes[(uSize)format];
+	}
+
+	inline constexpr uSize ImageTypeDimensions(ImageType type)
+	{
+		constexpr uSize sTypeDimensions[]
+		{
+			0, // IMAGE_TYPE_INVALID,
+			1, // IMAGE_TYPE_1D,
+			2, // IMAGE_TYPE_2D,
+			3, // IMAGE_TYPE_3D,
+			0  // _MAX_IMAGE_TYPE_ENUM
+		};
+
+		assert((uSize)type < _MAX_IMAGE_TYPE_ENUM && "ImageTypeDimensions(): ImageType enum out of bounds");
+
+		return sTypeDimensions[(uSize)type];
+	}
+
+	inline constexpr uSize ShaderParamSizeBytes(ShaderParamType type)
+	{
+		constexpr uSize sParamSizes[]
+		{
+			0,	 // SHADER_PARAM_TYPE_INVALID,
+			4,	 // SHADER_PARAM_TYPE_BOOL,	
+			4,	 // SHADER_PARAM_TYPE_INT,	
+			4,	 // SHADER_PARAM_TYPE_UINT,	
+			4,	 // SHADER_PARAM_TYPE_FLOAT,
+			8,	 // SHADER_PARAM_TYPE_DOUBLE,
+			8,	 // SHADER_PARAM_TYPE_BVEC2,
+			16,  // SHADER_PARAM_TYPE_BVEC3,
+			16,  // SHADER_PARAM_TYPE_BVEC4,
+			8,	 // SHADER_PARAM_TYPE_IVEC2,
+			16,  // SHADER_PARAM_TYPE_IVEC3,
+			16,  // SHADER_PARAM_TYPE_IVEC4,
+			8,	 // SHADER_PARAM_TYPE_UVEC2,
+			16,  // SHADER_PARAM_TYPE_UVEC3,
+			16,  // SHADER_PARAM_TYPE_UVEC4,
+			8,	 // SHADER_PARAM_TYPE_VEC2,	
+			16,  // SHADER_PARAM_TYPE_VEC3,	
+			16,  // SHADER_PARAM_TYPE_VEC4,	
+			16,  // SHADER_PARAM_TYPE_DVEC2,
+			32,  // SHADER_PARAM_TYPE_DVEC3,
+			32,  // SHADER_PARAM_TYPE_DVEC4,
+			0,   // SHADER_PARAM_TYPE_MAT2X2,
+			0,   // SHADER_PARAM_TYPE_MAT2X3,
+			0,   // SHADER_PARAM_TYPE_MAT2X4,
+			0,   // SHADER_PARAM_TYPE_MAT3X2,
+			0,   // SHADER_PARAM_TYPE_MAT3X3,
+			0,   // SHADER_PARAM_TYPE_MAT3X4,
+			0,   // SHADER_PARAM_TYPE_MAT4X2,
+			0,   // SHADER_PARAM_TYPE_MAT4X3,
+			256, // SHADER_PARAM_TYPE_MAT4X4,
+			0,	 // SHADER_PARAM_TYPE_MAT2,	
+			0,	 // SHADER_PARAM_TYPE_MAT3,	
+			256, // SHADER_PARAM_TYPE_MAT4,	
+			0,   // SHADER_PARAM_TYPE_DMAT2X2,
+			0,   // SHADER_PARAM_TYPE_DMAT2X3,
+			0,   // SHADER_PARAM_TYPE_DMAT2X4,
+			0,   // SHADER_PARAM_TYPE_DMAT3X2,
+			0,   // SHADER_PARAM_TYPE_DMAT3X3,
+			0,   // SHADER_PARAM_TYPE_DMAT3X4,
+			0,   // SHADER_PARAM_TYPE_DMAT4X2,
+			0,   // SHADER_PARAM_TYPE_DMAT4X3,
+			512, // SHADER_PARAM_TYPE_DMAT4X4,
+			0,   // SHADER_PARAM_TYPE_DMAT2,
+			0,   // SHADER_PARAM_TYPE_DMAT3,
+			512, // SHADER_PARAM_TYPE_DMAT4,
+			0,   // SHADER_PARAM_TYPE_SAMPLER,
+			0,   // SHADER_PARAM_TYPE_IMAGE,
+			4,   // SHADER_PARAM_TYPE_ATOMIC,
+			0    // _MAX_SHADER_PARAM_ENUM
+		};
+
+		assert((uSize)type < _MAX_SHADER_PARAM_ENUM && "ShaderParamSizeBytes(): ShaderParamType enum out of bounds");
+
+		return sParamSizes[(uSize)type];
+	}
+
+	inline constexpr uSize VertexFormatSizeBytes(VertexFormat format)
+	{
+		constexpr uSize sFormatSizes[]
+		{
+			0,  // VERTEX_FORMAT_INVALID,
+			4,  // VERTEX_FORMAT_FLOAT,
+			8,  // VERTEX_FORMAT_FLOAT2,
+			12, // VERTEX_FORMAT_FLOAT3,
+			16, // VERTEX_FORMAT_FLOAT4,
+			4,  // VERTEX_FORMAT_INT,
+			8,  // VERTEX_FORMAT_INT2,
+			12, // VERTEX_FORMAT_INT3,
+			16, // VERTEX_FORMAT_INT4,
+			4,  // VERTEX_FORMAT_UINT,
+			8,  // VERTEX_FORMAT_UINT2,
+			12, // VERTEX_FORMAT_UINT3,
+			16, // VERTEX_FORMAT_UINT4,
+			4,  // VERTEX_FORMAT_INT_2_10_10_10,
+			4,  // VERTEX_FORMAT_UINT_2_10_10_10,
+			4,  // VERTEX_FORMAT_FLOAT_10_11_11,
+			8,  // VERTEX_FORMAT_FLOAT_16_16_16_16,
+			0   // _MAX_VERTEX_FORMAT_ENUM
+		};
+
+		assert((uSize)format < _MAX_VERTEX_FORMAT_ENUM && "VertexFormatSizeBytes(): VertexFormat enum out of bounds");
+
+		return sFormatSizes[(uSize)format];
+	}
+
+	inline constexpr uSize IndexFormatSizeBytes(IndexFormat format)
+	{
+		constexpr uSize sFormatSizes[]
+		{
+			0, // INDEX_FORMAT_INVALID,
+			1, // INDEX_FORMAT_UINT8,
+			2, // INDEX_FORMAT_UINT16,
+			4, // INDEX_FORMAT_UINT32,
+			0  // _MAX_INDEX_FORMAT_ENUM
+		};
+
+		assert((uSize)format < _MAX_INDEX_FORMAT_ENUM && "IndexFormatSizeBytes(): IndexFormat enum out of bounds");
+
+		return sFormatSizes[(uSize)format];
+	}
+
+	inline constexpr uSize StringEncodingSizeBytes(StringEncoding encoding)
+	{
+		constexpr uSize sEncodingSizes[]
+		{
+			0, // STRING_ENCODING_INVALID,
+			1, // STRING_ENCODING_UTF8,
+			2, // STRING_ENCODING_UTF16,
+			4, // STRING_ENCODING_UTF32,
+			0  // _MAX_STRING_ENCODING_ENUM
+		};
+
+		assert((uSize)encoding < _MAX_STRING_ENCODING_ENUM && "StringEncodingSizeBytes(): StringEncoding enum out of bounds");
+
+		return sEncodingSizes[(uSize)encoding];
+	}
+}

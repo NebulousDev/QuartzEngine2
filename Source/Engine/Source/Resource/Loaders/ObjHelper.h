@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Resource/Common.h"
 #include "Resource/Assets/ObjModel.h"
 #include "Resource/Assets/Model.h"
 
@@ -241,7 +242,7 @@ namespace Quartz
 			positionElement.attribute		= VERTEX_ATTRIBUTE_POSITION;
 			positionElement.format			= settings.positionFormat;
 			positionElement.offsetBytes		= offsetBytes[settings.positionStreamIdx];
-			positionElement.sizeBytes		= VertexFormatSize(positionElement.format);
+			positionElement.sizeBytes		= VertexFormatSizeBytes(positionElement.format);
 
 			SetupOrAppendStream(settings.positionStreamIdx, positionElement, outVertexStreams);
 
@@ -254,7 +255,7 @@ namespace Quartz
 			normalElement.attribute			= VERTEX_ATTRIBUTE_NORMAL;
 			normalElement.format			= settings.normalFormat;
 			normalElement.offsetBytes		= offsetBytes[settings.normalStreamIdx];
-			normalElement.sizeBytes			= VertexFormatSize(normalElement.format);
+			normalElement.sizeBytes			= VertexFormatSizeBytes(normalElement.format);
 
 			SetupOrAppendStream(settings.normalStreamIdx, normalElement, outVertexStreams);
 
@@ -267,7 +268,7 @@ namespace Quartz
 			tangentElement.attribute		= VERTEX_ATTRIBUTE_TANGENT;
 			tangentElement.format			= settings.tangentFormat;
 			tangentElement.offsetBytes		= offsetBytes[settings.tangentStreamIdx];
-			tangentElement.sizeBytes		= VertexFormatSize(tangentElement.format);
+			tangentElement.sizeBytes		= VertexFormatSizeBytes(tangentElement.format);
 
 			SetupOrAppendStream(settings.tangentStreamIdx, tangentElement, outVertexStreams);
 
@@ -280,7 +281,7 @@ namespace Quartz
 			biTangentElement.attribute		= VERTEX_ATTRIBUTE_BITANGENT;
 			biTangentElement.format			= settings.biTangentFormat;
 			biTangentElement.offsetBytes	= offsetBytes[settings.biTangentStreamIdx];
-			biTangentElement.sizeBytes		= VertexFormatSize(biTangentElement.format);
+			biTangentElement.sizeBytes		= VertexFormatSizeBytes(biTangentElement.format);
 
 			SetupOrAppendStream(settings.biTangentStreamIdx, biTangentElement, outVertexStreams);
 
@@ -293,7 +294,7 @@ namespace Quartz
 			texCoordElement.attribute		= VERTEX_ATTRIBUTE_TEXCOORD;
 			texCoordElement.format			= settings.texCoordFormat;
 			texCoordElement.offsetBytes		= offsetBytes[settings.texCoordStreamIdx];
-			texCoordElement.sizeBytes		= VertexFormatSize(texCoordElement.format);
+			texCoordElement.sizeBytes		= VertexFormatSizeBytes(texCoordElement.format);
 
 			SetupOrAppendStream(settings.texCoordStreamIdx, texCoordElement, outVertexStreams);
 
@@ -462,16 +463,16 @@ namespace Quartz
 
 		bool is16Bit = false;
 
-		if (objModel.maxIndex <= INDEX_MAX_UINT16)
+		if (objModel.maxIndex <= UINT16_MAX)
 		{
 			outModel.indexStream.indexElement.format	= INDEX_FORMAT_UINT16;
-			outModel.indexStream.indexElement.sizeBytes = IndexFormatSize(INDEX_FORMAT_UINT16);
+			outModel.indexStream.indexElement.sizeBytes = IndexFormatSizeBytes(INDEX_FORMAT_UINT16);
 			is16Bit = true;
 		}
 		else
 		{
 			outModel.indexStream.indexElement.format	= INDEX_FORMAT_UINT32;
-			outModel.indexStream.indexElement.sizeBytes = IndexFormatSize(INDEX_FORMAT_UINT32);
+			outModel.indexStream.indexElement.sizeBytes = IndexFormatSizeBytes(INDEX_FORMAT_UINT32);
 			is16Bit = false;
 		}
 		
