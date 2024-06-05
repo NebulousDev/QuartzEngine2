@@ -10,13 +10,22 @@ namespace Quartz
 {
 	class Engine;
 
-	struct ModuleQueryInfo
+	enum ModuleType
 	{
-		String name;
-		String version;
+		MODULE_TYPE_GENERAL,
+		MODULE_TYPE_GRAPHICS,
+		MODULE_TYPE_PLATFORM,
+		MODULE_TYPE_GAME
 	};
 
-	typedef bool (*ModuleQueryFunc)(bool isEditor, ModuleQueryInfo& moduleQuery);
+	struct ModuleQueryInfo
+	{
+		String		name;
+		String		version;
+		ModuleType	type;
+	};
+
+	typedef bool (*ModuleQueryFunc)(bool isEditor, ModuleQueryInfo& outModuleQueryInfo);
 	typedef bool (*ModuleLoadFunc)(Log& engineLog, Engine& engine);
 	typedef void (*ModuleUnloadFunc)();
 
@@ -38,6 +47,7 @@ namespace Quartz
 
 		String				mName;
 		String				mVersion;
+		ModuleType			mType;
 
 		ModuleQueryFunc		mQueryFunc;
 		ModuleLoadFunc		mLoadFunc;
@@ -72,13 +82,14 @@ namespace Quartz
 			ModuleShutdownFunc	shutdownFunc
 		);
 
-		bool QuerySuccess() const;
-		bool IsLoaded() const;
+		bool				QuerySuccess() const;
+		bool				IsLoaded() const;
 
-		const String& GetName() const;
-		const String& GetVersion() const;
-		const String& GetPath() const;
+		const String&		GetName() const;
+		const String&		GetVersion() const;
+		const String&		GetPath() const;
+		const ModuleType	GetType() const;
 
-		DynamicLibrary* GetLibrary();
+		DynamicLibrary*		GetLibrary();
 	};
 }
