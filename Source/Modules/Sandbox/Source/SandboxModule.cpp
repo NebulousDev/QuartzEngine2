@@ -41,6 +41,9 @@
 #include "Runtime/Timer.h"
 #include "Utility/RefCounter.h"
 
+#include "Graphics/FrameGraph/FrameGraph.h"
+#include "Vulkan/VulkanFrameGraph.h"
+
 namespace Quartz
 {
 	extern "C"
@@ -55,8 +58,9 @@ namespace Quartz
 
 		bool QUARTZ_ENGINE_API ModuleQuery(bool isEditor, Quartz::ModuleQueryInfo& moduleQuery)
 		{
-			moduleQuery.name = "SandboxModule";
+			moduleQuery.name	= "SandboxModule";
 			moduleQuery.version = "1.0.0";
+			moduleQuery.type	= MODULE_TYPE_GAME;
 
 			return true;
 		}
@@ -310,6 +314,191 @@ namespace Quartz
 
 		void QUARTZ_ENGINE_API ModulePostInit()
 		{
+			/////////////////////////////////
+
+			LogInfo("Starting Sandbox");
+
+			/////////////////////////////////
+
+			FrameGraph& graph = Engine::GetGraphics().GetFrameGraph();
+			
+			FrameGraphImageInfo colorPassDiffuseTextureInfo = {};
+			colorPassDiffuseTextureInfo.width		= 640;
+			colorPassDiffuseTextureInfo.height		= 480;
+			colorPassDiffuseTextureInfo.depth		= 1;
+			colorPassDiffuseTextureInfo.layers		= 1;
+			colorPassDiffuseTextureInfo.mipLevels	= 1;
+			colorPassDiffuseTextureInfo.type		= IMAGE_TYPE_2D;
+			colorPassDiffuseTextureInfo.format		= IMAGE_FORMAT_R8;
+
+			{
+				FrameGraphPassInfo colorPassInfo = {};
+				colorPassInfo.queueFlags	= QUEUE_GRAPHICS;
+				colorPassInfo.allowSkip		= false;
+
+				FrameGraphPass& colorPass = graph.AddPass("colorPass", colorPassInfo);
+
+				FrameGraphImageInfo colorPassOutInfo = {};
+				colorPassOutInfo.width		= 640;
+				colorPassOutInfo.height		= 480;
+				colorPassOutInfo.depth		= 1;
+				colorPassOutInfo.layers		= 1;
+				colorPassOutInfo.mipLevels	= 1;
+				colorPassOutInfo.type		= IMAGE_TYPE_2D;
+				colorPassOutInfo.format		= IMAGE_FORMAT_R8;
+
+				FrameGraphImage& colorPassImage 
+					= colorPass.AddColorOutput("colorPassOut", colorPassOutInfo);
+
+				FrameGraphImage& colorPassTexture 
+					= colorPass.AddUniformTextureInput("colorPassOut", colorPassDiffuseTextureInfo, SHADER_STAGE_FRAGMENT);
+
+				colorPass.SetPassRender([&](const FrameGraphPass& framePass, FrameGraphCommandBuffer& commandBuffer) -> void
+					{
+						VulkanCommandRecorder* pRecorder	= graph.GetPhysicalCommandBuffer<VulkanCommandRecorder>(commandBuffer);
+						VulkanImage* pOutputImage			= graph.GetPhysicalImage<VulkanImage>(colorPassImage);
+						VulkanImage* pTextureImage			= graph.GetPhysicalImage<VulkanImage>(colorPassTexture);
+					}
+				);
+			}
+
+			{
+				FrameGraphPassInfo finalPassInfo = {};
+				finalPassInfo.queueFlags	= QUEUE_GRAPHICS;
+				finalPassInfo.allowSkip		= false;
+
+				FrameGraphPass& finalPass = graph.AddPass("finalPass", finalPassInfo);
+
+				FrameGraphImageInfo finalPassOutInfo = {};
+				finalPassOutInfo.width		= 640;
+				finalPassOutInfo.height		= 480;
+				finalPassOutInfo.depth		= 1;
+				finalPassOutInfo.layers		= 1;
+				finalPassOutInfo.mipLevels	= 1;
+				finalPassOutInfo.type		= IMAGE_TYPE_2D;
+				finalPassOutInfo.format		= IMAGE_FORMAT_R8;
+
+				FrameGraphImage& finalPassImage
+					= finalPass.AddColorOutput("finalPassOut", finalPassOutInfo);
+
+				FrameGraphImage& finalPassTexture
+					= finalPass.AddUniformTextureInput("colorPassOut", colorPassDiffuseTextureInfo, SHADER_STAGE_FRAGMENT);
+
+				FrameGraphImage& test0PassTexture
+					= finalPass.AddUniformTextureInput("test1PassOut", colorPassDiffuseTextureInfo, SHADER_STAGE_FRAGMENT);
+
+				finalPass.SetPassRender([&](const FrameGraphPass& framePass, FrameGraphCommandBuffer& commandBuffer) -> void
+					{
+						VulkanCommandRecorder* pRecorder = graph.GetPhysicalCommandBuffer<VulkanCommandRecorder>(commandBuffer);
+						VulkanImage* pOutputImage = graph.GetPhysicalImage<VulkanImage>(finalPassImage);
+						VulkanImage* pTextureImage = graph.GetPhysicalImage<VulkanImage>(finalPassTexture);
+					}
+				);
+			}
+
+			{
+				FrameGraphPassInfo test1PassInfo = {};
+				test1PassInfo.queueFlags	= QUEUE_GRAPHICS;
+				test1PassInfo.allowSkip		= false;
+
+				FrameGraphPass& test1Pass = graph.AddPass("test1Pass", test1PassInfo);
+
+				FrameGraphImageInfo test1PassOutInfo = {};
+				test1PassOutInfo.width		= 640;
+				test1PassOutInfo.height		= 480;
+				test1PassOutInfo.depth		= 1;
+				test1PassOutInfo.layers		= 1;
+				test1PassOutInfo.mipLevels	= 1;
+				test1PassOutInfo.type		= IMAGE_TYPE_2D;
+				test1PassOutInfo.format		= IMAGE_FORMAT_R8;
+
+				FrameGraphImage& test1PassInputImage
+					= test1Pass.AddColorInput("test0PassOut", test1PassOutInfo);
+
+				FrameGraphImage& test1PassImage
+					= test1Pass.AddColorOutput("test1PassOut", test1PassOutInfo);
+
+				FrameGraphImage& test1PassTexture
+					= test1Pass.AddUniformTextureInput("test1Texture", colorPassDiffuseTextureInfo, SHADER_STAGE_FRAGMENT);
+
+				test1Pass.SetPassRender([&](const FrameGraphPass& framePass, FrameGraphCommandBuffer& commandBuffer) -> void
+					{
+						VulkanCommandRecorder* pRecorder = graph.GetPhysicalCommandBuffer<VulkanCommandRecorder>(commandBuffer);
+						VulkanImage* pOutputImage = graph.GetPhysicalImage<VulkanImage>(test1PassImage);
+						VulkanImage* pTextureImage = graph.GetPhysicalImage<VulkanImage>(test1PassTexture);
+					}
+				);
+			}
+
+			{
+				FrameGraphPassInfo test0PassInfo = {};
+				test0PassInfo.queueFlags	= QUEUE_GRAPHICS;
+				test0PassInfo.allowSkip		= false;
+
+				FrameGraphPass& test0Pass = graph.AddPass("test0Pass", test0PassInfo);
+
+				FrameGraphImageInfo test0PassOutInfo = {};
+				test0PassOutInfo.width		= 640;
+				test0PassOutInfo.height		= 480;
+				test0PassOutInfo.depth		= 1;
+				test0PassOutInfo.layers		= 1;
+				test0PassOutInfo.mipLevels	= 1;
+				test0PassOutInfo.type		= IMAGE_TYPE_2D;
+				test0PassOutInfo.format		= IMAGE_FORMAT_R8;
+
+				FrameGraphImage& test0PassImage
+					= test0Pass.AddColorOutput("test0PassOut", test0PassOutInfo);
+
+				FrameGraphImage& test0PassTexture
+					= test0Pass.AddUniformTextureInput("test1Texture", colorPassDiffuseTextureInfo, SHADER_STAGE_FRAGMENT);
+
+				test0Pass.SetPassRender([&](const FrameGraphPass& framePass, FrameGraphCommandBuffer& commandBuffer) -> void
+					{
+						VulkanCommandRecorder* pRecorder = graph.GetPhysicalCommandBuffer<VulkanCommandRecorder>(commandBuffer);
+						VulkanImage* pOutputImage = graph.GetPhysicalImage<VulkanImage>(test0PassImage);
+						VulkanImage* pTextureImage = graph.GetPhysicalImage<VulkanImage>(test0PassTexture);
+					}
+				);
+			}
+
+			{
+				FrameGraphPassInfo test2PassInfo = {};
+				test2PassInfo.queueFlags	= QUEUE_GRAPHICS;
+				test2PassInfo.allowSkip		= false;
+
+				FrameGraphPass& test2Pass = graph.AddPass("test2Pass", test2PassInfo);
+
+				FrameGraphImageInfo test2PassOutInfo = {};
+				test2PassOutInfo.width		= 640;
+				test2PassOutInfo.height		= 480;
+				test2PassOutInfo.depth		= 1;
+				test2PassOutInfo.layers		= 1;
+				test2PassOutInfo.mipLevels	= 1;
+				test2PassOutInfo.type		= IMAGE_TYPE_2D;
+				test2PassOutInfo.format		= IMAGE_FORMAT_R8;
+
+				FrameGraphImage& test2PassImage
+					= test2Pass.AddColorOutput("test2PassOut", test2PassOutInfo);
+
+				FrameGraphImage& test2PassTexture
+					= test2Pass.AddUniformTextureInput("test0PassOut", colorPassDiffuseTextureInfo, SHADER_STAGE_FRAGMENT);
+
+				test2Pass.SetPassRender([&](const FrameGraphPass& framePass, FrameGraphCommandBuffer& commandBuffer) -> void
+					{
+						VulkanCommandRecorder* pRecorder = graph.GetPhysicalCommandBuffer<VulkanCommandRecorder>(commandBuffer);
+						VulkanImage* pOutputImage = graph.GetPhysicalImage<VulkanImage>(test2PassImage);
+						VulkanImage* pTextureImage = graph.GetPhysicalImage<VulkanImage>(test2PassTexture);
+					}
+				);
+			}
+
+			graph.SetOutputResource("finalPassOut");
+			graph.SetOutputResource("test2PassOut");
+
+			graph.Build();
+
+			/////////////////////////////////
+
 			ModelHandler* pModelHandler = new ModelHandler; // TODO
 			Engine::GetAssetManager().RegisterAssetHandler("obj", pModelHandler);
 			Engine::GetAssetManager().RegisterAssetHandler("qmodel", pModelHandler);
@@ -333,6 +522,8 @@ namespace Quartz
 
 			MaterialHandler* pMaterialHandler = new MaterialHandler;
 			Engine::GetAssetManager().RegisterAssetHandler("qmaterial", pMaterialHandler);
+
+			/////////////////////////////////
 
 			//QuckConvertToQShader("Shaders/visualize_normal.frag", "Shaders/visualize_normal.qsfrag");
 			//QuckConvertToQShader("Shaders/visualize_normal.vert", "Shaders/visualize_normal.qsvert");
@@ -386,7 +577,7 @@ namespace Quartz
 			//QuickConvertToQModel("Assets/Models/testScene.obj", "Assets/Models/testScene.qmodel");
 			//QuickConvertToQModel("Assets/Models/gun.obj", "Assets/Models/gun.qmodel");
 
-			//int j = 25;
+			/////////////////////////////////
 
 			RigidBodyComponent cubePhysics(cubeRigidBody, cubeCollider);
 			RigidBodyComponent cubePhysics2(cubeRigidBody2, cubeCollider2);
@@ -394,9 +585,7 @@ namespace Quartz
 			RigidBodyComponent planePhysics2(planeRigidBody, planeCollider);
 			RigidBodyComponent cameraPhysics(cameraRigidBody, cameraCollider);
 
-			LogInfo("Starting Sandbox");
-
-			StartVulkan();
+			/////////////////////////////////
 
 			EntityWorld& world	= Engine::GetWorld();
 			Input& input		= Engine::GetInput();
@@ -416,7 +605,7 @@ namespace Quartz
 			apiInfo.physicalDevice		= gfx.primaryPhysicalDevice.vkPhysicalDevice;
 			apiInfo.surfaceFormat		= format;
 
-			//WindowInfo		windowInfo		= { "QuartzEngine 2 - Sandbox", 1280, 720, 100, 100, WINDOW_WINDOWED };
+			//WindowInfo		windowInfo		= { "QuartzEngine 2 - Sandbox", 760, 480, 100, 100, WINDOW_FULLSCREEN };
 			WindowInfo		windowInfo		= { "QuartzEngine 2 - Sandbox", 1920, 1080, 100, 100, WINDOW_WINDOWED };
 			//WindowInfo		windowInfo		= { "QuartzEngine 2 - Sandbox", 2560, 1440, 0, 0, WINDOW_FULLSCREEN };
 			SurfaceInfo		surfaceInfo		= { SURFACE_API_VULKAN, &apiInfo };
@@ -426,6 +615,8 @@ namespace Quartz
 			gfx.pSurface = gfx.pResourceManager->CreateSurface(gfx.pPrimaryDevice, gfx.vkInstance, *(VulkanApiSurface*)gpWindow->GetSurface());
 
 			gPhysics.Initialize();
+
+			/////////////////////////////////
 
 			TransformComponent transform0
 			(

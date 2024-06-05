@@ -7,6 +7,7 @@
 #include "Runtime/Runtime.h"
 #include "Input/InputDeviceRegistry.h"
 #include "Module/ModuleRegistry.h"
+#include "Graphics/Graphics.h"
 #include "Filesystem/Filesystem.h"
 #include "Resource/AssetManager.h"
 #include "Config/Config.h"
@@ -24,6 +25,7 @@ namespace Quartz
 		Input*					mpInput;
 		InputDeviceRegistry*	mpDeviceRegistry;
 		ModuleRegistry*			mpModuleRegistry;
+		Graphics*				mpGraphics;
 		Filesystem*				mpFilesystem;
 		AssetManager*			mpAssetManager;
 		Config*					mpConfig;
@@ -35,6 +37,7 @@ namespace Quartz
 		static Input&				GetInput();
 		static InputDeviceRegistry& GetDeviceRegistry();
 		static ModuleRegistry&		GetModuleRegistry();
+		static Graphics&			GetGraphics();
 		static Filesystem&			GetFilesystem();
 		static AssetManager&		GetAssetManager();
 		static Config&				GetConfig();

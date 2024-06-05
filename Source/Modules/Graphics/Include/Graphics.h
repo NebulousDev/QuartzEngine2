@@ -24,12 +24,12 @@ namespace Quartz
 		bool d3d12;
 	};
 
-	struct Graphics
-	{
-		GraphicsAPI			activeApi;
-		GraphicsInstance*	pInstance;
-		AvailableAPI		available;
-	};
+	//struct Graphics
+	//{
+	//	GraphicsAPI			activeApi;
+	//	GraphicsInstance*	pInstance;
+	//	AvailableAPI		available;
+	//};
 
 	bool QUARTZ_GRAPHICS_API StartOpenGL();
 	bool QUARTZ_GRAPHICS_API StopOpenGL();

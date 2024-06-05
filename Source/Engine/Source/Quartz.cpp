@@ -1,5 +1,6 @@
 #include "Engine.h"
 
+#include "Debug.h"
 #include "EngineAPI.h"
 #include "Entity/World.h"
 #include "Module/ModuleRegistry.h"
@@ -19,10 +20,17 @@ public:
 	Engine::mpInput;
 	Engine::mpDeviceRegistry;
 	Engine::mpModuleRegistry;
+	Engine::mpGraphics;
 	Engine::mpFilesystem;
 	Engine::mpAssetManager;
 	Engine::mpConfig;
 	Engine::mpLog;
+};
+
+class GraphicsImpl : public Graphics
+{
+public:
+	inline GraphicsImpl() : Graphics() {}
 };
 
 int main()
@@ -86,6 +94,12 @@ int main()
 
 	/////////////////////////////////////////////////////////////////////////////////
 
+	/* Create Graphics */
+
+	GraphicsImpl graphics;
+
+	/////////////////////////////////////////////////////////////////////////////////
+
 	/* Create Engine */
 
 	EngineImpl engineImpl;
@@ -94,6 +108,7 @@ int main()
 	engineImpl.mpInput			= &input;
 	engineImpl.mpDeviceRegistry = &deviceRegistry;
 	engineImpl.mpModuleRegistry	= &moduleRegistry;
+	engineImpl.mpGraphics		= &graphics;
 	engineImpl.mpFilesystem		= &filesystem;
 	engineImpl.mpAssetManager	= &assetManager;
 	engineImpl.mpLog			= &engineLog;
@@ -102,7 +117,7 @@ int main()
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	/* Load Modules */
+	/* Load + Pre-initialize Modules */
 
 #ifdef QUARTZENGINE_WINAPI 
 	DynamicLibrary* pPlatformLibrary = LoadDynamicLibrary("Platform.dll");
@@ -119,6 +134,7 @@ int main()
 	Module* pSandboxModule  = moduleRegistry.CreateAndRegisterModule(pSandboxLibrary);
 
 	moduleRegistry.LoadAll(engineLog, Engine::GetInstance());
+
 	moduleRegistry.PreInitAll();
 
 	/////////////////////////////////////////////////////////////////////////////////
@@ -130,12 +146,62 @@ int main()
 	assetManager.RegisterAssetHandler("ini", &configHandler);
 
 	Config* pConfig = assetManager.GetOrLoadAsset<Config>("engine.ini");
+
+	if (!pConfig)
+	{
+		LogError("Error loading engine configs: 'engine.ini' not found in root directory.");
+		//LogInfo("'./engine.ini' created with default settings.");
+	}
+
 	engineImpl.mpConfig = pConfig;
 	pConfig->PrintConfigs();
 
 	/////////////////////////////////////////////////////////////////////////////////
 
+	/* Initialize Modules */
+
 	moduleRegistry.InitAll();
+
+	/////////////////////////////////////////////////////////////////////////////////
+
+	/* Start Graphics */
+
+	const Array<String> apiNames = graphics.GetApiNames();
+
+	DEBUG_ONLY
+	{
+		for (const String& apiName : apiNames)
+		{
+			LogDebug("Found Graphics Api [name=\"%s\"]", apiName.Str());
+		}
+	}
+
+	if (apiNames.Size() == 0)
+	{
+		LogFatal("Engine configuration error: No graphics apis available.");
+		return 1;
+	}
+
+	String graphicsApiName = apiNames[0];
+
+	if (!pConfig->GetValue("graphicsApi", graphicsApiName))
+	{
+		LogWarning("Engine configuration warning: No graphics api set in \"engine.ini\". Using default.");
+	}
+	else if (!apiNames.Contains(graphicsApiName))
+	{
+		LogError("Engine configuration error: Unknown Graphics Api [name =\"%s\"]. Using default.", graphicsApiName.Str());
+	}
+
+	if (!graphics.Start(graphicsApiName))
+	{
+		LogFatal("graphics.Start() failed with Graphics Api [name=\"%s\"].", graphicsApiName.Str());
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////
+
+	/* Post-initialize Modules */
+
 	moduleRegistry.PostInitAll();
 
 	/////////////////////////////////////////////////////////////////////////////////

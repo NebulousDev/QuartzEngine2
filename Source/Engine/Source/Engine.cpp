@@ -29,6 +29,11 @@ namespace Quartz
 		return *spInstance->mpModuleRegistry;
 	}
 
+	Graphics& Engine::GetGraphics()
+	{
+		return *spInstance->mpGraphics;
+	}
+
 	Filesystem& Engine::GetFilesystem()
 	{
 		return *spInstance->mpFilesystem;

@@ -36,7 +36,8 @@ add_library(${PROJECT_NAME} SHARED
 	"Source/Vulkan/Renderers/VulkanSkyRenderer.cpp"
 	"Source/Vulkan/Renderers/VulkanSceneRenderer.cpp"
 	"Source/Vulkan/Renderers/VulkanImGuiRenderer.cpp"
-	"Source/Resource/Loaders/NativeShaderHandler.cpp")
+	"Source/Resource/Loaders/NativeShaderHandler.cpp"
+	"Source/Vulkan/VulkanFrameGraph.cpp")
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 

@@ -8,6 +8,7 @@
 #include "Graphics.h"
 
 #include "Vulkan/VulkanGraphics.h"
+#include "Vulkan/VulkanFrameGraph.h"
 
 #include "gl/glew.h"
 #include "gl/GL.h"
@@ -31,36 +32,6 @@ namespace Quartz
 	{
 		return false;
 	}
-
-	bool InitOpenGL()
-	{
-		return glewInit() == GLEW_OK;
-	}
-
-	bool StartVulkan()
-	{
-		gpVulkanGraphics = &Engine::GetWorld().CreateSingleton<VulkanGraphics>();
-
-		if (gpVulkanGraphics->ready)
-		{
-			return true;
-		}
-
-		if (gpVulkanGraphics->Create())
-		{
-			gpGraphics->pInstance = (VulkanGraphics*)gpVulkanGraphics->vkInstance;
-			gpGraphics->activeApi = GRAPHICS_API_VULKAN;
-		}
-
-		return false;
-	}
-
-	bool StopVulkan()
-	{
-		gpVulkanGraphics->Destroy();
-		Engine::GetWorld().DestroySingleton<VulkanGraphics>();
-		return true;
-	}
 }
 
 extern "C"
@@ -69,8 +40,9 @@ extern "C"
 
 	bool QUARTZ_ENGINE_API ModuleQuery(bool isEditor, Quartz::ModuleQueryInfo& moduleQuery)
 	{
-		moduleQuery.name = "GraphicsModule";
+		moduleQuery.name	= "GraphicsModule";
 		moduleQuery.version = "1.0.0";
+		moduleQuery.type	= MODULE_TYPE_GRAPHICS;
 
 		return true;
 	}
@@ -82,35 +54,53 @@ extern "C"
 		return true;
 	}
 
-	void QUARTZ_ENGINE_API ModuleUnload()
+	void QUARTZ_ENGINE_API ModulePreInit() 
 	{
-		gpVulkanGraphics->Destroy();
-	}
+		gpVulkanGraphics = new VulkanGraphics();
 
-	void QUARTZ_ENGINE_API ModulePreInit()
-	{
-		gpGraphics = &Engine::GetWorld().CreateSingleton<Graphics>();
-
-		/* Check API Availability */
-
-		if (CheckGLAvailable())
-		{
-			gpGraphics->available.openGL = true;
-		}
-		
 		if (CheckVulkanAvailable())
 		{
-			gpGraphics->available.vulkan = true;
-		}
+			Graphics::ApiFunctions vulkanApiFunctions;
+			vulkanApiFunctions.apiStartFunc = []() -> bool 
+			{
+				bool result = gpVulkanGraphics->Create(); 
 
-		if (CheckD3D12Available())
-		{
-			gpGraphics->available.d3d12 = true;
+				if (result)
+				{
+					SetupVulkanFrameGraph(*gpVulkanGraphics);
+					return true;
+				}
+
+				return false;
+			};
+
+			vulkanApiFunctions.apiStopFunc = []() -> bool
+			{ 
+				gpVulkanGraphics->Destroy(); return true; 
+			};
+
+			FrameGraph::FrameGraphFunctions vulkanGraphFunctions;
+			SetupVulkanFrameGraphFunctions(*gpVulkanGraphics, vulkanGraphFunctions);
+
+			Graphics::ApiInfo vulkanApiInfo = {};
+			vulkanApiInfo.fullName				= "Vulkan";
+			vulkanApiInfo.apiFunctions			= vulkanApiFunctions;
+			vulkanApiInfo.frameGraphFunctions	= vulkanGraphFunctions;
+
+			Engine::GetGraphics().RegisterApi("vulkan", vulkanApiInfo);
 		}
 	}
 
 	void QUARTZ_ENGINE_API ModuleInit()
 	{
 		
+	}
+
+	void QUARTZ_ENGINE_API ModuleUnload()
+	{
+		if (gpVulkanGraphics)
+		{
+			gpVulkanGraphics->Destroy();
+		}
 	}
 }

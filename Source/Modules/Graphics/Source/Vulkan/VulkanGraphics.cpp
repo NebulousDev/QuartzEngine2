@@ -1,6 +1,8 @@
 #include "Vulkan/VulkanGraphics.h"
 
 #include "Log.h"
+#include "Engine.h"
+#include "Vulkan/VulkanFrameGraph.h"
 
 #define DEBUG_EXT_IN_RELEASE 1
 #define DEBUG_EXT DEBUG_EXT_IN_RELEASE || not defined NDEBUG
