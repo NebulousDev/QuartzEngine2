@@ -486,7 +486,6 @@ namespace Quartz
 			case SHADER_STAGE_GEOMETRY:					return shaderc_geometry_shader;
 			case SHADER_STAGE_FRAGMENT:					return shaderc_fragment_shader;
 			case SHADER_STAGE_COMPUTE:					return shaderc_compute_shader;
-			case SHADER_STAGE_KERNEL:					return shaderc_glsl_infer_from_source; // <<
 			case SHADER_STAGE_TASK:						return shaderc_task_shader;
 			case SHADER_STAGE_MESH:						return shaderc_mesh_shader;
 			case SHADER_STAGE_RAY_GENERATION:			return shaderc_raygen_shader;

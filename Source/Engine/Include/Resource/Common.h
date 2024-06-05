@@ -17,7 +17,7 @@ namespace Quartz
 
 	enum ImageUsageFlagBits : flags32
 	{
-		IMAGE_USAGE_INVALID						= 0x0 << 0,
+		IMAGE_USAGE_NONE						= 0x0 << 0,
 		IMAGE_USAGE_COLOR_INPUT					= 0x1 << 0,
 		IMAGE_USAGE_COLOR_OUTPUT				= 0x1 << 1,
 		IMAGE_USAGE_DEPTH_INPUT					= 0x1 << 2,
@@ -30,6 +30,7 @@ namespace Quartz
 	};
 
 	using ImageUsageFlags = flags32;
+	using ImageUsage = ImageUsageFlagBits;
 
 	enum ImageType : uInt32
 	{
@@ -61,15 +62,18 @@ namespace Quartz
 		SHADER_STAGE_GEOMETRY					= 0x1 <<  3,
 		SHADER_STAGE_FRAGMENT					= 0x1 <<  4,
 		SHADER_STAGE_COMPUTE					= 0x1 <<  5,
-		SHADER_STAGE_KERNEL						= 0x1 <<  6,
-		SHADER_STAGE_TASK						= 0x1 <<  7,
-		SHADER_STAGE_MESH						= 0x1 <<  8,
-		SHADER_STAGE_RAY_GENERATION				= 0x1 <<  9,
-		SHADER_STAGE_INTERSECTION				= 0x1 << 10,
-		SHADER_STAGE_ANY_HIT					= 0x1 << 11,
-		SHADER_STAGE_CLOSEST_HIT				= 0x1 << 12,
-		SHADER_STAGE_MISS						= 0x1 << 13,
-		SHADER_STAGE_CALLABLE					= 0x1 << 14
+		SHADER_STAGE_TASK						= 0x1 <<  6,
+		SHADER_STAGE_MESH						= 0x1 <<  7,
+		SHADER_STAGE_RAY_GENERATION				= 0x1 <<  8,
+		SHADER_STAGE_INTERSECTION				= 0x1 <<  9,
+		SHADER_STAGE_ANY_HIT					= 0x1 << 10,
+		SHADER_STAGE_CLOSEST_HIT				= 0x1 << 11,
+		SHADER_STAGE_MISS						= 0x1 << 12,
+		SHADER_STAGE_CALLABLE					= 0x1 << 13,
+
+		// Special stages
+		SHADER_STAGE_TOP_OF_PIPE				= 0x1 << 14,
+		SHADER_STAGE_BOTTOM_OF_PIPE				= 0x1 << 15
 	};
 
 	using ShaderStage		= ShaderStageFlagBits;
@@ -77,7 +81,7 @@ namespace Quartz
 
 	enum AccessFlagBits : flags32
 	{
-		ACCESS_INVALID							= 0x0 <<  0,
+		ACCESS_NONE								= 0x0 <<  0,
 		ACCESS_VERTEX_READ						= 0x1 <<  0,
 		ACCESS_INDEX_READ						= 0x1 <<  1,
 		ACCESS_UNIFORM_READ						= 0x1 <<  2,
@@ -102,8 +106,9 @@ namespace Quartz
 	{
 		QUEUE_INVALID							= 0x0 << 0,
 		QUEUE_GRAPHICS							= 0x1 << 0,
-		QUEUE_TRANSFER							= 0x1 << 1,
-		QUEUE_PRESENT							= 0x1 << 2
+		QUEUE_COMPUTE							= 0x1 << 1,
+		QUEUE_TRANSFER							= 0x1 << 2,
+		QUEUE_PRESENT							= 0x1 << 3
 	};
 
 	using QueueFlags = flags32;
