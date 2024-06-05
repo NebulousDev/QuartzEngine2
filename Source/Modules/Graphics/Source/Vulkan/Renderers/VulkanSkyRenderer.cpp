@@ -115,12 +115,12 @@ namespace Quartz
 
 		VulkanBufferInfo skyPerFrameStagingBufferInfo = {};
 		skyPerFrameStagingBufferInfo.sizeBytes			= sizeof(AtmospherePerFrameData);
-		skyPerFrameStagingBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		skyPerFrameStagingBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		skyPerFrameStagingBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 		VulkanBufferInfo skyPerFrameBufferInfo = {};
 		skyPerFrameBufferInfo.sizeBytes				= sizeof(AtmospherePerFrameData);
-		skyPerFrameBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		skyPerFrameBufferInfo.vkUsageFlags			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		skyPerFrameBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 		mpSkyPerFrameStagingBuffer = mpResourceManager->CreateBuffer(&device, skyPerFrameStagingBufferInfo);

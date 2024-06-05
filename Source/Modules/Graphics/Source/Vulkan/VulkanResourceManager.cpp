@@ -1254,7 +1254,7 @@ namespace Quartz
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType		= VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size			= info.sizeBytes;
-		bufferInfo.usage		= info.vkBufferUsage;
+		bufferInfo.usage		= info.vkUsageFlags;
 		bufferInfo.sharingMode	= VK_SHARING_MODE_EXCLUSIVE;
 
 		if (vkCreateBuffer(pDevice->vkDevice, &bufferInfo, nullptr, &vkBuffer) != VK_SUCCESS)
@@ -1304,7 +1304,7 @@ namespace Quartz
 		vulkanBuffer.sizeBytes			= info.sizeBytes;
 		vulkanBuffer.vkMemory			= vkMemory;
 		vulkanBuffer.vkMemoryProperties	= info.vkMemoryProperties;
-		vulkanBuffer.vkUsage			= info.vkBufferUsage;
+		vulkanBuffer.vkUsage			= info.vkUsageFlags;
 
 		return Register(vulkanBuffer);
 	}
@@ -1341,10 +1341,10 @@ namespace Quartz
 		vkCommandBuffersList.Resize(count);
 
 		VkCommandBufferAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = pCommandPool->vkCommandPool;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; // Secondary buffers not worth it
-		allocInfo.commandBufferCount = count;
+		allocInfo.sType					= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool			= pCommandPool->vkCommandPool;
+		allocInfo.level					= VK_COMMAND_BUFFER_LEVEL_PRIMARY; // Secondary buffers not worth it
+		allocInfo.commandBufferCount	= count;
 
 		if (vkAllocateCommandBuffers(pCommandPool->pDevice->vkDevice, &allocInfo, vkCommandBuffersList.Data()) != VK_SUCCESS)
 		{
@@ -1356,8 +1356,8 @@ namespace Quartz
 		{
 			VulkanCommandBuffer vulkanCommandBuffer = {};
 			vulkanCommandBuffer.vkCommandBuffer = vkCommandBuffersList[i];
-			vulkanCommandBuffer.pDevice = pCommandPool->pDevice;
-			vulkanCommandBuffer.pCommandPool = pCommandPool;
+			vulkanCommandBuffer.pDevice			= pCommandPool->pDevice;
+			vulkanCommandBuffer.pCommandPool	= pCommandPool;
 
 			LogTraceVkRSM("Created VulkanCommandBuffer [ID=%06.6d].", mCommandBuffers.Size() + 1);
 
@@ -1381,13 +1381,13 @@ namespace Quartz
 		}
 
 		VkFramebufferCreateInfo framebufferInfo = {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = info.renderpass->vkRenderpass;
+		framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass		= info.renderpass->vkRenderpass;
 		framebufferInfo.attachmentCount = info.attachments.Size();
-		framebufferInfo.pAttachments = vkAttachmentImageViews;
-		framebufferInfo.width = info.width;
-		framebufferInfo.height = info.height;
-		framebufferInfo.layers = info.layers;
+		framebufferInfo.pAttachments	= vkAttachmentImageViews;
+		framebufferInfo.width			= info.width;
+		framebufferInfo.height			= info.height;
+		framebufferInfo.layers			= info.layers;
 
 		if (vkCreateFramebuffer(pDevice->vkDevice, &framebufferInfo, VK_NULL_HANDLE, &vkFramebuffer) != VK_SUCCESS)
 		{
@@ -1397,11 +1397,11 @@ namespace Quartz
 
 		VulkanFramebuffer vulkanFramebuffer = {};
 		vulkanFramebuffer.vkFramebuffer = vkFramebuffer;
-		vulkanFramebuffer.renderpass = info.renderpass;
-		vulkanFramebuffer.attachments = info.attachments;
-		vulkanFramebuffer.width = info.width;
-		vulkanFramebuffer.height = info.height;
-		vulkanFramebuffer.layers = info.layers;
+		vulkanFramebuffer.renderpass	= info.renderpass;
+		vulkanFramebuffer.attachments	= info.attachments;
+		vulkanFramebuffer.width			= info.width;
+		vulkanFramebuffer.height		= info.height;
+		vulkanFramebuffer.layers		= info.layers;
 
 		LogTraceVkRSM("Created VulkanFramebuffer [ID=%06.6d].", mFramebuffers.Size() + 1);
 
@@ -1413,12 +1413,12 @@ namespace Quartz
 		VkDescriptorPool vkDescriptorPool;
 
 		VkDescriptorPoolCreateInfo descriptorPoolInfo = {};
-		descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		descriptorPoolInfo.maxSets = info.maxSets;
-		descriptorPoolInfo.poolSizeCount = info.sizes.Size();
-		descriptorPoolInfo.pPoolSizes = info.sizes.Data();
-		descriptorPoolInfo.flags = 0;
-		descriptorPoolInfo.pNext = nullptr;
+		descriptorPoolInfo.sType			= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolInfo.maxSets			= info.maxSets;
+		descriptorPoolInfo.poolSizeCount	= info.sizes.Size();
+		descriptorPoolInfo.pPoolSizes		= info.sizes.Data();
+		descriptorPoolInfo.flags			= 0;
+		descriptorPoolInfo.pNext			= nullptr;
 
 		if (vkCreateDescriptorPool(pDevice->vkDevice, &descriptorPoolInfo, VK_NULL_HANDLE, &vkDescriptorPool) != VK_SUCCESS)
 		{
@@ -1430,8 +1430,8 @@ namespace Quartz
 
 		VulkanDescriptorPool descriptorPool = {};
 		descriptorPool.vkDescriptorPool = vkDescriptorPool;
-		descriptorPool.sizes = info.sizes;
-		descriptorPool.maxSets = info.maxSets;
+		descriptorPool.sizes			= info.sizes;
+		descriptorPool.maxSets			= info.maxSets;
 
 		return Register(descriptorPool);
 	}

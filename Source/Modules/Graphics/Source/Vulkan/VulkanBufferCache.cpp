@@ -26,7 +26,7 @@ namespace Quartz
 			{
 				VulkanBufferInfo vertexBufferInfo = {};
 				vertexBufferInfo.sizeBytes			= mSettings.vertexBufferSizeMb * (1024 * 1024);
-				vertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | usageFlags;
+				vertexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | usageFlags;
 				vertexBufferInfo.vkMemoryProperties = memoryFlags;
 
 				mVertexBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, vertexBufferInfo)));
@@ -34,7 +34,7 @@ namespace Quartz
 
 			VulkanBufferInfo indexBufferInfo = {};
 			indexBufferInfo.sizeBytes			= mSettings.indexBufferSizeMb * (1024 * 1024);
-			indexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | usageFlags;
+			indexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | usageFlags;
 			indexBufferInfo.vkMemoryProperties	= memoryFlags;
 
 			mIndexBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, indexBufferInfo)));
@@ -42,7 +42,7 @@ namespace Quartz
 
 		VulkanBufferInfo globalBufferInfo = {};
 		globalBufferInfo.sizeBytes				= mSettings.globalBufferSizeBytes;
-		globalBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
+		globalBufferInfo.vkUsageFlags			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 		globalBufferInfo.vkMemoryProperties		= memoryFlags;
 
 		mGlobalBuffer = mpResourceManager->CreateBuffer(mpDevice, globalBufferInfo);
@@ -51,14 +51,14 @@ namespace Quartz
 		{
 			VulkanBufferInfo perInstanceBufferInfo = {};
 			perInstanceBufferInfo.sizeBytes				= mSettings.perInstanceBufferSizeMb * (1024 * 1024);
-			perInstanceBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
+			perInstanceBufferInfo.vkUsageFlags			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 			perInstanceBufferInfo.vkMemoryProperties	= memoryFlags;
 
 			mPerInstanceBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perInstanceBufferInfo)));
 
 			VulkanBufferInfo perModelBufferInfo = {};
 			perModelBufferInfo.sizeBytes			= mSettings.uniformBufferSizeMb * (1024 * 1024);
-			perModelBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
+			perModelBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 			perModelBufferInfo.vkMemoryProperties	= memoryFlags;
 
 			for (uSize i = 0; i < mSettings.maxUniformSets; i++)
@@ -75,7 +75,7 @@ namespace Quartz
 				{
 					VulkanBufferInfo stagingVertexBufferInfo = {};
 					stagingVertexBufferInfo.sizeBytes			= mSettings.vertexBufferSizeMb * (1024 * 1024);
-					stagingVertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+					stagingVertexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 					stagingVertexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 					mVertexStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingVertexBufferInfo)));
@@ -83,21 +83,21 @@ namespace Quartz
 
 				VulkanBufferInfo stagingGlobalBufferInfo = {};
 				stagingGlobalBufferInfo.sizeBytes			= mSettings.perInstanceBufferSizeMb * (1024 * 1024);
-				stagingGlobalBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+				stagingGlobalBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingGlobalBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 				mGlobalStagingBuffer = mpResourceManager->CreateBuffer(mpDevice, stagingGlobalBufferInfo);
 
 				VulkanBufferInfo stagingIndexBufferInfo = {};
 				stagingIndexBufferInfo.sizeBytes			= mSettings.indexBufferSizeMb * (1024 * 1024);
-				stagingIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+				stagingIndexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 				mIndexStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingIndexBufferInfo)));
 
 				VulkanBufferInfo stagingPerInstanceBufferInfo = {};
 				stagingPerInstanceBufferInfo.sizeBytes			= mSettings.perInstanceBufferSizeMb * (1024 * 1024);
-				stagingPerInstanceBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+				stagingPerInstanceBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingPerInstanceBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 				mPerInstanceStagingBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, stagingPerInstanceBufferInfo)));
@@ -112,7 +112,7 @@ namespace Quartz
 			{
 				VulkanBufferInfo stagingPerModelBufferInfo = {};
 				stagingPerModelBufferInfo.sizeBytes				= mSettings.uniformBufferSizeMb * (1024 * 1024);
-				stagingPerModelBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+				stagingPerModelBufferInfo.vkUsageFlags			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingPerModelBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 				for (uSize i = 0; i < mSettings.maxUniformSets; i++)
@@ -214,7 +214,7 @@ namespace Quartz
 
 				VulkanBufferInfo vertexBufferInfo = {};
 				vertexBufferInfo.sizeBytes			= verticesSizeBytes;
-				vertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | usageFlags;
+				vertexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | usageFlags;
 				vertexBufferInfo.vkMemoryProperties = memoryFlags;
 
 				VulkanMultiBuffer* pVertexBuffer = 
@@ -275,7 +275,7 @@ namespace Quartz
 
 			VulkanBufferInfo indexBufferInfo = {};
 			indexBufferInfo.sizeBytes			= indicesSizeBytes;
-			indexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | usageFlags;
+			indexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | usageFlags;
 			indexBufferInfo.vkMemoryProperties	= memoryFlags;
 
 			VulkanMultiBuffer* pIndexBuffer = 
@@ -351,7 +351,7 @@ namespace Quartz
 			{
 				VulkanBufferInfo stagingVertexBufferInfo = {};
 				stagingVertexBufferInfo.sizeBytes			= verticesSizeBytes;
-				stagingVertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+				stagingVertexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				stagingVertexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 				VulkanMultiBuffer* pVertexStagingBuffer = 
@@ -394,7 +394,7 @@ namespace Quartz
 		{
 			VulkanBufferInfo stagingIndexBufferInfo = {};
 			stagingIndexBufferInfo.sizeBytes			= indicesSizeBytes;
-			stagingIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			stagingIndexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			stagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 			VulkanMultiBuffer* pIndexStagingBuffer = 
@@ -461,7 +461,7 @@ namespace Quartz
 
 			VulkanBufferInfo perModelBufferInfo = {};
 			perModelBufferInfo.sizeBytes			= calculatedSizeBytes;
-			perModelBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
+			perModelBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | usageFlags;
 			perModelBufferInfo.vkMemoryProperties	= memoryFlags;
 
 			pBuffer = &mUniformBuffers.PushBack(VulkanMultiBuffer(mpResourceManager->CreateBuffer(mpDevice, perModelBufferInfo)));
@@ -521,7 +521,7 @@ namespace Quartz
 		{
 			VulkanBufferInfo uniformStagingBufferInfo = {};
 			uniformStagingBufferInfo.sizeBytes				= calculatedSizeBytes;
-			uniformStagingBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			uniformStagingBufferInfo.vkUsageFlags			= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			uniformStagingBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 			VulkanMultiBuffer* pPerModelStagingBuffer = 

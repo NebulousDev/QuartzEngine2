@@ -8,7 +8,7 @@ namespace Quartz
 	struct VulkanBufferInfo
 	{
 		uSize					sizeBytes;
-		VkBufferUsageFlags		vkBufferUsage;
+		VkBufferUsageFlags		vkUsageFlags;
 		VkMemoryPropertyFlags	vkMemoryProperties;
 	};
 

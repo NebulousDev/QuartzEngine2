@@ -62,12 +62,12 @@ namespace Quartz
 
 		VulkanBufferInfo meshLODStagingVertexBufferInfo = {};
 		meshLODStagingVertexBufferInfo.sizeBytes			= 0;
-		meshLODStagingVertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		meshLODStagingVertexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		meshLODStagingVertexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 		VulkanBufferInfo meshLODStagingIndexBufferInfo = {};
 		meshLODStagingIndexBufferInfo.sizeBytes				= 0;
-		meshLODStagingIndexBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		meshLODStagingIndexBufferInfo.vkUsageFlags			= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		meshLODStagingIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 		for (uSize i = 0; i < count; i++)
@@ -88,7 +88,7 @@ namespace Quartz
 		// TODO Move out of LODs
 		VulkanBufferInfo perTileStagingBufferInfo = {};
 		perTileStagingBufferInfo.sizeBytes			= sizeof(TerrainPerTileData) * MAX_LOADED_CHUNKS;
-		perTileStagingBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		perTileStagingBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		perTileStagingBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 		mpPerTileStagingBuffer = resources.CreateBuffer(&device, perTileStagingBufferInfo);
@@ -99,12 +99,12 @@ namespace Quartz
 
 		VulkanBufferInfo meshLODVertexBufferInfo = {};
 		meshLODVertexBufferInfo.sizeBytes			= meshLODStagingVertexBufferInfo.sizeBytes;
-		meshLODVertexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		meshLODVertexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		meshLODVertexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 		VulkanBufferInfo meshLODIndexBufferInfo = {};
 		meshLODIndexBufferInfo.sizeBytes			= meshLODStagingIndexBufferInfo.sizeBytes;
-		meshLODIndexBufferInfo.vkBufferUsage		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		meshLODIndexBufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		meshLODIndexBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 		mpLODVertexBuffer = resources.CreateBuffer(&device, meshLODVertexBufferInfo);
@@ -112,7 +112,7 @@ namespace Quartz
 
 		VulkanBufferInfo perTileBufferInfo = {};
 		perTileBufferInfo.sizeBytes				= perTileStagingBufferInfo.sizeBytes;
-		perTileBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		perTileBufferInfo.vkUsageFlags			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		perTileBufferInfo.vkMemoryProperties		= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 		mpPerTileBuffer = resources.CreateBuffer(&device, perTileBufferInfo);
@@ -361,7 +361,7 @@ namespace Quartz
 
 		VulkanBufferInfo perlinImageBufferInfo = {};
 		perlinImageBufferInfo.sizeBytes				= resolution * resolution * sizeof(float);
-		perlinImageBufferInfo.vkBufferUsage			= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		perlinImageBufferInfo.vkUsageFlags			= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		perlinImageBufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 		VulkanBuffer* pPerlinImageBuffer = resources.CreateBuffer(&device, perlinImageBufferInfo);
