@@ -276,7 +276,7 @@ namespace Quartz
 			return false;
 		}
 
-		outIntPtr = (dwHiFilePointer << 32 | dwLoFilePointer);
+		outIntPtr = ((uInt64)dwHiFilePointer << 32 | dwLoFilePointer);
 
 		return true;
 	}
