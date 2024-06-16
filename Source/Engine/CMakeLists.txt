@@ -33,7 +33,12 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Resource/Binary/QShaderParser.cpp"
     "Source/Graphics/FrameGraph/FrameGraphPass.cpp"
 	"Source/Graphics/FrameGraph/FrameGraph.cpp"
-    "Source/Graphics/Graphics.cpp")
+    "Source/Graphics/Graphics.cpp"
+    "Source/Graphics/Renderers/WorldRenderer.cpp"
+    "Source/Graphics/Component/TransformComponent.cpp"
+	"Source/Graphics/Component/MeshComponent.cpp"
+	"Source/Graphics/Component/MaterialComponent.cpp"
+	"Source/Graphics/Component/CameraComponent.cpp")
 
 if(WIN32)
 

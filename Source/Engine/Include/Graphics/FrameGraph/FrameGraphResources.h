@@ -12,49 +12,50 @@ namespace Quartz
 	class FrameGraph;
 	class FrameGraphPass;
 
-	using PhysicalImageHandle			= void*;
-	using PhysicalBufferHandle			= void*;
-	using PhysicalCommandBufferHandle	= void*;
+	using ApiImageHandle	= void*;
+	using ApiBufferHandle	= void*;
+	using ApiRecorderHandle = void*;
+
+	enum FrameGraphResourceFlagBits
+	{
+		RESOURCE_FLAG_NONE			= 0x0 << 0,
+		RESOURCE_FLAG_PERSISTANT	= 0x1 << 1,
+		RESOURCE_FLAG_BACKBUFFER	= 0x1 << 2,
+		RESOURCE_FLAG_WINDOW_OUTPUT	= 0x1 << 3,
+		RESOURCE_FLAG_IMAGE_OUTPUT	= 0x1 << 4,
+		RESOURCE_FLAG_BUFFER_OUTPUT = 0x1 << 5,
+	};
+
+	using FrameGraphResourceFlags = flags32;
 
 	struct FrameGraphImageInfo
 	{
-		uInt32			width;
-		uInt32			height;
-		uInt32			depth;
-		uInt32			layers;
-		uInt32			mipLevels;
-		ImageType		type;
-		ImageFormat		format;
-
-		enum FrameGraphImageInfoFlagBits
-		{
-			FG_IMAGE_FLAG_PERSISTANT = 0x1 << 0
-		};
-		using FrameGraphImageInfoFlags = flags32;
-		
-		FrameGraphImageInfoFlags flags;
+		uInt32						width;
+		uInt32						height;
+		uInt32						depth;
+		uInt32						layers;
+		uInt32						mipLevels;
+		ImageType					type;
+		ImageFormat					format;
+		FrameGraphResourceFlags		flags;
 	};
 
 	struct FrameGraphBufferInfo
 	{
-		uInt64 sizeBytes;
-
-		enum FrameGraphBufferInfoFlagBits
-		{
-			FG_BUFFER_FLAG_PERSISTANT = 0x1 << 0
-		};
-		using FrameGraphBufferInfoFlags = flags32;
-
-		FrameGraphBufferInfoFlags flags;
+		uInt64						sizeBytes;
+		FrameGraphResourceFlags		flags;
 	};
 
 	struct FrameGraphResource
 	{
+		uInt64						id;
 		String						name;
 		QueueFlags					queues;
 		ShaderStageFlags			stages;
 		Array<FrameGraphPass*, 16>	readPasses;
 		Array<FrameGraphPass*, 16>	writePasses;
+		FrameGraphResourceFlags		flags;
+		uInt32						activity;
 	};
 
 	struct FrameGraphImage;
@@ -79,7 +80,7 @@ namespace Quartz
 	{
 		FrameGraphImageInfo			info;
 		ImageUsageFlags				usages;
-		PhysicalImageHandle			hPhysicalImage;
+		ApiImageHandle				hApiImage;
 		FrameGraphImageTransition	transitionState;
 	};
 
@@ -87,12 +88,12 @@ namespace Quartz
 	{
 		FrameGraphBufferInfo		info;
 		BufferUsageFlags			usages;
-		PhysicalBufferHandle		hPhysicalBuffer;
+		ApiBufferHandle				hApiBuffer;
 	};
 
-	struct FrameGraphCommandBuffer
+	struct FrameGraphCommandRecorder
 	{
-		QueueFlags					capableQueues;
-		PhysicalCommandBufferHandle	hPhysicalCommandBuffer;
+		uInt64						id;
+		ApiRecorderHandle			hApiRecorder;
 	};
 }

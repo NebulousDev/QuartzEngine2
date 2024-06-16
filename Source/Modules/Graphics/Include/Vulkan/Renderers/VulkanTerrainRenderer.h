@@ -12,8 +12,8 @@
 #include "Vulkan/VulkanPipelineCache.h"
 #include "Vulkan/VulkanShaderCache.h"
 
-#include "Component/CameraComponent.h"
-#include "Component/TransformComponent.h"
+#include "Graphics/Component/CameraComponent.h"
+#include "Graphics/Component/TransformComponent.h"
 
 namespace Quartz
 {

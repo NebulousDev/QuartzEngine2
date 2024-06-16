@@ -11,6 +11,7 @@
 #include "VulkanSwapchainTimer.h"
 #include "VulkanBufferWriter.h"
 
+#include "Graphics/Renderer.h"
 #include "Renderers/VulkanSceneRenderer.h"
 #include "Renderers/VulkanTerrainRenderer.h"
 #include "Renderers/VulkanSkyRenderer.h"
@@ -18,20 +19,14 @@
 
 namespace Quartz
 {
-	class QUARTZ_GRAPHICS_API VulkanRenderer
+	class QUARTZ_GRAPHICS_API VulkanRenderer : public Renderer
 	{
 	private:
 		VulkanGraphics*				mpGraphics;
-		VulkanResourceManager*		mpResourceManager;
 		Window*						mpWindow;
-		VulkanDevice*				mpDevice;
 
 		VulkanSwapchain*			mpSwapchain;
 		VulkanSwapchainTimer		mSwapTimer;
-
-		VulkanBufferCache			mBufferCache;
-		VulkanShaderCache			mShaderCache;
-		VulkanPipelineCache			mPipelineCache;
 
 		uInt64						mTargetFPS			= 350;
 		double						mCurrentFPS			= 0.0;
@@ -61,11 +56,15 @@ namespace Quartz
 	public:
 		VulkanRenderer(VulkanGraphics& graphics, VulkanDevice& device, Window& activeWindow, uSize maxInFlightCount);
 
-		void Initialize();
+		void OnInitialize() override;
+		void OnDestroy() override;
+
+		void OnUpdate(double deltaTime) override;
+		void OnBuildFrame(FrameGraph& frameGraph) override;
+
+		void OnBackbufferChanged(uSize count, FrameGraphImageInfo& imageInfo) override;
 
 		void SetCamera(Entity cameraEntity);
-
-		void UpdateAll(EntityWorld& world, uSize frameIdx, double deltaTime);
 
 		void RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx);
 		void RecordPreDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx);
@@ -76,20 +75,13 @@ namespace Quartz
 
 		void RenderScene(EntityWorld& world, uSize frameIdx);
 
-		void RenderUpdate(Runtime& runtime, double delta);
-		void Register(Runtime& runtime);
-
 		void SetTargetFPS(uInt64 fps);
 
 		uInt64 GetTargetFPS() const { return mTargetFPS; }
 		double GetCurrentFPS() const { return mCurrentFPS; }
 		double GetAverageFPS() const { return mAverageFPS; }
 
-		Window&					GetWindow() const { return *mpWindow; }
-		VulkanDevice&			GetDevice() const { return *mpDevice; }
-		uSize					GetMaxInFlightCount() const { return mMaxInFlightCount; }
-		VulkanBufferCache&		GetBufferCache() { return mBufferCache; }
-		VulkanShaderCache&		GetShaderCache() { return mShaderCache; }
-		VulkanPipelineCache&	GetPipelineCache() { return mPipelineCache; }
+		Window&	GetWindow() const { return *mpWindow; }
+		uSize	GetMaxInFlightCount() const { return mMaxInFlightCount; }
 	};
 }

@@ -1,6 +1,5 @@
 #include "Vulkan/VulkanCommandRecorder.h"
 
-#include "Vulkan/VulkanTransitionHelper.h"
 #include "Log.h"
 
 namespace Quartz

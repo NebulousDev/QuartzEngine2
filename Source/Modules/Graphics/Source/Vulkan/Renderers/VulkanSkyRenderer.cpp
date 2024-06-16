@@ -106,7 +106,7 @@ namespace Quartz
 		VulkanShaderCache& shaderCache, VulkanPipelineCache& pipelineCache, uSize maxInFlightCount)
 	{
 		mpGraphics			= &graphics;
-		mpResourceManager	= graphics.pResourceManager;
+		mpResourceManager	= &graphics.resourceManager;
 		mpDevice			= &device;
 		mAtmosphere			= atmosphere;
 		mSettings			= settings;

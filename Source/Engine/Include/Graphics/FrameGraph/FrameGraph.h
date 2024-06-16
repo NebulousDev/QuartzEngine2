@@ -2,8 +2,10 @@
 
 #include "EngineAPI.h"
 #include "FrameGraphPass.h"
+#include "Graphics/ApiInfo.h"
 #include "Types/Set.h"
 #include "Types/Stack.h"
+#include "Window.h"
 #include <functional>
 
 namespace Quartz
@@ -15,37 +17,6 @@ namespace Quartz
 		friend class FrameGraphPass;
 
 	public:
-		using CreatePhysicalImageFunc			= std::function<PhysicalImageHandle(const FrameGraphImage& graphImage)>;
-		using CreatePhysicalBufferFunc			= std::function<PhysicalBufferHandle(const FrameGraphBuffer& graphBuffer)>;
-		using CreatePhysicalCommandBufferFunc	= std::function<PhysicalCommandBufferHandle(const FrameGraphCommandBuffer& graphCommandBuffer)>;
-
-		using BeginCommandBufferFunc			= std::function<void(const FrameGraphCommandBuffer& graphCommandBuffer)>;
-		using EndCommandBufferFunc				= std::function<void(const FrameGraphCommandBuffer& graphCommandBuffer)>;
-		using SubmitCommandBufferFunc			= std::function<void(const FrameGraphCommandBuffer& graphCommandBuffer)>;
-
-		using TransitionImageFunc				= std::function<void(
-														FrameGraphCommandBuffer& graphCommandBuffer,
-														const FrameGraphImageTransition& oldState, 
-														const FrameGraphImageTransition& newState)>;
-
-		using TransitionBufferFunc				= std::function<void(
-														FrameGraphCommandBuffer& graphCommandBuffer,
-														const FrameGraphBufferTransition& oldState, 
-														const FrameGraphBufferTransition& newState)>;
-
-	public:
-		struct FrameGraphFunctions
-		{
-			CreatePhysicalImageFunc			createPhysicalImageFunc;
-			CreatePhysicalBufferFunc		createPhysicalBufferFunc;
-			CreatePhysicalCommandBufferFunc	createPhysicalCommandBufferFunc;
-			BeginCommandBufferFunc			beginCommandBufferFunc;
-			EndCommandBufferFunc			endCommandBufferFunc;
-			SubmitCommandBufferFunc			submitCommandBufferFunc;
-			TransitionImageFunc				transitionImageFunc;
-			TransitionBufferFunc			transitionBufferFunc;
-		};
-
 		struct FrameGraphDependancy
 		{
 			uInt16 passIdx;
@@ -54,52 +25,69 @@ namespace Quartz
 			friend bool operator==(const FrameGraphDependancy& dep0, const FrameGraphDependancy& dep1);
 		};
 
-	private:
-		Map<String, FrameGraphImage, 128>				mFrameImages;
-		Map<String, FrameGraphBuffer, 128>				mFrameBuffers;
+	protected:
+		Array<FrameGraphPass, 64>						mPasses;
 
-		FrameGraphCommandBuffer							mCommandBuffer;
+		Map<String, uInt64, 128>						mResourceIds;
 
-		Array<FrameGraphPass, 64>						mPasses; 
+		Map<uInt64, FrameGraphImage, 64>				mPermanentImages;
+		Map<uInt64, FrameGraphBuffer, 64>				mPermanentBuffers;
+		Map<uInt64, FrameGraphImage, 128>				mTransientImages;
+		Map<uInt64, FrameGraphBuffer, 128>				mTransientBuffers;
 
-		FrameGraphFunctions								mFunctions;
+		FrameGraphCommandRecorder						mCommandRecorder;
 
-		Array<FrameGraphResource*, 4>					mOutputResources;
+		Array<FrameGraphResource*, 16>					mOutputResources;
+		Map<uInt64, Window*, 16>						mWindowOutputs;
+
 		Array<Array<FrameGraphDependancy, 64>, 4>		mDependencies;
 		Array<Stack<FrameGraphPass*, 64>, 4>			mPassStacks;
 		Array<uInt16, 4>								mOutPassIndices;
 		Array<uInt16, 64>								mOrderedPasses;
 
-	private:
-		FrameGraphImage& FindOrCreateImage(const String& name, const FrameGraphImageInfo& imageInfo, bool& found);
-		FrameGraphBuffer& FindOrCreateBuffer(const String& name, const FrameGraphBufferInfo& bufferInfo, bool& found);
+		uSize											mNextResourceId;
+
+	protected:
+		virtual bool				ApiInitialize(GraphicsApiInfo& info) = 0;
+		virtual bool				ApiDestroy() = 0;
+		virtual ApiImageHandle		ApiAquireImage(const FrameGraphImage& graphImage) = 0;
+		virtual void				ApiReleaseImage(const FrameGraphImage& graphImage) = 0;
+		virtual ApiBufferHandle		ApiAquireBuffer(const FrameGraphBuffer& graphBuffer) = 0;
+		virtual void				ApiReleaseBuffer(const FrameGraphBuffer& graphBuffer) = 0;
+		virtual ApiRecorderHandle	ApiAquireRecorder(const FrameGraphCommandRecorder& graphRecorder) = 0;
+		virtual void				ApiReleaseRecorder(const FrameGraphCommandRecorder& graphRecorder) = 0;
+		virtual void				ApiExecuteFrame() = 0;
+
+	protected:
+		FrameGraphImage& AquireImage(const String& name, const FrameGraphImageInfo& imageInfo, bool& found);
+		FrameGraphBuffer& AquireBuffer(const String& name, const FrameGraphBufferInfo& bufferInfo, bool& found);
+
+		void ReleaseImage(FrameGraphImage& image);
+		void ReleaseBuffer(FrameGraphBuffer& buffer);
 
 		uSize FindDependencies(FrameGraphPass& pass, FrameGraphImage& imageInput, 
 			Array<FrameGraphDependancy, 64>& outDependencies, Stack<FrameGraphPass*, 64>& outPassStack);
 
-		void SortPasses(Array<uInt16, 64>& outPasses);
+		void CheckActivity();
 
+		void SortPasses();
 		void AllocateResources();
 
-	protected:
-		void SetFunctions(const FrameGraphFunctions& functions);
+		void Destroy();
+
+		FrameGraphImage* GetImageByName(const WrapperString& name);
 
 	public:
 		FrameGraph();
 
 		FrameGraphPass& AddPass(const String& name, const FrameGraphPassInfo& passInfo);
 
-		bool SetOutputResource(const String& name);
+		bool SetOutput(const String& imageName, Window& outputWindow);
+		//bool SetResourceOutputImage(const String& name);
+		//bool SetResourceOutputBuffer(const String& name);
 
+		void Reset();
 		void Build();
-
-		template<typename PhysicalType>
-		PhysicalType* GetPhysicalImage(const FrameGraphImage& graphImage) const { return (PhysicalType*) nullptr; };
-
-		template<typename PhysicalType>
-		PhysicalType* GetPhysicalBuffer(const FrameGraphBuffer& graphBuffer) const { return (PhysicalType*) nullptr; };
-
-		template<typename PhysicalType>
-		PhysicalType* GetPhysicalCommandBuffer(const FrameGraphCommandBuffer& graphCommandBuffer) const { return (PhysicalType*) nullptr; };
+		void Execute();
 	};
 }

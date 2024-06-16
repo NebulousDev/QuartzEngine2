@@ -1,12 +1,12 @@
 #pragma once
 
-#include "GfxAPI.h"
+#include "EngineAPI.h"
 #include "Entity/Component.h"
 #include "Resource/Assets/Model.h"
 
 namespace Quartz
 {
-	struct QUARTZ_GRAPHICS_API MeshComponent : public Component<MeshComponent>
+	struct QUARTZ_ENGINE_API MeshComponent : public Component<MeshComponent>
 	{
 		String modelURI;
 		uInt64 modelURIHash;

@@ -1,4 +1,4 @@
-#include "Component/MeshComponent.h"
+#include "Graphics/Component/MeshComponent.h"
 
 namespace Quartz
 {

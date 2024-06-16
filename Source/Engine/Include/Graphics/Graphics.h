@@ -1,68 +1,70 @@
 #pragma once
 
-#include "Types/Array.h"
-#include "Types/String.h"
-#include <functional>
-
+#include "ApiInfo.h"
 #include "Renderer.h"
+#include "Runtime/Runtime.h"
+#include "ShaderCache.h"
+#include "PipelineCache.h"
 #include "FrameGraph/FrameGraph.h"
+
+#include <functional>
 
 namespace Quartz
 {
 	class QUARTZ_ENGINE_API Graphics
 	{
-	public:
-		using GraphicsApiStartFunc = std::function<bool()>;
-		using GraphicsApiStopFunc = std::function<bool()>;
-
-		struct ApiFunctions
-		{
-			GraphicsApiStartFunc	apiStartFunc;
-			GraphicsApiStopFunc		apiStopFunc;
-		};
-
-		struct ApiInfo
-		{
-			//using namespace FrameGraph;
-
-			String				fullName;
-			String				version;
-			Array<String>		capabilities;
-			ApiFunctions		apiFunctions;
-			FrameGraph::FrameGraphFunctions	frameGraphFunctions;
-		};
-
 	private:
-		Map<String, ApiInfo>	mApis;
-		ApiInfo*				mpActiveApi;
-		Map<String, uInt32>		mRendererMap;
-		Array<Renderer*, 64>	mRenderers;
-		FrameGraph*				mpFrameGraph;
+		Map<String, GraphicsApiInfo, 8>	mApis;
+		GraphicsApiInfo*				mpActiveApi;
+		Map<String, uInt32, 64>			mRendererMap;
+		Array<Renderer*, 64>			mRenderers;
+		ShaderCache						mShaderCache;
+		PipelineCache					mPipelineCache;
+
+		FrameGraph*						mpFrameGraph;
+		uSize							mMultipleBufferCount;
+		uSize							mActiveBufferIdx;
+
+		bool							mFlagRebuildGraphs;
 
 	protected:
 		Graphics();
 		~Graphics();
 
+		void ApiStart();
+		void ApiStop();
+		void ApiWaitIdle();
+
+		void Update(Runtime& runtime, double deltaTime);
+
 	public:
+		Graphics(const Graphics&) = delete; // Dont accidentally copy Graphics
+
 		bool Start(const String& apiName);
 		bool Stop();
 
-		template<typename RendererType>
-		RendererType& AddRenderer(const String& rendererName)
+		template<typename RendererType, typename... CtorValues>
+		RendererType& AddRenderer(const String& rendererName, CtorValues&&... ctorValues)
 		{
-			Renderer* pRenderer = static_cast<Renderer*>(new RendererType());
+			Renderer* pRenderer = static_cast<Renderer*>(new RendererType(Forward<CtorValues>(ctorValues)...));
 			mRenderers.PushBack(pRenderer);
 			mRendererMap.Put(rendererName, mRenderers.Size());
+			pRenderer->OnInitialize();
+			return *static_cast<RendererType*>(pRenderer);
 		}
 
 		bool RemoveRenderer(const String& rendererName);
 
-		void RegisterApi(const String& apiName, const ApiInfo& apiInfo);
+		void RegisterApi(const String& apiName, const GraphicsApiInfo& apiInfo);
 
-		FrameGraph& GetFrameGraph();
+		bool SetMultipleBuffering(uSize count);
+
+		ShaderCache&	GetShaderCache();
+		PipelineCache&	GetPipelineCache();
+		FrameGraph&		GetFrameGraph();
 
 		const Array<String>	GetApiNames() const;
-		const ApiInfo* GetCurrentApiInfo() const;
-		const ApiInfo* GetApiInfo(const String& apiName) const;
+		const GraphicsApiInfo* GetCurrentApiInfo() const;
+		const GraphicsApiInfo* GetApiInfo(const String& apiName) const;
 	};
 }

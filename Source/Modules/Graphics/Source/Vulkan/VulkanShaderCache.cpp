@@ -36,9 +36,9 @@ namespace Quartz
 			return nullptr;
 		}
 
-		ShaderCode* pSpirvCode = nullptr;
+		Shader::ShaderCode* pSpirvCode = nullptr;
 
-		for (ShaderCode& code : pShader->shaderCodes)
+		for (Shader::ShaderCode& code : pShader->shaderCodes)
 		{
 			if (code.lang == SHADER_LANG_GLSL_SPIRV)
 			{

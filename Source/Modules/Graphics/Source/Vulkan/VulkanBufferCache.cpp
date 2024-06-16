@@ -124,12 +124,13 @@ namespace Quartz
 		}
 	}
 
-	void VulkanBufferCache::Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, 
-		const VulkanRenderSettings& settings)
+	VulkanBufferCache::VulkanBufferCache(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager) :
+		mpDevice(pDevice), 
+		mpResourceManager(pResourceManager) { }
+
+	void VulkanBufferCache::Initialize(const VulkanRenderSettings& settings)
 	{
-		mSettings			= settings;
-		mpResourceManager	= pResourceManager;
-		mpDevice			= pDevice;
+		mSettings = settings;
 
 		InitializeDefaultBuffers();
 	}

@@ -18,7 +18,7 @@ namespace Quartz
 		mCurrentFrame(pSwapchain->backbufferCount - 1)
 	{ }
 
-	#define FENCE_TIMEOUT UINT64_MAX
+	#define FENCE_TIMEOUT 1000000000 //UINT64_MAX
 
 	void VulkanSwapchainTimer::AdvanceFrame()
 	{
@@ -49,6 +49,11 @@ namespace Quartz
 		presentInfo.pResults			= nullptr;
 
 		vkQueuePresentKHR(mpSwapchain->pDevice->queues.present, &presentInfo);
+	}
+
+	VulkanImage* VulkanSwapchainTimer::GetCurrentImage()
+	{
+		return mpSwapchain->images[mCurrentFrame];
 	}
 
 	VulkanImageView* VulkanSwapchainTimer::GetCurrentImageView()

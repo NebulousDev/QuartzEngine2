@@ -11,8 +11,10 @@
 
 #include "Vulkan/VulkanMultiBuffer.h"
 
-#include "Component/MeshComponent.h"
-#include "Component/TransformComponent.h"
+#include "Graphics/Component/MeshComponent.h"
+#include "Graphics/Component/TransformComponent.h"
+
+#include "Vulkan/VulkanFrameGraph.h"
 
 namespace Quartz
 {
@@ -24,40 +26,24 @@ namespace Quartz
 		assert(maxInFlightCount < VULKAN_GRAPHICS_MAX_IN_FLIGHT);
 
 		mpGraphics			= &graphics;
-		mpResourceManager	= graphics.pResourceManager;
 		mpWindow			= &activeWindow;
-		mpDevice			= &device;
 		mMaxInFlightCount	= maxInFlightCount;
-
-		mPipelineCache		= VulkanPipelineCache(mpDevice, mpResourceManager);
-		mShaderCache		= VulkanShaderCache(mpDevice, mpResourceManager);
-		mpSwapchain			= mpResourceManager->CreateSwapchain(mpDevice, *graphics.pSurface, maxInFlightCount);
-		mSwapTimer			= VulkanSwapchainTimer(mpSwapchain);
 	}
 
-	void VulkanRenderer::Initialize()
+	void VulkanRenderer::OnInitialize()
 	{
+		VulkanResourceManager& resourceManager	= mpGraphics->resourceManager;
+		VulkanShaderCache& shaderCache			= mpGraphics->shaderCache;
+		VulkanBufferCache& bufferCache			= mpGraphics->bufferCache;
+		VulkanPipelineCache& pipelineCache		= mpGraphics->pipelineCache;
+		VulkanDevice& device					= *mpGraphics->pPrimaryDevice;
+
+		// Swapchain
+
+		mpSwapchain			= resourceManager.CreateSwapchain(&device, *mpGraphics->pSurface, mMaxInFlightCount);
+		mSwapTimer			= VulkanSwapchainTimer(mpSwapchain);
+
 		// Color Pass
-
-		VulkanRenderSettings renderSettings = {};
-		renderSettings.useUniqueMeshBuffers				= false;
-		renderSettings.useUniqueMeshStagingBuffers		= false;
-		renderSettings.useUniqueUniformBuffers			= false;
-		renderSettings.useUniqueUniformStagingBuffers	= false;
-		renderSettings.vertexBufferSizeMb				= 512; // 32
-		renderSettings.indexBufferSizeMb				= 512; // 16
-		renderSettings.perInstanceBufferSizeMb			= 64;  // 16
-		renderSettings.uniformBufferSizeMb				= 64;
-		renderSettings.globalBufferSizeBytes			= 128;
-		renderSettings.uniquePerInstanceBufferSizeBytes	= 128; //
-		renderSettings.uniquePerModelBufferSizeBytes	= 128; //
-		renderSettings.maxUniformSets					= 4;
-		renderSettings.useInstancing					= false;
-		renderSettings.useMeshStaging					= true;
-		renderSettings.useUniformStaging				= true;
-		renderSettings.useDrawIndirect					= false;
-
-		mBufferCache.Initialize(mpDevice, mpResourceManager, renderSettings);
 
 		for (uSize i = 0; i < mMaxInFlightCount; i++)
 		{
@@ -71,7 +57,7 @@ namespace Quartz
 			colorImageInfo.layers		= 1;
 			colorImageInfo.mips			= 1;
 
-			mColorImages[i] = mpResourceManager->CreateImage(mpDevice, colorImageInfo);
+			mColorImages[i] = resourceManager.CreateImage(&device, colorImageInfo);
 
 			VulkanImageViewInfo colorImageViewInfo = {};
 			colorImageViewInfo.pImage			= mColorImages[i];
@@ -83,7 +69,7 @@ namespace Quartz
 			colorImageViewInfo.mipStart			= 0;
 			colorImageViewInfo.mipCount			= 1;
 
-			mColorImageViews[i] = mpResourceManager->CreateImageView(mpDevice, colorImageViewInfo);
+			mColorImageViews[i] = resourceManager.CreateImageView(&device, colorImageViewInfo);
 
 			VulkanImageInfo depthImageInfo = {};
 			depthImageInfo.vkFormat		= VK_FORMAT_D24_UNORM_S8_UINT;
@@ -95,7 +81,7 @@ namespace Quartz
 			depthImageInfo.layers		= 1;
 			depthImageInfo.mips			= 1;
 
-			mDepthImages[i] = mpResourceManager->CreateImage(mpDevice, depthImageInfo);
+			mDepthImages[i] = resourceManager.CreateImage(&device, depthImageInfo);
 
 			VulkanImageViewInfo depthImageViewInfo = {};
 			depthImageViewInfo.pImage			= mDepthImages[i];
@@ -107,18 +93,18 @@ namespace Quartz
 			depthImageViewInfo.mipStart			= 0;
 			depthImageViewInfo.mipCount			= 1;
 
-			mDepthImageViews[i] = mpResourceManager->CreateImageView(mpDevice, depthImageViewInfo);
+			mDepthImageViews[i] = resourceManager.CreateImageView(&device, depthImageViewInfo);
 		}
 
 		VulkanCommandPoolInfo renderPoolInfo = {};
-		renderPoolInfo.queueFamilyIndex			= mpDevice->pPhysicalDevice-> primaryQueueFamilyIndices.graphics;
+		renderPoolInfo.queueFamilyIndex			= device.pPhysicalDevice-> primaryQueueFamilyIndices.graphics;
 		renderPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		VulkanCommandPool* pRenderPool = mpResourceManager->CreateCommandPool(mpDevice, renderPoolInfo);
+		VulkanCommandPool* pRenderPool = resourceManager.CreateCommandPool(&device, renderPoolInfo);
 
-		mpResourceManager->CreateCommandBuffers(pRenderPool, mMaxInFlightCount, mCommandBuffers);
+		resourceManager.CreateCommandBuffers(pRenderPool, mMaxInFlightCount, mCommandBuffers);
 
-		mTerrainRenderer.Initialize(*mpGraphics, *mpDevice, mShaderCache, mPipelineCache, mMaxInFlightCount);
+		mTerrainRenderer.Initialize(*mpGraphics, device, shaderCache, pipelineCache, mMaxInFlightCount);
 
 		AtmosphereSun sun0 = {};
 		sun0.sunDir = { 0.0f, -0.2f, -1.0f };
@@ -143,8 +129,8 @@ namespace Quartz
 		settings.scatterLUTSize			= { 32, 32 };
 		settings.viewLUTSize			= { 200, 200 };
 
-		mSceneRenderer.Initialize(*mpGraphics, *mpDevice, mShaderCache, mPipelineCache, mMaxInFlightCount);
-		mSkyRenderer.Initialize(*mpGraphics, *mpDevice, atmosphere, settings, mShaderCache, mPipelineCache, mMaxInFlightCount);
+		mSceneRenderer.Initialize(*mpGraphics, device, shaderCache, pipelineCache, mMaxInFlightCount);
+		mSkyRenderer.Initialize(*mpGraphics, device, atmosphere, settings, shaderCache, pipelineCache, mMaxInFlightCount);
 
 		VkPipelineRenderingCreateInfo renderingInfo = {};
 		renderingInfo.sType						= VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -152,12 +138,12 @@ namespace Quartz
 		renderingInfo.pColorAttachmentFormats	= &mColorImages[0]->vkFormat;
 		renderingInfo.depthAttachmentFormat		= VK_FORMAT_D24_UNORM_S8_UINT;
 
-		mImGuiRenderer.Initialize(*mpGraphics, *mpDevice, *mpWindow, renderingInfo);
+		mImGuiRenderer.Initialize(*mpGraphics, device, *mpWindow, renderingInfo);
 
 		// Tonemap Pass
 
-		VulkanShader* pTonemapVertexShader		= mShaderCache.FindOrCreateShader("Shaders/fullscreen.qsvert");
-		VulkanShader* pTonemapFragmentShader	= mShaderCache.FindOrCreateShader("Shaders/tonemap_hdr-sdr.qsfrag");
+		VulkanShader* pTonemapVertexShader		= shaderCache.FindOrCreateShader("Shaders/fullscreen.qsvert");
+		VulkanShader* pTonemapFragmentShader	= shaderCache.FindOrCreateShader("Shaders/tonemap_hdr-sdr.qsfrag");
 
 		Array<VulkanAttachment, 1> tonemapPassAttachments =
 		{
@@ -165,12 +151,12 @@ namespace Quartz
 		};
 
 		VulkanGraphicsPipelineInfo tonemapPipelineInfo =
-			mPipelineCache.MakeGraphicsPipelineInfo(
+			pipelineCache.MakeGraphicsPipelineInfo(
 				{ pTonemapVertexShader, pTonemapFragmentShader }, tonemapPassAttachments);
 
 		tonemapPipelineInfo.vkCullMode = VK_CULL_MODE_NONE;
 
-		mpTonemapPipeline = mPipelineCache.FindOrCreateGraphicsPipeline(tonemapPipelineInfo);
+		mpTonemapPipeline = pipelineCache.FindOrCreateGraphicsPipeline(tonemapPipelineInfo);
 
 		VkSamplerCreateInfo tonemapSamplerInfo{};
 		tonemapSamplerInfo.sType					= VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -190,7 +176,120 @@ namespace Quartz
 		tonemapSamplerInfo.minLod					= 0.0f;
 		tonemapSamplerInfo.maxLod					= 0.0f;
 
-		vkCreateSampler(mpDevice->vkDevice, &tonemapSamplerInfo, VK_NULL_HANDLE, &mVkTonemapSampler);
+		vkCreateSampler(device.vkDevice, &tonemapSamplerInfo, VK_NULL_HANDLE, &mVkTonemapSampler);
+	}
+
+	void VulkanRenderer::OnDestroy()
+	{
+
+	}
+
+	void VulkanRenderer::OnUpdate(double deltaTime)
+	{
+		EntityWorld& world = Engine::GetWorld();
+
+		TransformComponent& cameraTransformComponent = world.Get<TransformComponent>(mCameraEntity);
+		CameraComponent& cameraComponent = world.Get<CameraComponent>(mCameraEntity);
+
+		mSceneRenderer.Update(world, mpGraphics->bufferCache, mpGraphics->shaderCache, mpGraphics->pipelineCache, 
+			cameraComponent, cameraTransformComponent, mCurrentFrameIdx);
+
+		//Vec2f centerPos = { cameraTransformComponent.position.x, cameraTransformComponent.position.z };
+		//mTerrainRenderer.Update(centerPos, cameraComponent, cameraTransformComponent);
+		//mSkyRenderer.Update(cameraComponent, cameraTransformComponent, mCurrentFrameIdx);
+		mImGuiRenderer.Update(this, deltaTime);
+	}
+
+	void VulkanRenderer::OnBuildFrame(FrameGraph& frameGraph)
+	{
+		mCurrentFPS = (1.0 / mAccumFrametime);
+		mAverageFPS = mAverageDecayFPS * mAverageFPS + (1.0 - mAverageDecayFPS) * mCurrentFPS;
+		mAccumFrametime = 0;
+
+		FrameGraphPassInfo passInfo = {};
+		passInfo.queueFlags = QUEUE_GRAPHICS | QUEUE_PRESENT;
+
+		FrameGraphPass& vulkanPass = frameGraph.AddPass("VulkanRendererPass", passInfo);
+
+		FrameGraphImageInfo imageInfo = {};
+		imageInfo.width		= mpGraphics->pSurface->width;
+		imageInfo.height	= mpGraphics->pSurface->height;
+		imageInfo.depth		= 1;
+		imageInfo.layers	= 1;
+		imageInfo.mipLevels	= 1;
+		imageInfo.type		= IMAGE_TYPE_2D;
+		imageInfo.format	= IMAGE_FORMAT_R8G8B8A8;
+		imageInfo.flags		= RESOURCE_FLAG_BACKBUFFER | RESOURCE_FLAG_PERSISTANT | RESOURCE_FLAG_WINDOW_OUTPUT;
+
+		vulkanPass.AddColorOutput("swapchain", imageInfo);
+
+		imageInfo.format = IMAGE_FORMAT_D24S8;
+		imageInfo.flags	 = RESOURCE_FLAG_BACKBUFFER | RESOURCE_FLAG_PERSISTANT; // @TODO: FIX THIS
+		vulkanPass.AddDepthStencilOutput("depth", imageInfo);
+		
+		frameGraph.SetOutput("swapchain", *mpWindow);
+
+		vulkanPass.SetPassExecute([&](
+			FrameGraph& frameGraph, const FrameGraphPass& framePass, FrameGraphCommandRecorder& graphRecorder)
+		{
+			VulkanFrameGraph& vulkanFrameGraph = static_cast<VulkanFrameGraph&>(frameGraph);
+			VulkanCommandRecorder& recorder = vulkanFrameGraph.GetActiveRecorder();
+
+			VkViewport vkViewport = {};
+			vkViewport.x		= 0;
+			vkViewport.y		= mpGraphics->pSurface->height;
+			vkViewport.width	= mpGraphics->pSurface->width;
+			vkViewport.height	= -(float)mpGraphics->pSurface->height;
+			vkViewport.minDepth = 0.0f;
+			vkViewport.maxDepth = 1.0f;
+
+			VkRect2D vkScissor = {};
+			vkScissor.offset.x		= 0;
+			vkScissor.offset.y		= 0;
+			vkScissor.extent.width	= mpGraphics->pSurface->width;
+			vkScissor.extent.height = mpGraphics->pSurface->height;
+
+			recorder.SetViewport(vkViewport, vkScissor);
+
+			mSceneRenderer.RecordTransfers(recorder, mpGraphics->bufferCache, mCurrentFrameIdx);
+
+			VulkanImageView* pSwapchainView = vulkanFrameGraph.GetActiveImageView("swapchain");
+			VulkanImageView* pDepthView		= vulkanFrameGraph.GetActiveImageView("depth");
+
+			VulkanRenderingAttachmentInfo colorRenderingAttachmentInfo = {};
+			colorRenderingAttachmentInfo.pImageView		= pSwapchainView;
+			colorRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			colorRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
+			colorRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
+			colorRenderingAttachmentInfo.clearValue		= { 0.02f, 0.05f, 0.05f, 1.0f };
+
+			VulkanRenderingAttachmentInfo depthRenderingAttachmentInfo = {};
+			depthRenderingAttachmentInfo.pImageView		= pDepthView;
+			depthRenderingAttachmentInfo.imageLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			depthRenderingAttachmentInfo.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
+			depthRenderingAttachmentInfo.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
+			depthRenderingAttachmentInfo.clearValue		= { 1.0f, 0 };
+
+			VulkanRenderingAttachmentInfo pColorAttachmentInfos[] = { colorRenderingAttachmentInfo };
+
+			VulkanRenderingBeginInfo renderingBeginInfo = {};
+			renderingBeginInfo.pColorAttachments	= pColorAttachmentInfos;
+			renderingBeginInfo.colorAttachmentCount	= 1;
+			renderingBeginInfo.pDepthAttachment		= &depthRenderingAttachmentInfo;
+			renderingBeginInfo.pStencilAttachment	= nullptr;
+			renderingBeginInfo.renderArea			= { { 0, 0 }, { mpGraphics->pSurface->width, mpGraphics->pSurface->height } };
+
+			recorder.BeginRendering(renderingBeginInfo);
+			mSceneRenderer.RecordDraws(recorder, mCurrentFrameIdx);
+			mImGuiRenderer.RecordDraws(recorder);
+			recorder.EndRendering();
+
+		});
+	}
+
+	void VulkanRenderer::OnBackbufferChanged(uSize count, FrameGraphImageInfo& imageInfo)
+	{
+
 	}
 
 	void VulkanRenderer::SetCamera(Entity cameraEntity)
@@ -204,24 +303,11 @@ namespace Quartz
 		mCameraEntity = cameraEntity;
 	}
 
-	void VulkanRenderer::UpdateAll(EntityWorld& world, uSize frameIdx, double deltaTime)
-	{
-		TransformComponent& cameraTransformComponent = world.Get<TransformComponent>(mCameraEntity);
-		CameraComponent& cameraComponent = world.Get<CameraComponent>(mCameraEntity);
-
-		mSceneRenderer.Update(world, mBufferCache, mShaderCache, mPipelineCache, cameraComponent, cameraTransformComponent, frameIdx);
-
-		Vec2f centerPos = { cameraTransformComponent.position.x, cameraTransformComponent.position.z };
-		mTerrainRenderer.Update(centerPos, cameraComponent, cameraTransformComponent);
-		mSkyRenderer.Update(cameraComponent, cameraTransformComponent, frameIdx);
-		mImGuiRenderer.Update(this, deltaTime);
-	}
-
 	void VulkanRenderer::RecordTransfers(VulkanCommandRecorder& recorder, uInt32 frameIdx)
 	{
 		mSkyRenderer.RecordTransfers(recorder, frameIdx);
 		mTerrainRenderer.RecordTransfers(recorder);
-		mSceneRenderer.RecordTransfers(recorder, mBufferCache, frameIdx);
+		mSceneRenderer.RecordTransfers(recorder, mpGraphics->bufferCache, frameIdx);
 	}
 
 	void VulkanRenderer::RecordPreDraws(VulkanCommandRecorder& recorder, uInt32 frameIdx)
@@ -259,18 +345,20 @@ namespace Quartz
 
 	void VulkanRenderer::RenderScene(EntityWorld& world, uSize frameIdx)
 	{
+		return;
+
 		VulkanCommandBuffer* pCommandBuffer = mCommandBuffers[frameIdx];
 		VulkanCommandRecorder recorder(pCommandBuffer);
 
 		VulkanSubmission renderSubmition	= {};
 		renderSubmition.commandBuffers		= { mCommandBuffers[frameIdx] };
-		renderSubmition.waitSemaphores		= { mSwapTimer.GetCurrentAcquiredSemaphore()};
+		renderSubmition.waitSemaphores		= { mSwapTimer.GetCurrentAcquiredSemaphore() };
 		renderSubmition.waitStages			= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		renderSubmition.signalSemaphores	= { mSwapTimer.GetCurrentCompleteSemaphore() };
 
 		recorder.Reset();
 
-		recorder.BeginRecording();
+		//recorder.BeginRecording();
 
 		RecordTransfers(recorder, frameIdx);
 
@@ -424,38 +512,13 @@ namespace Quartz
 
 		RecordPostDraws(recorder, frameIdx);
 
-		recorder.PipelineBarrierSwapchainImageEnd(mpSwapchain->images[frameIdx]);
+		//recorder.PipelineBarrierSwapchainImageEnd(mpSwapchain->images[frameIdx]);
 
-		recorder.EndRecording();
+		//recorder.EndRecording();
 
-		mpGraphics->Submit(renderSubmition, mpGraphics->pPrimaryDevice->queues.graphics, mSwapTimer.GetCurrentFence());
+		//mpGraphics->Submit(renderSubmition, mpGraphics->pPrimaryDevice->queues.graphics, mSwapTimer.GetCurrentFence());
 
-		mSwapTimer.Present();
-	}
-
-	void VulkanRenderer::RenderUpdate(Runtime& runtime, double delta)
-	{
-		EntityWorld& world = Engine::GetWorld();
-
-		UpdateAll(world, mCurrentFrameIdx, delta);
-
-		mAccumFrametime += delta;
-		if (mAccumFrametime >= (1.0 / mTargetFPS))
-		{
-			mSwapTimer.AdvanceFrame();
-			mCurrentFrameIdx = mSwapTimer.GetFrameIndex();
-
-			mCurrentFPS = (1.0 / mAccumFrametime);
-			mAverageFPS = mAverageDecayFPS * mAverageFPS + (1.0 - mAverageDecayFPS) * mCurrentFPS;
-			mAccumFrametime = 0;
-
-			RenderScene(world, mCurrentFrameIdx);
-		}
-	}
-
-	void VulkanRenderer::Register(Runtime& runtime)
-	{
-		runtime.RegisterOnUpdate(&VulkanRenderer::RenderUpdate, this);
+		//mSwapTimer.Present();
 	}
 
 	void VulkanRenderer::SetTargetFPS(uInt64 fps)

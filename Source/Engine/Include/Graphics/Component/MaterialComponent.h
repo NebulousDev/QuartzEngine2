@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GfxAPI.h"
+#include "EngineAPI.h"
 #include "Entity/Component.h"
 #include "Resource/Assets/Material.h"
 
@@ -8,7 +8,7 @@
 
 namespace Quartz
 {
-	struct QUARTZ_GRAPHICS_API MaterialComponent : public Component<MaterialComponent>
+	struct QUARTZ_ENGINE_API MaterialComponent : public Component<MaterialComponent>
 	{
 		Array<String> materialPaths;
 		Array<Material*> pCachedMaterials;

@@ -56,22 +56,14 @@ extern "C"
 
 	void QUARTZ_ENGINE_API ModulePreInit() 
 	{
-		gpVulkanGraphics = new VulkanGraphics();
+		gpVulkanGraphics = &Engine::GetWorld().CreateSingleton<VulkanGraphics>();
 
 		if (CheckVulkanAvailable())
 		{
-			Graphics::ApiFunctions vulkanApiFunctions;
+			GraphicsApiFunctions vulkanApiFunctions;
 			vulkanApiFunctions.apiStartFunc = []() -> bool 
 			{
-				bool result = gpVulkanGraphics->Create(); 
-
-				if (result)
-				{
-					SetupVulkanFrameGraph(*gpVulkanGraphics);
-					return true;
-				}
-
-				return false;
+				return gpVulkanGraphics->Create();
 			};
 
 			vulkanApiFunctions.apiStopFunc = []() -> bool
@@ -79,13 +71,19 @@ extern "C"
 				gpVulkanGraphics->Destroy(); return true; 
 			};
 
-			FrameGraph::FrameGraphFunctions vulkanGraphFunctions;
-			SetupVulkanFrameGraphFunctions(*gpVulkanGraphics, vulkanGraphFunctions);
+			vulkanApiFunctions.apiWaitIdleFunc = []() -> bool
+			{
+				gpVulkanGraphics->WaitIdle(); return true;
+			};
 
-			Graphics::ApiInfo vulkanApiInfo = {};
-			vulkanApiInfo.fullName				= "Vulkan";
-			vulkanApiInfo.apiFunctions			= vulkanApiFunctions;
-			vulkanApiInfo.frameGraphFunctions	= vulkanGraphFunctions;
+			VulkanFrameGraph* pVulkanFrameGraph = new VulkanFrameGraph();
+
+			GraphicsApiInfo vulkanApiInfo = {};
+			vulkanApiInfo.fullName		= "Vulkan";
+			vulkanApiInfo.version		= "1.3.0";
+			vulkanApiInfo.apiFunctions	= vulkanApiFunctions;
+			vulkanApiInfo.pFrameGraph	= pVulkanFrameGraph;
+			vulkanApiInfo.pNativeApi	= gpVulkanGraphics;
 
 			Engine::GetGraphics().RegisterApi("vulkan", vulkanApiInfo);
 		}

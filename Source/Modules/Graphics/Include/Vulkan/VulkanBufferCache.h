@@ -11,8 +11,8 @@
 #include "VulkanRenderable.h"
 #include "VulkanMaterial.h"
 
-#include "Component/MeshComponent.h"
-#include "Component/TransformComponent.h"
+#include "Graphics/Component/MeshComponent.h"
+#include "Graphics/Component/TransformComponent.h"
 
 namespace Quartz
 {
@@ -92,7 +92,10 @@ namespace Quartz
 			uSize perModelSizeBytes, uSize offsetAlignment);
 
 	public:
-		void Initialize(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager, const VulkanRenderSettings& settings);
+		VulkanBufferCache() = default;
+		VulkanBufferCache(VulkanDevice* pDevice, VulkanResourceManager* pResourceManager);
+
+		void Initialize(const VulkanRenderSettings& settings);
 			 
 		void ResetPerModelBuffers();
 			 

@@ -63,7 +63,7 @@ namespace Quartz
 		return true;
 	}
 
-	inline uSize LookupParamTypeSizeBytes(ShaderParamType& paramType)
+	inline uSize LookupParamTypeSizeBytes(ShaderUniformType& paramType)
 	{
 		static uSize sParamBytes[48]
 		{ 
@@ -85,60 +85,60 @@ namespace Quartz
 		return sParamBytes[paramTypeInt];
 	}
 
-	inline bool LookupParamTypeInfo(const Substring& typeName, ShaderParamType& outParamType, uSize& outParamSizeBytes)
+	inline bool LookupParamTypeInfo(const Substring& typeName, ShaderUniformType& outParamType, uSize& outParamSizeBytes)
 	{
 		// Bound types:
 
-		if      (typeName.Find("sampler") != typeName.Length())		outParamType = SHADER_PARAM_TYPE_SAMPLER;
-		else if (typeName.Find("image") != typeName.Length())		outParamType = SHADER_PARAM_TYPE_IMAGE;
-		else if (typeName.Find("atomic") != typeName.Length())		outParamType = SHADER_PARAM_TYPE_ATOMIC;
+		if      (typeName.Find("sampler") != typeName.Length())		outParamType = SHADER_UNIFORM_TYPE_SAMPLER;
+		else if (typeName.Find("image") != typeName.Length())		outParamType = SHADER_UNIFORM_TYPE_IMAGE;
+		else if (typeName.Find("atomic") != typeName.Length())		outParamType = SHADER_UNIFORM_TYPE_ATOMIC;
 
 		// Regular types:
 
-		else if (typeName == "bool"_WRAP)		outParamType = SHADER_PARAM_TYPE_BOOL;
-		else if (typeName == "int"_WRAP)		outParamType = SHADER_PARAM_TYPE_INT;
-		else if (typeName == "uint"_WRAP)		outParamType = SHADER_PARAM_TYPE_UINT;
-		else if (typeName == "float"_WRAP)		outParamType = SHADER_PARAM_TYPE_FLOAT;
-		else if (typeName == "double"_WRAP)		outParamType = SHADER_PARAM_TYPE_DOUBLE;
-		else if (typeName == "vec2"_WRAP)		outParamType = SHADER_PARAM_TYPE_VEC2;
-		else if (typeName == "vec3"_WRAP)		outParamType = SHADER_PARAM_TYPE_VEC3;
-		else if (typeName == "vec4"_WRAP)		outParamType = SHADER_PARAM_TYPE_VEC4;
-		else if (typeName == "mat2"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT2;
-		else if (typeName == "mat3"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT3;
-		else if (typeName == "mat4"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT4;
-		else if (typeName == "dmat2"_WRAP)		outParamType = SHADER_PARAM_TYPE_DMAT2;
-		else if (typeName == "dmat3"_WRAP)		outParamType = SHADER_PARAM_TYPE_DMAT3;
-		else if (typeName == "dmat4"_WRAP)		outParamType = SHADER_PARAM_TYPE_DMAT4;
-		else if (typeName == "bvec2"_WRAP)		outParamType = SHADER_PARAM_TYPE_BVEC2;
-		else if (typeName == "bvec3"_WRAP)		outParamType = SHADER_PARAM_TYPE_BVEC3;
-		else if (typeName == "bvec4"_WRAP)		outParamType = SHADER_PARAM_TYPE_BVEC4;
-		else if (typeName == "ivec2"_WRAP)		outParamType = SHADER_PARAM_TYPE_IVEC2;
-		else if (typeName == "ivec3"_WRAP)		outParamType = SHADER_PARAM_TYPE_IVEC3;
-		else if (typeName == "ivec4"_WRAP)		outParamType = SHADER_PARAM_TYPE_IVEC4;
-		else if (typeName == "uvec2"_WRAP)		outParamType = SHADER_PARAM_TYPE_UVEC2;
-		else if (typeName == "uvec3"_WRAP)		outParamType = SHADER_PARAM_TYPE_UVEC3;
-		else if (typeName == "uvec4"_WRAP)		outParamType = SHADER_PARAM_TYPE_UVEC4;
-		else if (typeName == "dvec2"_WRAP)		outParamType = SHADER_PARAM_TYPE_DVEC2;
-		else if (typeName == "dvec3"_WRAP)		outParamType = SHADER_PARAM_TYPE_DVEC3;
-		else if (typeName == "dvec4"_WRAP)		outParamType = SHADER_PARAM_TYPE_DVEC4;
-		else if (typeName == "mat2x2"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT2X2;
-		else if (typeName == "mat2x3"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT2X3;
-		else if (typeName == "mat2x4"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT2X4;
-		else if (typeName == "mat3x2"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT3X2;
-		else if (typeName == "mat3x3"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT3X3;
-		else if (typeName == "mat3x4"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT3X4;
-		else if (typeName == "mat4x2"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT4X2;
-		else if (typeName == "mat4x3"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT4X3;
-		else if (typeName == "mat4x4"_WRAP)		outParamType = SHADER_PARAM_TYPE_MAT4X4;
-		else if (typeName == "dmat2x2"_WRAP)	outParamType = SHADER_PARAM_TYPE_DMAT2X2;
-		else if (typeName == "dmat2x3"_WRAP)	outParamType = SHADER_PARAM_TYPE_DMAT2X3;
-		else if (typeName == "dmat2x4"_WRAP)	outParamType = SHADER_PARAM_TYPE_DMAT2X4;
-		else if (typeName == "dmat3x2"_WRAP)	outParamType = SHADER_PARAM_TYPE_DMAT3X2;
-		else if (typeName == "dmat3x3"_WRAP)	outParamType = SHADER_PARAM_TYPE_DMAT3X3;
-		else if (typeName == "dmat3x4"_WRAP)	outParamType = SHADER_PARAM_TYPE_DMAT3X4;
-		else if (typeName == "dmat4x2"_WRAP)	outParamType = SHADER_PARAM_TYPE_DMAT4X2;
-		else if (typeName == "dmat4x3"_WRAP)	outParamType = SHADER_PARAM_TYPE_DMAT4X3;
-		else if (typeName == "dmat4x4"_WRAP)	outParamType = SHADER_PARAM_TYPE_DMAT4X4;
+		else if (typeName == "bool"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_BOOL;
+		else if (typeName == "int"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_INT;
+		else if (typeName == "uint"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_UINT;
+		else if (typeName == "float"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_FLOAT;
+		else if (typeName == "double"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_DOUBLE;
+		else if (typeName == "vec2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_VEC2;
+		else if (typeName == "vec3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_VEC3;
+		else if (typeName == "vec4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_VEC4;
+		else if (typeName == "mat2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT2;
+		else if (typeName == "mat3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT3;
+		else if (typeName == "mat4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT4;
+		else if (typeName == "dmat2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_DMAT2;
+		else if (typeName == "dmat3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_DMAT3;
+		else if (typeName == "dmat4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_DMAT4;
+		else if (typeName == "bvec2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_BVEC2;
+		else if (typeName == "bvec3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_BVEC3;
+		else if (typeName == "bvec4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_BVEC4;
+		else if (typeName == "ivec2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_IVEC2;
+		else if (typeName == "ivec3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_IVEC3;
+		else if (typeName == "ivec4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_IVEC4;
+		else if (typeName == "uvec2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_UVEC2;
+		else if (typeName == "uvec3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_UVEC3;
+		else if (typeName == "uvec4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_UVEC4;
+		else if (typeName == "dvec2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_DVEC2;
+		else if (typeName == "dvec3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_DVEC3;
+		else if (typeName == "dvec4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_DVEC4;
+		else if (typeName == "mat2x2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT2X2;
+		else if (typeName == "mat2x3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT2X3;
+		else if (typeName == "mat2x4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT2X4;
+		else if (typeName == "mat3x2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT3X2;
+		else if (typeName == "mat3x3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT3X3;
+		else if (typeName == "mat3x4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT3X4;
+		else if (typeName == "mat4x2"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT4X2;
+		else if (typeName == "mat4x3"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT4X3;
+		else if (typeName == "mat4x4"_WRAP)		outParamType = SHADER_UNIFORM_TYPE_MAT4X4;
+		else if (typeName == "dmat2x2"_WRAP)	outParamType = SHADER_UNIFORM_TYPE_DMAT2X2;
+		else if (typeName == "dmat2x3"_WRAP)	outParamType = SHADER_UNIFORM_TYPE_DMAT2X3;
+		else if (typeName == "dmat2x4"_WRAP)	outParamType = SHADER_UNIFORM_TYPE_DMAT2X4;
+		else if (typeName == "dmat3x2"_WRAP)	outParamType = SHADER_UNIFORM_TYPE_DMAT3X2;
+		else if (typeName == "dmat3x3"_WRAP)	outParamType = SHADER_UNIFORM_TYPE_DMAT3X3;
+		else if (typeName == "dmat3x4"_WRAP)	outParamType = SHADER_UNIFORM_TYPE_DMAT3X4;
+		else if (typeName == "dmat4x2"_WRAP)	outParamType = SHADER_UNIFORM_TYPE_DMAT4X2;
+		else if (typeName == "dmat4x3"_WRAP)	outParamType = SHADER_UNIFORM_TYPE_DMAT4X3;
+		else if (typeName == "dmat4x4"_WRAP)	outParamType = SHADER_UNIFORM_TYPE_DMAT4X4;
 
 		else { return false; }
 
@@ -148,7 +148,7 @@ namespace Quartz
 	}
 
 	inline bool MultilineReadParams(StringReader& reader, uSize& lineNumber, const Substring& startLine, 
-		const Map<WrapperString, Array<ShaderParam, 128>>& structMap, Array<ShaderParam, 128>& outParams, 
+		const Map<WrapperString, Array<ShaderUniform, 128>>& structMap, Array<ShaderUniform, 128>& outParams, 
 		int64 set, int64 binding, bool appendVarName)
 	{
 		Substring line		= startLine;
@@ -218,7 +218,7 @@ namespace Quartz
 
 					if (!blockName.IsEmpty() && appendVarName)
 					{
-						for (ShaderParam& param : outParams)
+						for (ShaderUniform& param : outParams)
 						{
 							param.name = blockName + "."_STR + param.name;
 						}
@@ -268,9 +268,9 @@ namespace Quartz
 					{
 						for (uSize i = 0; i < arrayCount; i++)
 						{
-							for (const ShaderParam& structParam : structIt->value)
+							for (const ShaderUniform& structParam : structIt->value)
 							{
-								ShaderParam param = structParam;
+								ShaderUniform param = structParam;
 
 								if (arrayCount > 1)
 								{
@@ -285,19 +285,19 @@ namespace Quartz
 									param.name = String(nameStr) + "." + param.name;
 								}
 
-								param.set				= set;
-								param.binding			= binding;
-								param.valueOffsetBytes	= offsetBytes;
+								param.set			= set;
+								param.binding		= binding;
+								param.offsetBytes	= offsetBytes;
 
 								outParams.PushBack(param);
 
-								offsetBytes += param.valueSizeBytes;
+								offsetBytes += param.sizeBytes;
 							}
 						}
 					}
 					else
 					{
-						ShaderParamType paramType;
+						ShaderUniformType paramType;
 						uSize			paramSize;
 
 						if (!LookupParamTypeInfo(typeStr, paramType, paramSize))
@@ -305,18 +305,18 @@ namespace Quartz
 							return false;
 						}
 
-						ShaderParam param;
-						param.name				= nameStr;
-						param.type				= paramType;
-						param.set				= set;
-						param.binding			= binding;
-						param.arrayCount		= arrayCount;
-						param.valueOffsetBytes	= offsetBytes;
-						param.valueSizeBytes	= paramSize;
+						ShaderUniform param;
+						param.name			= nameStr;
+						param.type			= paramType;
+						param.set			= set;
+						param.binding		= binding;
+						param.arrayCount	= arrayCount;
+						param.offsetBytes	= offsetBytes;
+						param.sizeBytes		= paramSize;
 
 						outParams.PushBack(param);
 
-						offsetBytes += param.valueSizeBytes;
+						offsetBytes += param.sizeBytes;
 					}
 
 					if (scopeCount == 0)
@@ -334,43 +334,43 @@ namespace Quartz
 		return false;
 	}
 
-	inline bool AdjustOffsets(Array<ShaderParam>& inOutParams)
+	inline bool AdjustOffsets(Array<ShaderUniform>& inOutParams)
 	{
 		uSize accumulatedOffset = 0;
 
 		for (sSize i = 0; i < ((sSize)inOutParams.Size() - 1); i++)
 		{
-			ShaderParam& param = inOutParams[i];
-			ShaderParam& nextParam = inOutParams[i + 1];
+			ShaderUniform& param = inOutParams[i];
+			ShaderUniform& nextParam = inOutParams[i + 1];
 
-			if (param.type == SHADER_PARAM_TYPE_VEC3 || 
-				param.type == SHADER_PARAM_TYPE_IVEC3 || 
-				param.type == SHADER_PARAM_TYPE_UVEC3 || 
-				param.type == SHADER_PARAM_TYPE_BVEC3)
+			if (param.type == SHADER_UNIFORM_TYPE_VEC3 || 
+				param.type == SHADER_UNIFORM_TYPE_IVEC3 || 
+				param.type == SHADER_UNIFORM_TYPE_UVEC3 || 
+				param.type == SHADER_UNIFORM_TYPE_BVEC3)
 			{
 				if (param.set == nextParam.set && param.binding == nextParam.binding)
 				{
-					if (nextParam.valueSizeBytes <= 4)
+					if (nextParam.sizeBytes <= 4)
 					{
-						param.valueSizeBytes -= nextParam.valueSizeBytes;
+						param.sizeBytes -= nextParam.sizeBytes;
 					}
 				}
 			}
 
-			param.valueOffsetBytes = accumulatedOffset;
+			param.offsetBytes = accumulatedOffset;
 
-			if ((accumulatedOffset + param.valueSizeBytes) % 16 != 0 && nextParam.valueSizeBytes > 4)
+			if ((accumulatedOffset + param.sizeBytes) % 16 != 0 && nextParam.sizeBytes > 4)
 			{
 				accumulatedOffset += 4;
 			}
 			
-			accumulatedOffset += param.valueSizeBytes;
+			accumulatedOffset += param.sizeBytes;
 		}
 
 		return true;
 	}
 
-	inline bool ParseGLSLParams(const String& data, Array<ShaderParam>& outParams)
+	inline bool ParseGLSLParams(const String& data, Array<ShaderUniform>& outParams)
 	{
 		StringReader reader(data);
 		uSize lineNumber = 1;
@@ -378,7 +378,7 @@ namespace Quartz
 		int64 lastSet = 0;
 		int64 lastBinding = 0;
 
-		Map<WrapperString, Array<ShaderParam, 128>> structMap;
+		Map<WrapperString, Array<ShaderUniform, 128>> structMap;
 
 		while (!reader.IsEmpty())
 		{
@@ -396,7 +396,7 @@ namespace Quartz
 
 				const Substring structTypeName = structStr.Substring(0, nameEndIdx);
 
-				Array<ShaderParam, 128> structParams;
+				Array<ShaderUniform, 128> structParams;
 				if (!MultilineReadParams(reader, lineNumber, structStr, structMap, structParams, 0, 0, false))
 				{
 					LogError("Error parsing GLSL text: Malformed line [%d] \"%s\"", lineNumber, line.Str());
@@ -446,14 +446,14 @@ namespace Quartz
 					lastBinding = binding;
 				}
 				
-				Array<ShaderParam, 128> blockParams;
+				Array<ShaderUniform, 128> blockParams;
 				if (!MultilineReadParams(reader, lineNumber, layoutStr, structMap, blockParams, set, binding, true))
 				{
 					LogError("Error parsing GLSL text: Malformed line [%d] \"%s\"", lineNumber, line.Str());
 					return false;
 				}
 
-				for (const ShaderParam& param : blockParams)
+				for (const ShaderUniform& param : blockParams)
 				{
 					outParams.PushBack(param);
 				}
@@ -466,9 +466,9 @@ namespace Quartz
 
 #if GLSL_DEBUG_PRINT_UNIFORM_OFFSETS
 
-		for (ShaderParam& param : outParams)
+		for (ShaderUniform& param : outParams)
 		{
-			LogInfo("%s : size = %d, offset = %d", param.name.Str(), param.valueSizeBytes, param.valueOffsetBytes);
+			LogInfo("%s : size = %d, offset = %d", param.name.Str(), param.sizeBytes, param.offsetBytes);
 		}
 
 #endif

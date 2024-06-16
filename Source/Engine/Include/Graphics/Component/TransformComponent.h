@@ -1,12 +1,12 @@
 #pragma once
 
-#include "GfxAPI.h"
+#include "EngineAPI.h"
 #include "Entity/Component.h"
 #include "Math/Math.h"
 
 namespace Quartz
 {
-	struct QUARTZ_GRAPHICS_API TransformComponent : 
+	struct QUARTZ_ENGINE_API TransformComponent : 
 		public Component<TransformComponent>, 
 		public Transform
 	{

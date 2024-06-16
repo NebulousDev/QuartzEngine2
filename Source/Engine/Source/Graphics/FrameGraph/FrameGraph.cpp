@@ -1,6 +1,7 @@
 #include "Graphics/FrameGraph/FrameGraph.h"
 
 #include "Log.h"
+#include "Debug.h"
 
 namespace Quartz
 {
@@ -15,51 +16,121 @@ namespace Quartz
 		return dep0.passIdx == dep1.passIdx && dep0.dependentIdx == dep1.dependentIdx;
 	}
 
-	FrameGraph::FrameGraph()
-	{
-		mCommandBuffer.capableQueues			= QUEUE_GRAPHICS | QUEUE_PRESENT;
-		mCommandBuffer.hPhysicalCommandBuffer	= nullptr;
-	}
+	FrameGraph::FrameGraph() :
+	mNextResourceId(1) { }
 
-	FrameGraphImage& FrameGraph::FindOrCreateImage(const String& name, const FrameGraphImageInfo& imageInfo, bool& found)
+	FrameGraphImage& FrameGraph::AquireImage(const String& name, const FrameGraphImageInfo& imageInfo, bool& found)
 	{
-		auto& imageIt = mFrameImages.Find(name);
-		if (imageIt != mFrameImages.End())
+		uInt64 imageId = 0;
+
+		auto& iamgeIdIt = mResourceIds.Find(name);
+		if (iamgeIdIt != mResourceIds.End())
+		{
+			imageId = iamgeIdIt->value;
+			//goto makeImage;
+		}
+
+		auto& transImageIt = mTransientImages.Find(imageId);
+		if (transImageIt != mTransientImages.End())
 		{
 			found = true;
-			return imageIt->value;
+			return transImageIt->value;
 		}
 		else
 		{
-			FrameGraphImage& image = mFrameImages.Put(name, FrameGraphImage());
+			auto& permImageIt = mPermanentImages.Find(imageId);
+			if (permImageIt != mPermanentImages.End())
+			{
+				found = true;
+				return permImageIt->value;
+			}
+			else
+			{
+			makeImage:
 
-			image.name						= name;
-			image.info						= imageInfo;
-			image.transitionState.pImage	= &image;
-			image.transitionState.access	= ACCESS_NONE;
-			image.transitionState.stage		= SHADER_STAGE_TOP_OF_PIPE;
-			image.transitionState.usage		= IMAGE_USAGE_NONE;
+				FrameGraphImage* pImage = nullptr;
 
-			found = false;
+				uInt64 newResourceId = mNextResourceId++;
 
-			return image;
+				if (imageInfo.flags & RESOURCE_FLAG_PERSISTANT)
+				{
+					pImage = &mPermanentImages.Put(newResourceId);
+				}
+				else
+				{
+					pImage = &mTransientImages.Put(newResourceId);
+				}
+
+				pImage->id						= newResourceId;
+				pImage->name					= name;
+				pImage->info					= imageInfo;
+				pImage->transitionState.pImage	= pImage;
+				pImage->transitionState.access	= ACCESS_NONE;
+				pImage->transitionState.stage	= SHADER_STAGE_TOP_OF_PIPE;
+				pImage->transitionState.usage	= IMAGE_USAGE_NONE;
+				pImage->flags					= imageInfo.flags;
+
+				mResourceIds.Put(name, newResourceId);
+
+				found = false;
+
+				return *pImage;
+			}
 		}
 	}
 
-	FrameGraphBuffer& FrameGraph::FindOrCreateBuffer(const String& name, const FrameGraphBufferInfo& bufferInfo, bool& found)
+	FrameGraphBuffer& FrameGraph::AquireBuffer(const String& name, const FrameGraphBufferInfo& bufferInfo, bool& found)
 	{
-		auto& bufferIt = mFrameBuffers.Find(name);
-		if (bufferIt != mFrameBuffers.End())
+		uInt64 bufferId = 0;
+
+		auto& bufferIdIt = mResourceIds.Find(name);
+		if (bufferIdIt != mResourceIds.End())
+		{
+			bufferId = bufferIdIt->value;
+			//goto makeBuffer;
+		}
+
+		auto& transBufferIt = mTransientBuffers.Find(bufferId);
+		if (transBufferIt != mTransientBuffers.End())
 		{
 			found = true;
-			return bufferIt->value;
+			return transBufferIt->value;
 		}
 		else
 		{
-			FrameGraphBuffer& buffer = mFrameBuffers.Put(name, FrameGraphBuffer());
-			buffer.info = bufferInfo;
-			found = false;
-			return buffer;
+			auto& permBufferIt = mPermanentBuffers.Find(bufferId);
+			if (permBufferIt != mPermanentBuffers.End())
+			{
+				found = true;
+				return permBufferIt->value;
+			}
+			else
+			{
+			makeBuffer:
+
+				FrameGraphBuffer* pBuffer = nullptr;
+
+				uInt64 newResourceId = mNextResourceId++;
+
+				if (bufferInfo.flags & RESOURCE_FLAG_PERSISTANT)
+				{
+					pBuffer = &mPermanentBuffers.Put(newResourceId);
+				}
+				else
+				{
+					pBuffer = &mTransientBuffers.Put(newResourceId);
+				}
+
+				pBuffer->id		= newResourceId;
+				pBuffer->name	= name;
+				pBuffer->info	= bufferInfo;
+
+				mResourceIds.Put(name, newResourceId);
+
+				found = false;
+
+				return *pBuffer;
+			}
 		}
 	}
 
@@ -69,21 +140,56 @@ namespace Quartz
 	}
 
 	// Returns true if resource was found
-	bool FrameGraph::SetOutputResource(const String& name)
+	bool FrameGraph::SetOutput(const String& imageName, Window& outputWindow)
 	{
-		auto& imageIt = mFrameImages.Find(name);
-		if (imageIt != mFrameImages.End())
+		uInt64 imageId = 0;
+
+		auto& iamgeIdIt = mResourceIds.Find(imageName);
+		if (iamgeIdIt != mResourceIds.End())
 		{
-			mOutputResources.PushBack(&imageIt->value);
-			return true;
+			imageId = iamgeIdIt->value;
+
+			DEBUG_ONLY
+			{
+				auto& imageIt = mTransientImages.Find(imageId);
+				if (imageIt != mTransientImages.End())
+				{
+					LogError("Error setting FrameGraph output resource: Resource [type=Image, name=\"%s\"] must be marked RESOURCE_FLAG_PERSISTANT.", 
+						imageName.Str());
+					return false;
+				}
+
+				//auto& bufferIt = mTransientBuffers.Find(imageName);
+				//if (bufferIt != mTransientBuffers.End())
+				//{
+				//	LogError("Error setting FrameGraph output resource: Resource [type=Buffer, name=\"%s\"] must be marked RESOURCE_FLAG_PERSISTANT.");
+				//	return false;
+				//}
+			}
+
+			auto& imageIt = mPermanentImages.Find(imageId);
+			if (imageIt != mPermanentImages.End())
+			{
+				if (!mWindowOutputs.Contains(imageIt->key))
+				{
+					mWindowOutputs.Put(imageIt->key, &outputWindow);
+					mOutputResources.PushBack(&imageIt->value);
+					imageIt->value.flags |= RESOURCE_FLAG_PERSISTANT | RESOURCE_FLAG_BACKBUFFER | RESOURCE_FLAG_WINDOW_OUTPUT;
+				}
+
+				return true;
+			}
+
+			//auto& bufferIt = mPermanentBuffers.Find(imageName);
+			//if (bufferIt != mPermanentBuffers.End())
+			//{
+			//	mOutputResources.PushBack(&imageIt->value);
+			//	return true;
+			//}
 		}
 
-		auto& bufferIt = mFrameBuffers.Find(name);
-		if (bufferIt != mFrameBuffers.End())
-		{
-			mOutputResources.PushBack(&imageIt->value);
-			return true;
-		}
+		LogError("Error setting FrameGraph output resource: Resource [type=Image, name=\"%s\"] is not registered in any pass.", 
+			imageName.Str());
 
 		return false;
 	}
@@ -114,6 +220,7 @@ namespace Quartz
 					if (!outPassStack.Contains(&dependantPass))
 					{
 						outPassStack.Push(&dependantPass);
+						pColorImage->activity = 0;
 					}
 
 					dependencyCount++;
@@ -131,6 +238,7 @@ namespace Quartz
 					if (!outPassStack.Contains(&dependantPass))
 					{
 						outPassStack.Push(&dependantPass);
+						pDepthImage->activity = 0;
 					}
 
 					dependencyCount++;
@@ -148,6 +256,7 @@ namespace Quartz
 					if (!outPassStack.Contains(&dependantPass))
 					{
 						outPassStack.Push(&dependantPass);
+						pDepthStencilImage->activity = 0;
 					}
 
 					dependencyCount++;
@@ -158,11 +267,35 @@ namespace Quartz
 		return dependencyCount;
 	}
 
-	void FrameGraph::SortPasses(Array<uInt16, 64>& outPasses)
+	void FrameGraph::CheckActivity()
+	{
+		for (auto& imagePair : mTransientImages)
+		{
+			if (imagePair.value.activity > 2)
+			{
+				ApiReleaseImage(imagePair.value);
+				mTransientImages.Remove(imagePair.key);
+			}
+			else
+			{
+				imagePair.value.activity++;
+			}
+		}
+
+		//for (auto& bufferPair : mTransientBuffers)
+		//{
+		//	ApiReleaseBuffer(bufferPair.value);
+		//}
+
+		//mTransientImages.Clear();
+		//mTransientBuffers.Clear();
+	}
+
+	void FrameGraph::SortPasses()
 	{
 		for (uSize i = 0; i < mOutputResources.Size(); i++)
 		{
-			const FrameGraphResource& outputResource		= *mOutputResources[i];
+			FrameGraphResource& outputResource				= *mOutputResources[i];
 			Array<FrameGraphDependancy, 64>& dependencies	= mDependencies[i];
 			Stack<FrameGraphPass*, 64>& passStack			= mPassStacks[i];
 			uInt16& outPassIdx								= mOutPassIndices[i];
@@ -219,23 +352,119 @@ namespace Quartz
 			{
 				uSize passIdx = dependencies[i].dependentIdx;
 
-				if (!outPasses.Contains(passIdx))
+				if (!mOrderedPasses.Contains(passIdx))
 				{
-					outPasses.PushBack(passIdx);
+					mOrderedPasses.PushBack(passIdx);
 				}
 			}
 
-			outPasses.PushBack(outPassIdx);
+			outputResource.activity = 0;
+
+			mOrderedPasses.PushBack(outPassIdx);
 		}
 	}
 
 	void FrameGraph::AllocateResources()
 	{
-		for (auto& imagePair : mFrameImages)
+		for (auto& imagePair : mPermanentImages)
 		{
-			FrameGraphImage& image	= imagePair.value;
-			image.hPhysicalImage	= mFunctions.createPhysicalImageFunc(image);
+			FrameGraphImage& image = imagePair.value;
+
+			if (image.hApiImage == nullptr)
+			{
+				image.hApiImage = ApiAquireImage(image);
+			}
 		}
+
+		for (auto& bufferPair : mPermanentBuffers)
+		{
+			FrameGraphBuffer& buffer = bufferPair.value;
+
+			if (buffer.hApiBuffer == nullptr)
+			{
+				buffer.hApiBuffer = ApiAquireBuffer(buffer);
+			}
+		}
+
+		for (auto& imagePair : mTransientImages)
+		{
+			FrameGraphImage& image = imagePair.value;
+			image.hApiImage	= ApiAquireImage(image);
+		}
+
+		for (auto& bufferPair : mTransientBuffers)
+		{
+			FrameGraphBuffer& buffer = bufferPair.value;
+			buffer.hApiBuffer = ApiAquireBuffer(buffer);
+		}
+	}
+
+	void FrameGraph::Destroy()
+	{
+		
+	}
+
+	FrameGraphImage* FrameGraph::GetImageByName(const WrapperString& name)
+	{
+		uInt64 imageId = 0;
+
+		auto& iamgeIdIt = mResourceIds.Find(name);
+		if (iamgeIdIt != mResourceIds.End())
+		{
+			imageId = iamgeIdIt->value;
+		}
+
+		auto& transImageIt = mTransientImages.Find(imageId);
+		if (transImageIt != mTransientImages.End())
+		{
+			return &transImageIt->value;
+		}
+
+		auto& permImageIt = mPermanentImages.Find(imageId);
+		if (permImageIt != mPermanentImages.End())
+		{
+			return &permImageIt->value;
+		}
+
+		return nullptr;
+	}
+
+	void FrameGraph::Reset()
+	{
+		for (auto& imagePair : mTransientImages)
+		{
+			mResourceIds.Remove(imagePair.value.name);
+		}
+
+		for (auto& imagePair : mPermanentImages)
+		{
+			FrameGraphImage& image = imagePair.value;
+			image.readPasses.Clear();
+			image.writePasses.Clear();
+			//image.stages = 0;
+			image.usages = 0;
+			image.queues = 0;
+		}
+
+		for (auto& bufferPair : mPermanentBuffers)
+		{
+			FrameGraphBuffer& buffer = bufferPair.value;
+			buffer.readPasses.Clear();
+			buffer.writePasses.Clear();
+			//buffer.stages = 0;
+			buffer.usages = 0;
+			buffer.queues = 0;
+		}
+
+		mOutputResources.Clear();
+		mWindowOutputs.Clear();
+
+		mDependencies.Clear();
+		mPassStacks.Clear();
+		mOutPassIndices.Clear();
+		mOrderedPasses.Clear();
+
+		mPasses.Clear();
 	}
 
 	void FrameGraph::Build()
@@ -246,49 +475,17 @@ namespace Quartz
 			return;
 		}
 
-		mDependencies.Clear();
-		mPassStacks.Clear();
-		mOutPassIndices.Clear();
-		mOrderedPasses.Clear();
-
 		mDependencies.Resize(mOutputResources.Size());
 		mPassStacks.Resize(mOutputResources.Size());
 		mOutPassIndices.Resize(mOutputResources.Size());
 
-		Array<uInt16, 64> orderedPasses;
-
-		SortPasses(orderedPasses);
-
+		SortPasses();
 		AllocateResources();
-
-		if (!mCommandBuffer.hPhysicalCommandBuffer)
-		{
-			mCommandBuffer.hPhysicalCommandBuffer = mFunctions.createPhysicalCommandBufferFunc(mCommandBuffer);
-		}
-
-		mFunctions.beginCommandBufferFunc(mCommandBuffer);
-
-		for (uSize i = 0; i < orderedPasses.Size(); i++)
-		{
-			const FrameGraphPass& pass = mPasses[orderedPasses[i]];
-
-			for (const FrameGraphImageTransition& imageTransition : pass.mImageTransitions)
-			{
-				const FrameGraphImageTransition& oldState = imageTransition.pImage->transitionState;
-				const FrameGraphImageTransition& newState = imageTransition;
-
-				mFunctions.transitionImageFunc(mCommandBuffer, oldState, newState);
-			}
-
-			pass.mPassRenderFunc(pass, mCommandBuffer);
-		}
-
-		mFunctions.endCommandBufferFunc(mCommandBuffer);
-		mFunctions.submitCommandBufferFunc(mCommandBuffer);
 	}
 
-	void FrameGraph::SetFunctions(const FrameGraphFunctions& functions)
+	void FrameGraph::Execute()
 	{
-		mFunctions = functions;
+		ApiExecuteFrame();
+		CheckActivity();
 	}
 }

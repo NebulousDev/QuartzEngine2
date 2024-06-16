@@ -7,30 +7,19 @@
 
 namespace Quartz
 {
-	struct ShaderParam
-	{
-		String			name;
-		ShaderParamType	type;
-		uInt32			set;
-		uInt32			binding;
-		uInt32			arrayCount;
-		uInt32			valueOffsetBytes;
-		uInt32			valueSizeBytes;
-	};
-
-	struct ShaderCode
-	{
-		ByteBuffer* pSourceBuffer;
-		ShaderLang	lang;
-		String		entry;
-	};
-
 	struct Shader : public Asset
 	{
+		struct ShaderCode
+		{
+			ByteBuffer* pSourceBuffer;
+			ShaderLang	lang;
+			String		entry;
+		};
+
 		String					name;
 		ShaderStage				stage;
 		Array<ShaderCode, 5>	shaderCodes;
-		Array<ShaderParam>		params;
+		Array<ShaderUniform>	uniforms;
 
 		Shader() = default;
 		Shader(File* pSourceFile) : Asset(pSourceFile) {};

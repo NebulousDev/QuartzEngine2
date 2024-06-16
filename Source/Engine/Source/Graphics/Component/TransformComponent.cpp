@@ -1,4 +1,4 @@
-#include "Component/TransformComponent.h"
+#include "Graphics/Component/TransformComponent.h"
 
 namespace Quartz
 {

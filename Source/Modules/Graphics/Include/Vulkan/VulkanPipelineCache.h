@@ -3,7 +3,7 @@
 #include "../GfxAPI.h"
 #include "VulkanResourceManager.h"
 #include "Primatives/VulkanPipeline.h"
-#include "Component/MaterialComponent.h"
+#include "Graphics/Component/MaterialComponent.h"
 
 namespace Quartz
 {

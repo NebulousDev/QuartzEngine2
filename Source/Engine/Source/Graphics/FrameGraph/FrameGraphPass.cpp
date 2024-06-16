@@ -13,7 +13,7 @@ namespace Quartz
 	FrameGraphImage& FrameGraphPass::AddColorInput(const String& name, const FrameGraphImageInfo& imageInfo)
 	{
 		bool imageFound = false;
-		FrameGraphImage& image = mpFrameGraph->FindOrCreateImage(name, imageInfo, imageFound);
+		FrameGraphImage& image = mpFrameGraph->AquireImage(name, imageInfo, imageFound);
 
 		image.queues	|= mQueues;
 		image.usages	|= IMAGE_USAGE_COLOR_INPUT;
@@ -36,7 +36,7 @@ namespace Quartz
 	FrameGraphImage& FrameGraphPass::AddColorOutput(const String& name, const FrameGraphImageInfo& imageInfo)
 	{
 		bool imageFound = false;
-		FrameGraphImage& image = mpFrameGraph->FindOrCreateImage(name, imageInfo, imageFound);
+		FrameGraphImage& image = mpFrameGraph->AquireImage(name, imageInfo, imageFound);
 
 		image.queues	|= mQueues;
 		image.usages	|= IMAGE_USAGE_COLOR_OUTPUT;
@@ -59,7 +59,7 @@ namespace Quartz
 	FrameGraphImage& FrameGraphPass::AddDepthInput(const String& name, const FrameGraphImageInfo& imageInfo)
 	{
 		bool imageFound = false;
-		FrameGraphImage& image = mpFrameGraph->FindOrCreateImage(name, imageInfo, imageFound);
+		FrameGraphImage& image = mpFrameGraph->AquireImage(name, imageInfo, imageFound);
 
 		image.queues	|= mQueues;
 		image.usages	|= IMAGE_USAGE_DEPTH_INPUT;
@@ -82,7 +82,7 @@ namespace Quartz
 	FrameGraphImage& FrameGraphPass::AddDepthOutput(const String& name, const FrameGraphImageInfo& imageInfo)
 	{
 		bool imageFound = false;
-		FrameGraphImage& image = mpFrameGraph->FindOrCreateImage(name, imageInfo, imageFound);
+		FrameGraphImage& image = mpFrameGraph->AquireImage(name, imageInfo, imageFound);
 
 		image.queues	|= mQueues;
 		image.usages	|= IMAGE_USAGE_DEPTH_OUTPUT;
@@ -105,7 +105,7 @@ namespace Quartz
 	FrameGraphImage& FrameGraphPass::AddDepthStencilInput(const String& name, const FrameGraphImageInfo& imageInfo)
 	{
 		bool imageFound = false;
-		FrameGraphImage& image = mpFrameGraph->FindOrCreateImage(name, imageInfo, imageFound);
+		FrameGraphImage& image = mpFrameGraph->AquireImage(name, imageInfo, imageFound);
 
 		image.queues	|= mQueues;
 		image.usages	|= IMAGE_USAGE_DEPTH_STENCIL_INPUT;
@@ -128,7 +128,7 @@ namespace Quartz
 	FrameGraphImage& FrameGraphPass::AddDepthStencilOutput(const String& name, const FrameGraphImageInfo& imageInfo)
 	{
 		bool imageFound = false;
-		FrameGraphImage& image = mpFrameGraph->FindOrCreateImage(name, imageInfo, imageFound);
+		FrameGraphImage& image = mpFrameGraph->AquireImage(name, imageInfo, imageFound);
 
 		image.queues	|= mQueues;
 		image.usages	|= IMAGE_USAGE_DEPTH_STENCIL_OUTPUT;
@@ -151,7 +151,7 @@ namespace Quartz
 	FrameGraphBuffer& FrameGraphPass::AddVertexBufferInput(const String& name, const FrameGraphBufferInfo& bufferInfo)
 	{
 		bool bufferFound = false;
-		FrameGraphBuffer& buffer = mpFrameGraph->FindOrCreateBuffer(name, bufferInfo, bufferFound);
+		FrameGraphBuffer& buffer = mpFrameGraph->AquireBuffer(name, bufferInfo, bufferFound);
 
 		buffer.queues	|= mQueues;
 		buffer.usages	|= BUFFER_USAGE_VERTEX_INPUT;
@@ -173,7 +173,7 @@ namespace Quartz
 	FrameGraphBuffer& FrameGraphPass::AddIndexBufferInput(const String& name, const FrameGraphBufferInfo& bufferInfo)
 	{
 		bool bufferFound = false;
-		FrameGraphBuffer& buffer = mpFrameGraph->FindOrCreateBuffer(name, bufferInfo, bufferFound);
+		FrameGraphBuffer& buffer = mpFrameGraph->AquireBuffer(name, bufferInfo, bufferFound);
 
 		buffer.queues	|= mQueues;
 		buffer.usages	|= BUFFER_USAGE_INDEX_INPUT;
@@ -195,7 +195,7 @@ namespace Quartz
 	FrameGraphImage& FrameGraphPass::AddUniformTextureInput(const String& name, const FrameGraphImageInfo& imageInfo, ShaderStageFlags shaderStages)
 	{
 		bool imageFound = false;
-		FrameGraphImage& image = mpFrameGraph->FindOrCreateImage(name, imageInfo, imageFound);
+		FrameGraphImage& image = mpFrameGraph->AquireImage(name, imageInfo, imageFound);
 
 		image.queues	|= mQueues;
 		image.usages	|= IMAGE_USAGE_SAMPLED_TEXUTRE;
@@ -219,7 +219,7 @@ namespace Quartz
 	FrameGraphBuffer& FrameGraphPass::AddUniformBufferInput(const String& name, const FrameGraphBufferInfo& bufferInfo, ShaderStageFlags shaderStages)
 	{
 		bool bufferFound = false;
-		FrameGraphBuffer& buffer = mpFrameGraph->FindOrCreateBuffer(name, bufferInfo, bufferFound);
+		FrameGraphBuffer& buffer = mpFrameGraph->AquireBuffer(name, bufferInfo, bufferFound);
 
 		buffer.queues	|= mQueues;
 		buffer.usages	|= BUFFER_USAGE_UNIFORM_INPUT;
@@ -239,8 +239,13 @@ namespace Quartz
 		return buffer;
 	}
 
-	void FrameGraphPass::SetPassRender(PassRenderFunc renderFunc)
+	void FrameGraphPass::SetPassExecute(PassExecuteFunc executeFunc)
 	{
-		mPassRenderFunc = renderFunc;
+		mPassExecuteFunc = executeFunc;
+	}
+
+	void FrameGraphPass::Execute(FrameGraphCommandRecorder& commandRecorder) const
+	{
+		mPassExecuteFunc(*mpFrameGraph, *this, commandRecorder);
 	}
 }

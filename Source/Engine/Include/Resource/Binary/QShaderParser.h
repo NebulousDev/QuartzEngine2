@@ -26,8 +26,8 @@ namespace Quartz
 		bool		BeginWriting();
 		bool		EndWriting();
 		bool		WriteStrings();
-		bool		WriteShaderParam(const ShaderParam& shaderParam);
-		bool		WriteShaderCode(const ShaderCode& shaderCode);
+		bool		WriteShaderParam(const ShaderUniform& shaderUniform);
+		bool		WriteShaderCode(const Shader::ShaderCode& shaderCode);
 
 		bool		BeginReading();
 		bool		EndReading();

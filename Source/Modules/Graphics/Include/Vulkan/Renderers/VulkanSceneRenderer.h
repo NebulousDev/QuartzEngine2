@@ -13,11 +13,13 @@
 #include "Vulkan/VulkanRenderable.h"
 #include "Vulkan/Primatives/VulkanImage.h"
 
-#include "Component/CameraComponent.h"
-#include "Component/TransformComponent.h"
-#include "Component/LightComponent.h"
+#include "Graphics/Component/CameraComponent.h"
+#include "Graphics/Component/TransformComponent.h"
+#include "Graphics/Component/LightComponent.h"
 
 #include "Resource/Assets/Image.h"
+
+#include "Graphics/Renderer.h"
 
 namespace Quartz
 {

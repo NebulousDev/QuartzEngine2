@@ -64,7 +64,7 @@ namespace Quartz
 	{
 		Shader* pShader = static_cast<Shader*>(pInAsset);
 
-		for (ShaderCode& code : pShader->shaderCodes)
+		for (Shader::ShaderCode& code : pShader->shaderCodes)
 		{
 			mBufferPool.Free(code.pSourceBuffer);
 		}

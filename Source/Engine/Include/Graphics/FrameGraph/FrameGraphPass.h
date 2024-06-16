@@ -15,8 +15,7 @@ namespace Quartz
 
 	struct FrameGraphPassInfo
 	{
-		QueueFlags	queueFlags;
-		bool		allowSkip;
+		QueueFlags queueFlags;
 	};
 
 	class QUARTZ_ENGINE_API FrameGraphPass
@@ -24,9 +23,10 @@ namespace Quartz
 	public:
 		friend class FrameGraph;
 
-		using PassRenderFunc = std::function<void(
+		using PassExecuteFunc = std::function<void(
+			FrameGraph& frameGraph, 
 			const FrameGraphPass& framePass, 
-			FrameGraphCommandBuffer& commandBuffer)>;
+			FrameGraphCommandRecorder& graphRecorder)>;
 
 	private:
 		FrameGraph*								mpFrameGraph;
@@ -48,7 +48,7 @@ namespace Quartz
 		Array<FrameGraphImageTransition, 16>	mImageTransitions;
 		Array<FrameGraphBufferTransition, 16>	mBufferTransitions;
 
-		PassRenderFunc							mPassRenderFunc;
+		PassExecuteFunc							mPassExecuteFunc;
 
 	private:
 		FrameGraphPass(FrameGraph* pFrameGraph, uInt16 passIdx, const FrameGraphPassInfo& passInfo);
@@ -69,8 +69,13 @@ namespace Quartz
 		FrameGraphImage&	AddUniformTextureInput(const String& name, const FrameGraphImageInfo& imageInfo, ShaderStageFlags shaderStages);
 		FrameGraphBuffer&	AddUniformBufferInput(const String& name, const FrameGraphBufferInfo& bufferInfo, ShaderStageFlags shaderStages);
 
-		void				SetPassRender(PassRenderFunc renderFunc);
+		void				SetPassExecute(PassExecuteFunc executeFunc);
 
 		inline uInt16		GetPassIndex() const { return mPassIdx; }
+
+		void				Execute(FrameGraphCommandRecorder& commandRecorder) const;
+
+		inline const Array<FrameGraphImageTransition, 16>&	GetImageTransitions() const { return mImageTransitions; }
+		inline const Array<FrameGraphBufferTransition, 16>& GetBufferTransitions() const { return mBufferTransitions; }
 	};
 }

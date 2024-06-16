@@ -30,8 +30,8 @@ namespace Quartz
 		String glslText(assetFile.GetSize());
 		assetFile.Read((uInt8*)glslText.Data(), assetFile.GetSize());
 
-		ShaderCode code;
-		Array<ShaderParam> params;
+		Shader::ShaderCode code;
+		Array<ShaderUniform> params;
 
 		if (!ParseGLSLParams(glslText, params))
 		{
@@ -72,9 +72,9 @@ namespace Quartz
 			return false;
 		}
 
-		pShader->name	= assetFile.GetPath();
-		pShader->params = params;
-		pShader->stage	= stageGuess;
+		pShader->name		= assetFile.GetPath();
+		pShader->uniforms	= params;
+		pShader->stage		= stageGuess;
 
 		pShader->shaderCodes.PushBack(code);
 
@@ -165,7 +165,7 @@ namespace Quartz
 	{
 		Shader* pShader = static_cast<Shader*>(pInAsset);
 
-		for (ShaderCode& code : pShader->shaderCodes)
+		for (Shader::ShaderCode& code : pShader->shaderCodes)
 		{
 			mBufferPool.Free(code.pSourceBuffer);
 		}

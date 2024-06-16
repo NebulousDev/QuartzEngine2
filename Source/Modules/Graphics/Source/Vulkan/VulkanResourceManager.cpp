@@ -9,7 +9,7 @@
 
 #include <vulkan/vulkan.h>
 
-#define DEBUG_TRACE_LOG_VULKAN_RESOURCE_CREATION 0
+#define DEBUG_TRACE_LOG_VULKAN_RESOURCE_CREATION 1
 
 #if DEBUG_TRACE_LOG_VULKAN_RESOURCE_CREATION 
 #define LogTraceVkRSM LogTrace
@@ -1529,7 +1529,7 @@ namespace Quartz
 			uSize index = mBuffers.IndexOf(it);
 
 			// @TODO: properly remove, requires better storage
-			//mBuffers.Remove(pBuffer);
+			mBuffers.RemoveIndex(index);
 
 			LogTraceVkRSM("Destroyed VulkanBuffer [ID=%06.6d].", index);
 		}
@@ -1550,7 +1550,7 @@ namespace Quartz
 			uSize index = mImages.IndexOf(it);
 
 			// @TODO: properly remove, requires better storage
-			//mImages.Remove(index);
+			mImages.RemoveIndex(index);
 
 			LogTraceVkRSM("Destroyed VulkanImage [ID=%06.6d].", index);
 		}
@@ -1571,7 +1571,7 @@ namespace Quartz
 			uSize index = mImageViews.IndexOf(it);
 
 			// @TODO: properly remove, requires better storage
-			//mImageViews.Remove(index);
+			mImageViews.RemoveIndex(index);
 
 			LogTraceVkRSM("Destroyed VulkanImageView [ID=%06.6d].", index);
 		}

@@ -111,7 +111,7 @@ namespace Quartz
 		return true;
 	}
 
-	bool QShaderParser::WriteShaderParam(const ShaderParam& shaderParam)
+	bool QShaderParser::WriteShaderParam(const ShaderUniform& shaderParam)
 	{
 		QShaderParamTable& paramTable = mHeader.paramTable;
 
@@ -130,8 +130,8 @@ namespace Quartz
 		qShaderParam.binding			= shaderParam.binding;
 		qShaderParam.arrayCount			= shaderParam.arrayCount;
 		qShaderParam._reserved1			= 0;
-		qShaderParam.valueOffsetBytes	= shaderParam.valueOffsetBytes;
-		qShaderParam.valueSizeBytes		= shaderParam.valueSizeBytes;
+		qShaderParam.valueOffsetBytes	= shaderParam.offsetBytes;
+		qShaderParam.valueSizeBytes		= shaderParam.sizeBytes;
 
 		if (!mFile.WriteValues<QShaderParam>(&qShaderParam, 1))
 		{
@@ -144,7 +144,7 @@ namespace Quartz
 		return true;
 	}
 
-	bool QShaderParser::WriteShaderCode(const ShaderCode& shaderCode)
+	bool QShaderParser::WriteShaderCode(const Shader::ShaderCode& shaderCode)
 	{
 		QShaderShaderTable& shaderTable = mHeader.shaderTable;
 
@@ -285,7 +285,7 @@ namespace Quartz
 				return false;
 			}
 
-			ShaderParam shaderParam;
+			ShaderUniform shaderParam;
 
 			if (qShaderParam.nameID < mStrings.Size())
 			{
@@ -296,14 +296,14 @@ namespace Quartz
 				return false;
 			}
 
-			shaderParam.type				= (ShaderParamType)qShaderParam.type;
-			shaderParam.set					= qShaderParam.set;
-			shaderParam.binding				= qShaderParam.binding;
-			shaderParam.arrayCount			= qShaderParam.arrayCount;
-			shaderParam.valueOffsetBytes	= qShaderParam.valueOffsetBytes;
-			shaderParam.valueSizeBytes		= qShaderParam.valueSizeBytes;
+			shaderParam.type			= (ShaderUniformType)qShaderParam.type;
+			shaderParam.set				= qShaderParam.set;
+			shaderParam.binding			= qShaderParam.binding;
+			shaderParam.arrayCount		= qShaderParam.arrayCount;
+			shaderParam.offsetBytes		= qShaderParam.valueOffsetBytes;
+			shaderParam.sizeBytes		= qShaderParam.valueSizeBytes;
 			
-			mpShader->params.PushBack(shaderParam);
+			mpShader->uniforms.PushBack(shaderParam);
 		}
 
 		return true;
@@ -327,7 +327,7 @@ namespace Quartz
 				return false;
 			}
 
-			ShaderCode shaderCode;
+			Shader::ShaderCode shaderCode;
 
 			if (qShaderCode.entryID < mStrings.Size())
 			{
@@ -402,7 +402,7 @@ namespace Quartz
 
 		if (!ReadShaderCodes())
 		{
-			for (ShaderCode& code : mpShader->shaderCodes)
+			for (Shader::ShaderCode& code : mpShader->shaderCodes)
 			{
 				mpBufferAllocator->Free(code.pSourceBuffer);
 			}
@@ -414,7 +414,7 @@ namespace Quartz
 
 		if (!EndReading())
 		{
-			for (ShaderCode& code : mpShader->shaderCodes)
+			for (Shader::ShaderCode& code : mpShader->shaderCodes)
 			{
 				mpBufferAllocator->Free(code.pSourceBuffer);
 			}
@@ -440,7 +440,7 @@ namespace Quartz
 			return false;
 		}
 
-		for (const ShaderParam& param : mpShader->params)
+		for (const ShaderUniform& param : mpShader->uniforms)
 		{
 			if (!WriteShaderParam(param))
 			{
@@ -449,7 +449,7 @@ namespace Quartz
 			}
 		}
 
-		for (const ShaderCode& code : mpShader->shaderCodes)
+		for (const Shader::ShaderCode& code : mpShader->shaderCodes)
 		{
 			if (!WriteShaderCode(code))
 			{

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "GfxAPI.h"
+#include "EngineAPI.h"
 #include "Entity/Component.h"
 #include "Resource/Assets/Light.h"
 
 namespace Quartz
 {
-	struct LightComponent : public Component<LightComponent>
+	struct QUARTZ_ENGINE_API LightComponent : public Component<LightComponent>
 	{
 		PointLight pointLight;
 

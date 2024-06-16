@@ -1,4 +1,4 @@
-#include "Component/CameraComponent.h"
+#include "Graphics/Component/CameraComponent.h"
 
 namespace Quartz
 {

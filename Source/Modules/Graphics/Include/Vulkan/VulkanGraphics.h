@@ -6,6 +6,9 @@
 #include "Primatives/VulkanPhysicalDevice.h"
 #include "Primatives/VulkanSwapchain.h"
 #include "VulkanResourceManager.h"
+#include "VulkanShaderCache.h"
+#include "VulkanBufferCache.h"
+#include "VulkanPipelineCache.h"
 
 #include "Entity/World.h"
 
@@ -21,7 +24,7 @@ namespace Quartz
 		Array<VkSemaphore>			signalSemaphores;
 	};
 
-	struct QUARTZ_GRAPHICS_API VulkanGraphics : public GraphicsInstance
+	struct QUARTZ_GRAPHICS_API VulkanGraphics
 	{
 		VkInstance					vkInstance;
 		VkApplicationInfo			vkAppInfo;
@@ -30,7 +33,10 @@ namespace Quartz
 		Array<VulkanPhysicalDevice> physicalDevices;
 		VulkanDevice*				pPrimaryDevice;
 		Array<VulkanDevice>			devices;
-		VulkanResourceManager*		pResourceManager;
+		VulkanResourceManager		resourceManager;
+		VulkanShaderCache			shaderCache;
+		VulkanBufferCache			bufferCache;
+		VulkanPipelineCache			pipelineCache;
 
 		//TEMP
 		VulkanSurface* pSurface;
@@ -40,6 +46,7 @@ namespace Quartz
 		bool Create();
 		void Destroy();
 
+		void WaitIdle();
 		void Submit(VulkanSubmission submission, VkQueue deviceQueue, VkFence signalFence);
 	};
 

@@ -1,8 +1,8 @@
 #include "Vulkan/Renderers/VulkanSceneRenderer.h"
 
 #include "Resource/Assets/Shader.h"
-#include "Component/MeshComponent.h"
-#include "Component/MaterialComponent.h"
+#include "Graphics/Component/MeshComponent.h"
+#include "Graphics/Component/MaterialComponent.h"
 
 #include "Engine.h"
 
@@ -17,7 +17,7 @@ namespace Quartz
 		mpGraphics	= &graphics;
 		mpDevice	= &device;
 
-		VulkanResourceManager*	pResources	= graphics.pResourceManager;
+		VulkanResourceManager*	pResources	= &graphics.resourceManager;
 		VulkanDevice*			pDevice		= graphics.pPrimaryDevice;
 
 		VulkanShader* pDefaultVertexShader		= shaderCache.FindOrCreateShader("Shaders/basic_mesh.qsvert");
@@ -81,14 +81,14 @@ namespace Quartz
 		imageInfo.vkImageType	= VK_IMAGE_TYPE_2D;
 		imageInfo.vkUsageFlags	= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-		pVulkanImage = mpGraphics->pResourceManager->CreateImage(mpDevice, imageInfo);
+		pVulkanImage = mpGraphics->resourceManager.CreateImage(mpDevice, imageInfo);
 
 		VulkanBufferInfo bufferInfo = {};
 		bufferInfo.sizeBytes			= pImage->pImageData->Size();
 		bufferInfo.vkMemoryProperties	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		bufferInfo.vkUsageFlags		= VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-		VulkanBuffer* pImageTransferBuffer = mpGraphics->pResourceManager->CreateBuffer(mpDevice, bufferInfo);
+		VulkanBuffer* pImageTransferBuffer = mpGraphics->resourceManager.CreateBuffer(mpDevice, bufferInfo);
 
 		VulkanBufferWriter imageBufferWriter(pImageTransferBuffer);
 		void* pBufferData = imageBufferWriter.Map();
@@ -99,9 +99,9 @@ namespace Quartz
 		terrainCommandPoolInfo.queueFamilyIndex			= mpDevice->pPhysicalDevice->primaryQueueFamilyIndices.graphics;
 		terrainCommandPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		VulkanCommandPool* pImmediateCommandPool = mpGraphics->pResourceManager->CreateCommandPool(mpDevice, terrainCommandPoolInfo);
+		VulkanCommandPool* pImmediateCommandPool = mpGraphics->resourceManager.CreateCommandPool(mpDevice, terrainCommandPoolInfo);
 		VulkanCommandBuffer* pImmediateCommandBuffer;
-		mpGraphics->pResourceManager->CreateCommandBuffers(pImmediateCommandPool, 1, &pImmediateCommandBuffer);
+		mpGraphics->resourceManager.CreateCommandBuffers(pImmediateCommandPool, 1, &pImmediateCommandBuffer);
 
 		VkBufferImageCopy vkImageCopy = {};
 		vkImageCopy.imageExtent.width				= imageInfo.width;
@@ -146,7 +146,7 @@ namespace Quartz
 
 		vkWaitForFences(mpDevice->vkDevice, 1, &vkTransferFence, true, INT64_MAX);
 
-		mpGraphics->pResourceManager->DestroyBuffer(pImageTransferBuffer);
+		mpGraphics->resourceManager.DestroyBuffer(pImageTransferBuffer);
 	}
 
 	void VulkanSceneRenderer::Update(EntityWorld& world, VulkanBufferCache& bufferCache,
@@ -218,7 +218,7 @@ namespace Quartz
 
 			Array<VulkanAttachment, 2> attachments =
 			{
-				{ "Color Pass",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_R32G32B32A32_SFLOAT },
+				{ "Color Pass",		VULKAN_ATTACHMENT_TYPE_SWAPCHAIN,		VK_FORMAT_B8G8R8A8_UNORM }, //VK_FORMAT_R32G32B32A32_SFLOAT },
 				{ "Depth-Stencil",	VULKAN_ATTACHMENT_TYPE_DEPTH_STENCIL,	VK_FORMAT_D24_UNORM_S8_UINT }
 			};
 
@@ -356,7 +356,7 @@ namespace Quartz
 							for (const VulkanShader* pVulkanShader : shaderList)
 							{
 								const Shader* pShaderAsset = pVulkanShader->pShaderAsset;
-								for (const ShaderParam& param : pShaderAsset->params)
+								for (const ShaderUniform& param : pShaderAsset->uniforms)
 								{
 									if (param.name == paramName)
 									{
@@ -399,7 +399,7 @@ namespace Quartz
 								viewInfo.mipCount			= mipCount;
 								viewInfo.mipStart			= 0;
 
-								VulkanImageView* pVulkanImageView = mpGraphics->pResourceManager->CreateImageView(mpDevice, viewInfo);
+								VulkanImageView* pVulkanImageView = mpGraphics->resourceManager.CreateImageView(mpDevice, viewInfo);
 
 								VulkanUniformImageBind imageBind = {};
 								imageBind.binding		= bindIdx;
@@ -423,13 +423,13 @@ namespace Quartz
 							for (const VulkanShader* pVulkanShader : shaderList)
 							{
 								const Shader* pShaderAsset = pVulkanShader->pShaderAsset;
-								for (const ShaderParam& param : pShaderAsset->params)
+								for (const ShaderUniform& param : pShaderAsset->uniforms)
 								{
 									if (param.name == paramName)
 									{
-										bindIdx = param.binding;
-										offsetBytes = param.valueOffsetBytes;
-										sizeBytes = param.valueSizeBytes;
+										bindIdx		= param.binding;
+										offsetBytes = param.offsetBytes;
+										sizeBytes	= param.sizeBytes;
 										break;
 									}
 								}

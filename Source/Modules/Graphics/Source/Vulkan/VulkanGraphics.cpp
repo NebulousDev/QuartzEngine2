@@ -550,30 +550,44 @@ namespace Quartz
 
 	bool VulkanGraphics::Create()
 	{
-		if (ready)
-			return false;
-
 		bool success =
 			CreateVulkanInstance(this) &&
 			QueryVulkanPhysicalDevices(this) &&
 			CreateVulkanDevices(this) &&
 			ChoosePrimaryDevices(this);
 
-		pResourceManager = new VulkanResourceManager();
+		resourceManager	= VulkanResourceManager();
+		pipelineCache	= VulkanPipelineCache(pPrimaryDevice, &resourceManager);
+		bufferCache		= VulkanBufferCache(pPrimaryDevice, &resourceManager);
+		shaderCache		= VulkanShaderCache(pPrimaryDevice, &resourceManager);
+
+		VulkanRenderSettings renderSettings = {};
+		renderSettings.useUniqueMeshBuffers				= false;
+		renderSettings.useUniqueMeshStagingBuffers		= false;
+		renderSettings.useUniqueUniformBuffers			= false;
+		renderSettings.useUniqueUniformStagingBuffers	= false;
+		renderSettings.vertexBufferSizeMb				= 512; // 32
+		renderSettings.indexBufferSizeMb				= 512; // 16
+		renderSettings.perInstanceBufferSizeMb			= 64;  // 16
+		renderSettings.uniformBufferSizeMb				= 64;
+		renderSettings.globalBufferSizeBytes			= 128;
+		renderSettings.uniquePerInstanceBufferSizeBytes	= 128; //
+		renderSettings.uniquePerModelBufferSizeBytes	= 128; //
+		renderSettings.maxUniformSets					= 4;
+		renderSettings.useInstancing					= false;
+		renderSettings.useMeshStaging					= true;
+		renderSettings.useUniformStaging				= true;
+		renderSettings.useDrawIndirect					= false;
+
+		bufferCache.Initialize(renderSettings);
 
 		PrintVulkanStats(this);
-
-		ready = true;
 
 		return success;
 	}
 
 	void VulkanGraphics::Destroy()
 	{
-		ready = false;
-
-		delete pResourceManager;
-
 		for (VulkanDevice& device : devices)
 		{
 			vkDeviceWaitIdle(device.vkDevice);
@@ -581,6 +595,11 @@ namespace Quartz
 		}
 
 		vkDestroyInstance(vkInstance, nullptr);
+	}
+
+	void VulkanGraphics::WaitIdle()
+	{
+		vkDeviceWaitIdle(pPrimaryDevice->vkDevice);
 	}
 
 	void VulkanGraphics::Submit(VulkanSubmission submission, VkQueue deviceQueue, VkFence signalFence)

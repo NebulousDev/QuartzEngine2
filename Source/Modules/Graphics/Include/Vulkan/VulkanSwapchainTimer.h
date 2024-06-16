@@ -20,6 +20,7 @@ namespace Quartz
 			void AdvanceFrame();
 			void Present();
 
+			VulkanImage*		GetCurrentImage();
 			VulkanImageView*	GetCurrentImageView();
 			VkSemaphore			GetCurrentAcquiredSemaphore();
 			VkSemaphore			GetCurrentCompleteSemaphore();

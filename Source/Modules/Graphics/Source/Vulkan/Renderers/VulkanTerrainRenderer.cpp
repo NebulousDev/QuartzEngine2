@@ -55,7 +55,7 @@ namespace Quartz
 
 	void VulkanTerrainRenderer::CreateLODs(uSize count, uSize closeResolution)
 	{
-		VulkanResourceManager& resources = *mpGraphics->pResourceManager;
+		VulkanResourceManager& resources = mpGraphics->resourceManager;
 		VulkanDevice& device = *mpGraphics->pPrimaryDevice;
 
 		/* Terrain Staging Buffers */
@@ -204,9 +204,9 @@ namespace Quartz
 	void VulkanTerrainRenderer::DestroyTile(const TerrainTile& tile)
 	{
 		// @TODO: use a pool system
-		mpGraphics->pResourceManager->DestroyBuffer(tile.textures.pHeightMapBuffer);
-		mpGraphics->pResourceManager->DestroyImage(tile.textures.pHeightMapImage);
-		mpGraphics->pResourceManager->DestroyImageView(tile.textures.pHeightMapView);
+		mpGraphics->resourceManager.DestroyBuffer(tile.textures.pHeightMapBuffer);
+		mpGraphics->resourceManager.DestroyImage(tile.textures.pHeightMapImage);
+		mpGraphics->resourceManager.DestroyImageView(tile.textures.pHeightMapView);
 	}
 
 	// @TODO: Clean this up
@@ -323,7 +323,7 @@ namespace Quartz
 
 	TerrainTileTextures VulkanTerrainRenderer::GenerateTileTextures(uInt32 lodIndex, const Vec2f& position, float scale, uInt64 seed, uSize resolution)
 	{
-		VulkanResourceManager& resources = *mpGraphics->pResourceManager;
+		VulkanResourceManager& resources = mpGraphics->resourceManager;
 		VulkanDevice& device = *mpGraphics->pPrimaryDevice;
 
 		/* Generate Heightmap Images */
@@ -509,8 +509,8 @@ namespace Quartz
 		terrainCommandPoolInfo.queueFamilyIndex			= device.pPhysicalDevice->primaryQueueFamilyIndices.graphics;
 		terrainCommandPoolInfo.vkCommandPoolCreateFlags	= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-		mpImmediateCommandPool = graphics.pResourceManager->CreateCommandPool(&device, terrainCommandPoolInfo);
-		graphics.pResourceManager->CreateCommandBuffers(mpImmediateCommandPool, 3, mImmediateCommandBuffers);
+		mpImmediateCommandPool = graphics.resourceManager.CreateCommandPool(&device, terrainCommandPoolInfo);
+		graphics.resourceManager.CreateCommandBuffers(mpImmediateCommandPool, 3, mImmediateCommandBuffers);
 
 		VkFenceCreateInfo vkImmediateFenceInfo = {};
 		vkImmediateFenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;

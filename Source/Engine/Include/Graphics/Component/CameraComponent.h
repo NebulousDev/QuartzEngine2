@@ -1,13 +1,13 @@
 #pragma once
 
-#include "GfxAPI.h"
+#include "EngineAPI.h"
 #include "Entity/Component.h"
 
 #include "Math/Math.h"
 
 namespace Quartz
 {
-	struct QUARTZ_GRAPHICS_API CameraComponent : public Component<CameraComponent>
+	struct QUARTZ_ENGINE_API CameraComponent : public Component<CameraComponent>
 	{
 		float fov;
 		float near;
