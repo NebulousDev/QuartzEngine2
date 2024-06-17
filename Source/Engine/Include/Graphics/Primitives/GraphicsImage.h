@@ -1,53 +1,52 @@
+#pragma once
+
 #include "Graphics/Primitives/GraphicsObject.h"
 #include "Resource/Common.h"
 
 namespace Quartz
 {
-	class GraphicsImageInfo
+	struct GraphicsImageInfo
 	{
-		uInt32		width;
-		uInt32		height;
-		uInt32		depth;
-		uInt32		layers;
-		uInt32		mips;
-		ImageType	type;
-		ImageFormat	format;
+		uInt32			width;
+		uInt32			height;
+		uInt32			depth;
+		uInt32			layers;
+		uInt32			mips;
+		ImageType		type;
+		ImageFormat		format;
+		ImageUsageFlags	usages;
 	};
 
-	class GraphicsImage : public GraphicsObject
+	class QUARTZ_ENGINE_API GraphicsImage : public GraphicsObject
 	{
 	private:
-		uInt32		mWidth;
-		uInt32		mHeight;
-		uInt32		mDepth;
-		uInt32		mLayers;
-		uInt32		mMips;
-		ImageType	mType;
-		ImageFormat	mFormat;
+		GraphicsImageInfo mInfo;
 
 	public:
 		inline GraphicsImage() = default;
 		inline GraphicsImage(const GraphicsImageInfo& info, const GraphicsMemoryInfo& memoryInfo, void* pNativeObject) :
-			GraphicsObject(info, memoryInfo, pNativeObject),
-			mWidth(info.width), mHeight(info.height), mDepth(info.depth)
-			mLayers(info.layers), mMips(info.mips),
-			mType(info.type), mFormat(info.format) {}
+			GraphicsObject(memoryInfo, pNativeObject),
+			mInfo(info) {}
 
-		inline bool IsValid() const override { return true; } // @TODO
+		inline ~GraphicsImage() { mID = 0; }
 
-		inline bool Is1D() const { return mType == IMAGE_TYPE_1D; }
-		inline bool Is2D() const { return mType == IMAGE_TYPE_2D; }
-		inline bool Is3D() const { return mType == IMAGE_TYPE_3D; }
+		inline bool IsValid() const override { return mID != 0; } // @TODO
+
+		inline bool Is1D() const { return mInfo.type == IMAGE_TYPE_1D; }
+		inline bool Is2D() const { return mInfo.type == IMAGE_TYPE_2D; }
+		inline bool Is3D() const { return mInfo.type == IMAGE_TYPE_3D; }
 
 		inline bool IsHDR() const { return false; } // @TODO
 
-		inline uInt32 GetWidth() const { return mWidth; }
-		inline uInt32 GetHeight() const { return mHeight; }
-		inline uInt32 GetDepth() const { return mDepth; }
-		inline uInt32 GetLayers() const { return mLayers; }
-		inline uInt32 GetMips() const { return mMips; }
+		inline uInt32 GetWidth() const { return mInfo.width; }
+		inline uInt32 GetHeight() const { return mInfo.height; }
+		inline uInt32 GetDepth() const { return mInfo.depth; }
+		inline uInt32 GetLayers() const { return mInfo.layers; }
+		inline uInt32 GetMips() const { return mInfo.mips; }
 
-		inline ImageType	GetType() const { return mType; }
-		inline ImageFormat	GetFormat() const { return mFormat; }
+		inline ImageType	GetType() const { return mInfo.type; }
+		inline ImageFormat	GetFormat() const { return mInfo.format; }
+
+		inline GraphicsImageInfo GetInfo() const { return mInfo; }
 	};
 }

@@ -5,6 +5,7 @@
 #include "Runtime/Runtime.h"
 #include "ShaderCache.h"
 #include "PipelineCache.h"
+#include "ImageCache.h"
 #include "FrameGraph/FrameGraph.h"
 
 #include <functional>
@@ -13,27 +14,31 @@ namespace Quartz
 {
 	class QUARTZ_ENGINE_API Graphics
 	{
+	public:
+		friend class GraphicsImageCache;
+		friend class ShaderCache;
+		friend class PipelineCache;
+
 	private:
-		Map<String, GraphicsApiInfo, 8>	mApis;
+		Map<String, GraphicsApiInfo, 8>	mAvailableApis;
 		GraphicsApiInfo*				mpActiveApi;
 		Map<String, uInt32, 64>			mRendererMap;
 		Array<Renderer*, 64>			mRenderers;
+		GraphicsImageCache				mImageChache;
 		ShaderCache						mShaderCache;
 		PipelineCache					mPipelineCache;
-
 		FrameGraph*						mpFrameGraph;
-		uSize							mMultipleBufferCount;
-		uSize							mActiveBufferIdx;
-
-		bool							mFlagRebuildGraphs;
 
 	protected:
 		Graphics();
 		~Graphics();
 
-		void ApiStart();
-		void ApiStop();
-		void ApiWaitIdle();
+		bool ApiStart();
+		bool ApiStop();
+		void ApiWaitIdle(uInt64 timeout);
+
+		bool ApiCreateImage(const GraphicsImageInfo& imageInfo, GraphicsMemoryInfo& outMemoryInfo, void*& pOutNativeImage);
+		bool ApiDestroyImage(void* pNativeImage);
 
 		void Update(Runtime& runtime, double deltaTime);
 
@@ -57,14 +62,12 @@ namespace Quartz
 
 		void RegisterApi(const String& apiName, const GraphicsApiInfo& apiInfo);
 
-		bool SetMultipleBuffering(uSize count);
-
 		ShaderCache&	GetShaderCache();
 		PipelineCache&	GetPipelineCache();
 		FrameGraph&		GetFrameGraph();
 
-		const Array<String>	GetApiNames() const;
-		const GraphicsApiInfo* GetCurrentApiInfo() const;
-		const GraphicsApiInfo* GetApiInfo(const String& apiName) const;
+		const Array<String>		GetApiNames() const;
+		const GraphicsApiInfo*	GetCurrentApiInfo() const;
+		const GraphicsApiInfo*	GetApiInfo(const String& apiName) const;
 	};
 }

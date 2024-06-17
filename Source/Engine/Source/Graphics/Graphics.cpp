@@ -3,6 +3,8 @@
 #include "Log.h"
 #include "Engine.h"
 
+#define QUARTZ_GRAPHICS_IDLE_TIMEOUT 10000000
+
 namespace Quartz
 {
 	Graphics::Graphics() :
@@ -13,25 +15,35 @@ namespace Quartz
 		delete mpFrameGraph;
 	}
 
-	void Graphics::ApiStart()
+	bool Graphics::ApiStart()
 	{
-		mpActiveApi->apiFunctions.apiStartFunc();
+		return mpActiveApi->apiFunctions.apiStart();
 	}
 
-	void Graphics::ApiStop()
+	bool Graphics::ApiStop()
 	{
-		mpActiveApi->apiFunctions.apiStopFunc();
+		return mpActiveApi->apiFunctions.apiStop();
 	}
 
-	void Graphics::ApiWaitIdle()
+	void Graphics::ApiWaitIdle(uInt64 timeout)
 	{
-		mpActiveApi->apiFunctions.apiWaitIdleFunc();
+		mpActiveApi->apiFunctions.apiWaitIdle(timeout);
+	}
+
+	bool Graphics::ApiCreateImage(const GraphicsImageInfo& imageInfo, GraphicsMemoryInfo& outMemoryInfo, void*& pOutNativeImage)
+	{
+		bool result = mpActiveApi->apiFunctions.apiCreateImage(imageInfo, outMemoryInfo, pOutNativeImage);
+		return result;
+	}
+
+	bool Graphics::ApiDestroyImage(void* pNativeImage)
+	{
+		bool result = mpActiveApi->apiFunctions.apiDestroyImage(pNativeImage);
+		return result;
 	}
 
 	void Graphics::Update(Runtime& runtime, double deltaTime)
 	{
-		//ApiWaitIdle();
-
 		mpFrameGraph->Reset();
 
 		for (Renderer* pRenderer : mRenderers)
@@ -50,11 +62,11 @@ namespace Quartz
 
 	bool Graphics::Start(const String& apiName)
 	{
-		auto& rendererIt = mApis.Find(apiName);
-		if (rendererIt != mApis.End())
+		auto& rendererIt = mAvailableApis.Find(apiName);
+		if (rendererIt != mAvailableApis.End())
 		{
 			GraphicsApiInfo& info = rendererIt->value;
-			bool result = info.apiFunctions.apiStartFunc();
+			bool result = ApiStart();
 
 			if (!result)
 			{
@@ -71,6 +83,8 @@ namespace Quartz
 
 			LogInfo("Graphics started with Api [name=\"%s\"]", apiName.Str());
 
+			ApiWaitIdle(QUARTZ_GRAPHICS_IDLE_TIMEOUT);
+
 			return true;
 		}
 		else
@@ -84,7 +98,9 @@ namespace Quartz
 	{
 		if (mpActiveApi)
 		{
-			bool result = mpActiveApi->apiFunctions.apiStopFunc();
+			ApiWaitIdle(QUARTZ_GRAPHICS_IDLE_TIMEOUT);
+
+			bool result = ApiStop();
 
 			if (!result)
 			{
@@ -121,26 +137,17 @@ namespace Quartz
 
 	void Graphics::RegisterApi(const String& apiName, const GraphicsApiInfo& apiInfo)
 	{
-		mApis.Put(apiName, apiInfo);
-	}
-
-	bool Graphics::SetMultipleBuffering(uSize count)
-	{
-		if (count > 3)
+		if (mAvailableApis.Size() == mAvailableApis.Capacity())
 		{
-			LogError("Error setting multiple buffering: Count of %d is greater than 3.", count);
-			return false;
+			LogFatal("Error registering Graphics API [name=%s]: Too many APIs registered.", apiName.Str());
+			return;
 		}
-		else if (count < 1)
+		else if (mAvailableApis.Contains(apiName))
 		{
-			LogError("Error setting multiple buffering: Count of %d is less than 1.", count);
-			return false;
+			LogWarning("Warning registering Graphics API [name=%s]: An API by that name is already registered. Overwriting API...", apiName.Str());
 		}
 
-		mMultipleBufferCount = count;
-		mFlagRebuildGraphs = true;
-
-		return true;
+		mAvailableApis.Put(apiName, apiInfo);
 	}
 
 	ShaderCache& Graphics::GetShaderCache()
@@ -160,10 +167,10 @@ namespace Quartz
 
 	const Array<String> Graphics::GetApiNames() const
 	{
-		Array<String> apiNames(mApis.Size());
+		Array<String> apiNames(mAvailableApis.Size());
 
 		uSize idx = 0;
-		for (auto& apiPair : mApis)
+		for (auto& apiPair : mAvailableApis)
 		{
 			apiNames[idx++] = apiPair.key;
 		}
@@ -178,8 +185,8 @@ namespace Quartz
 
 	const GraphicsApiInfo* Graphics::GetApiInfo(const String& apiName) const
 	{
-		auto& apiIt = mApis.Find(apiName);
-		if (apiIt != mApis.End())
+		auto& apiIt = mAvailableApis.Find(apiName);
+		if (apiIt != mAvailableApis.End())
 		{
 			return &apiIt->value;
 		}

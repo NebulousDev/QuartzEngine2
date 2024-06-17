@@ -54,6 +54,41 @@ extern "C"
 		return true;
 	}
 
+	void SetupVulkanApiFunctions(GraphicsApiFunctions& functions)
+	{
+		functions.apiStart = []() -> bool
+		{
+			return gpVulkanGraphics->Create();
+		};
+
+		functions.apiStop = []() -> bool
+		{ 
+			gpVulkanGraphics->Destroy();
+			return true; 
+		};
+
+		functions.apiWaitIdle = [](uInt64 time) -> bool
+		{
+			// Time is ignored in vulkan
+			gpVulkanGraphics->WaitIdle();
+			return true;
+		};
+
+		functions.apiCreateImage = [](
+			const GraphicsImageInfo& imageInfo, GraphicsMemoryInfo& outMemoryInfo, void*& pOutNativeImage) -> bool
+		{
+			VulkanImageInfo vulkanImageInfo = {};
+			vulkanImageInfo.width			= imageInfo.width;
+			vulkanImageInfo.height			= imageInfo.height;
+			vulkanImageInfo.depth			= imageInfo.depth;
+			vulkanImageInfo.layers			= imageInfo.layers;
+			vulkanImageInfo.mips			= imageInfo.mips;
+			//vulkanImageInfo.vkImageType		= VulkanImag
+
+			//VulkanImage* pImage = 
+		};
+	}
+
 	void QUARTZ_ENGINE_API ModulePreInit() 
 	{
 		gpVulkanGraphics = &Engine::GetWorld().CreateSingleton<VulkanGraphics>();
@@ -61,20 +96,7 @@ extern "C"
 		if (CheckVulkanAvailable())
 		{
 			GraphicsApiFunctions vulkanApiFunctions;
-			vulkanApiFunctions.apiStartFunc = []() -> bool 
-			{
-				return gpVulkanGraphics->Create();
-			};
-
-			vulkanApiFunctions.apiStopFunc = []() -> bool
-			{ 
-				gpVulkanGraphics->Destroy(); return true; 
-			};
-
-			vulkanApiFunctions.apiWaitIdleFunc = []() -> bool
-			{
-				gpVulkanGraphics->WaitIdle(); return true;
-			};
+			SetupVulkanApiFunctions(vulkanApiFunctions);
 
 			VulkanFrameGraph* pVulkanFrameGraph = new VulkanFrameGraph();
 

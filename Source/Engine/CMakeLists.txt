@@ -38,7 +38,8 @@ set(QUARTZENGINE_SOURCE_FILES
     "Source/Graphics/Component/TransformComponent.cpp"
 	"Source/Graphics/Component/MeshComponent.cpp"
 	"Source/Graphics/Component/MaterialComponent.cpp"
-	"Source/Graphics/Component/CameraComponent.cpp")
+	"Source/Graphics/Component/CameraComponent.cpp"
+    "Source/Graphics/ImageCache.cpp")
 
 if(WIN32)
 
