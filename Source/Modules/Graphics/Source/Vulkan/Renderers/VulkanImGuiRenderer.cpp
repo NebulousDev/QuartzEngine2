@@ -7,11 +7,11 @@
 #include "imgui.h"
 #include "backends/imgui_impl_vulkan.h"
 
-#if QUARTZAPP_GLFW
+#ifdef QUARTZAPP_GLFW
 #include "backends/imgui_impl_glfw.h"
 #endif
 
-#if QUARTZAPP_WINAPI
+#ifdef QUARTZAPP_WINAPI
 #include "backends/imgui_impl_win32.h"
 #endif
 
@@ -40,7 +40,7 @@ namespace Quartz
 				break;
 			}
 #endif
-#if QUARTZAPP_WINAPI
+#ifdef QUARTZAPP_WINAPI
 			case WINDOW_API_WINAPI:
 			{
 				ImGui_ImplWin32_Init(window.GetNativeHandle());
@@ -140,14 +140,14 @@ namespace Quartz
 		
 		switch (mWindowApi)
 		{
-#if QUARTZAPP_GLFW
+#ifdef QUARTZAPP_GLFW
 			case WINDOW_API_GLFW:
 			{
 				ImGui_ImplGlfw_NewFrame();
 				break;
 			}
 #endif
-#if QUARTZAPP_WINAPI
+#ifdef QUARTZAPP_WINAPI
 			case WINDOW_API_WINAPI:
 			{
 				ImGui_ImplWin32_NewFrame();

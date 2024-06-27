@@ -10,8 +10,10 @@
 #include "Vulkan/VulkanGraphics.h"
 #include "Vulkan/VulkanFrameGraph.h"
 
+#ifdef QUARTZAPP_GLEW
 #include "gl/glew.h"
 #include "gl/GL.h"
+#endif
 
 namespace Quartz
 {
@@ -20,7 +22,11 @@ namespace Quartz
 
 	bool CheckGLAvailable()
 	{
+#ifdef QUARTZAPP_GLEW
 		return glewInit() == GLEW_OK;
+#else
+		return false;
+#endif
 	}
 
 	bool CheckVulkanAvailable()

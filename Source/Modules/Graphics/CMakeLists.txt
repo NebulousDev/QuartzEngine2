@@ -7,11 +7,23 @@ include(GNUInstallDirs)
 add_compile_definitions(QUARTZ_GRAPHICS_EXPORT)
 
 file(GLOB third_party_sources
-	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_glfw.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_win32.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/imgui.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/imgui_draw.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/imgui_tables.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/imgui_widgets.cpp"
 )
+
+if(${QUARTZAPP_GLFW})
+	set(third_party_sources ${third_party_sources} "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_glfw.cpp")
+endif()
+
+if(${QUARTZAPP_WINAPI})
+	set(third_party_sources ${third_party_sources} "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_win32.cpp")
+endif()
+
+if(${QUARTZAPP_VULKAN})
+	set(third_party_sources ${third_party_sources} "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/imgui/backends/imgui_impl_vulkan.cpp")
+endif()
 
 add_library(${PROJECT_NAME} SHARED
 	${third_party_sources}
